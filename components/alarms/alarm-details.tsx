@@ -68,9 +68,6 @@ export function AlarmDetails({
             </Badge>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
-        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
