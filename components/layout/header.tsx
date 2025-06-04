@@ -1,16 +1,13 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/layout/header.tsx
+// components/layout/header.tsx
 import Link from "next/link";
-import { Bell, Menu } from "lucide-react";
+import Image from "next/image"; // IMPORTANTE: Añadir import para Image
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { MainNav } from "./main-nav";
-// Removed Avatar and DropdownMenu as user profile will be in Sidebar
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
+import { MainNav } from "./main-nav"; //
 
 interface HeaderProps {
-  toggleSidebar?: () => void; // This prop might not be needed if sidebar toggle is handled by Sheet
+  toggleSidebar?: () => void; 
 }
 
 export function Header({ toggleSidebar }: HeaderProps) {
@@ -23,69 +20,57 @@ export function Header({ toggleSidebar }: HeaderProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden" // Only show on mobile/tablet
-                onClick={toggleSidebar} // Retain toggle if it has other effects
+                className="md:hidden"
+                onClick={toggleSidebar} 
               >
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0"> {/* Adjusted padding */}
+            <SheetContent side="left" className="w-72 p-0">
               <div className="flex h-16 items-center border-b px-4">
                  <Link 
                   href="/"
-                  className="flex items-center gap-2 text-lg font-semibold" // Adjusted size
+                  className="flex items-center gap-2 text-lg font-semibold"
                 >
-                  <Bell className="h-6 w-6" />
-                  <span>Transport App</span>
+                  {/* LOGO MODIFICADO (SHEET) */}
+                  <Image 
+                    src="/logo-grupo-alliot.png" 
+                    alt="Grupo Alliot Logo" 
+                    width={28} // Ajusta según el tamaño deseado
+                    height={28} // Ajusta según el tamaño deseado
+                    className="h-7 w-7"
+                  />
+                  {/* TEXTO MODIFICADO (SHEET) */}
+                  <span>Grupo Alliot</span>
                 </Link>
               </div>
-              <div className="p-4"> {/* Added padding for Nav */}
+              <div className="p-4">
                 <MainNav />
               </div>
             </SheetContent>
           </Sheet>
-          {/* Logo/Title for larger screens - already part of Sidebar, but can be here for consistency if sidebar is collapsible */}
+          
+          {/* Logo/Título para MD y mayores, si el sidebar no está siempre visible o para branding extra */}
           <Link
             href="/"
             className="hidden md:flex items-center gap-2 text-xl font-bold"
           >
-            <Bell className="h-6 w-6" />
-            <span>Transport App</span>
+            {/* LOGO MODIFICADO (MD screens) */}
+             <Image 
+                src="/logo-grupo-alliot.png" 
+                alt="Grupo Alliot Logo" 
+                width={32}
+                height={32}
+                className="h-8 w-8"
+              />
+            {/* TEXTO MODIFICADO (MD screens) */}
+            <span className="hidden md:inline-block">Grupo Alliot</span>
           </Link>
         </div>
         
-        {/* User profile section removed from here, will be added to Sidebar */}
-        {/* <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/01.png" alt="@admin" />
-                  <AvatarFallback>AD</AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">Admin</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    admin@example.com
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem>Perfil</DropdownMenuItem>
-                <DropdownMenuItem>Facturación</DropdownMenuItem>
-                <DropdownMenuItem>Configuración</DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Cerrar Sesión</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div> */}
+        {/* Aquí irían otros elementos del header si los hubiera, como el perfil de usuario si no estuviera en el sidebar */}
+        
       </div>
     </header>
   );

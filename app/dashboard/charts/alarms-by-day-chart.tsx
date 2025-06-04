@@ -1,17 +1,17 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/charts/alarms-by-day-chart.tsx
+// components/dashboard/charts/alarms-by-day-chart.tsx
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; //
+import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 interface AlarmsByDayChartProps {
   data: Array<{ name: string; Total: number; Confirmadas: number; Pendientes: number; }>;
 }
 
 const chartConfig = {
-  Total: { label: "Total", color: "hsl(var(--chart-1))" },
-  Confirmadas: { label: "Confirmadas", color: "hsl(var(--chart-2))" },
-  Pendientes: { label: "Pendientes", color: "hsl(var(--chart-4))" },
+  Total: { label: "Total", color: "hsl(var(--chart-1))" }, // Ensure chart-1 is defined in globals.css
+  Confirmadas: { label: "Confirmadas", color: "hsl(var(--chart-2))" }, // Ensure chart-2 is defined
+  Pendientes: { label: "Pendientes", color: "hsl(var(--chart-4))" }, // Ensure chart-4 is defined
 } satisfies ChartConfig;
 
 export function AlarmsByDayChart({ data }: AlarmsByDayChartProps) {
@@ -44,7 +44,7 @@ export function AlarmsByDayChart({ data }: AlarmsByDayChartProps) {
           <Legend />
           <Bar dataKey="Confirmadas" stackId="a" fill="var(--color-Confirmadas)" radius={[4, 4, 0, 0]} />
           <Bar dataKey="Pendientes" stackId="a" fill="var(--color-Pendientes)" radius={[4, 4, 0, 0]} />
-          {/* <Bar dataKey="Total" fill="var(--color-Total)" radius={[4, 4, 0, 0]} /> Removed as Confirmadas + Pendientes might not equal Total, or can be a separate bar if not stacked */}
+          {/* Consider if 'Total' bar is needed or if stacked bars are sufficient */}
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>

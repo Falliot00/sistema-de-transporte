@@ -1,8 +1,8 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/charts/alarms-by-type-pie-chart.tsx
+// components/dashboard/charts/alarms-by-type-pie-chart.tsx
 "use client";
 
 import { Pie, PieChart, Tooltip, Legend, Cell, ResponsiveContainer } from 'recharts';
-import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart'; //
+import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 
 interface AlarmsByTypePieChartProps {
   data: Array<{ name: string; value: number; fill: string; }>;
@@ -38,7 +38,8 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
             outerRadius={100}
             innerRadius={60}
             labelLine={false}
-            label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+            // label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`} // Can be verbose
+            label={({ percent }) => `${(percent * 100).toFixed(0)}%`} // Simpler label
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />

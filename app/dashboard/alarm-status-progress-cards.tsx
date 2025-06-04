@@ -1,4 +1,4 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/alarm-status-progress-cards.tsx
+// components/dashboard/alarm-status-progress-cards.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ interface AlarmStatusProgressData {
   title: string;
   value: number;
   total: number;
-  color?: string;
+  color?: string; // e.g., "hsl(var(--chart-1))"
 }
 
 interface AlarmStatusProgressCardsProps {
@@ -21,37 +21,36 @@ export function AlarmStatusProgressCards({ data }: AlarmStatusProgressCardsProps
   }
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {data.map((status) => (
-        <Card key={status.title}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">{status.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{status.value} <span className="text-sm font-normal text-muted-foreground">/ {status.total}</span></div>
-            <Progress 
-              value={(status.value / (status.total || 1)) * 100} 
-              className="mt-2 h-3" 
-              indicatorClassName={status.color ? `bg-[${status.color}]` : 'bg-primary'} // Custom color needs to be handled carefully. Tailwind JIT might not pick this up. Consider CSS variables.
-              style={{ '--indicator-color': status.color } as React.CSSProperties} // Use CSS variable for dynamic color
-            />
-             <style jsx global>{`
-              .progress-indicator-custom {
-                background-color: var(--indicator-color) !important;
-              }
-            `}</style>
-            <Progress 
-              value={(status.value / (status.total || 1)) * 100} 
-              className="mt-2 h-3"
-              // For direct style, Recharts uses fill, Progress might need different handling or a custom wrapper
-              // This is a simplified approach. For dynamic colors, you might need to define them in tailwind.config or use style attributes.
-              // indicatorClassName={status.color ? `bg-[${status.color}]` : 'bg-primary'} 
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {((status.value / (status.total || 1)) * 100).toFixed(1)}% del total
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+      {data.map((status) => {
+        const percentage = (status.value / (status.total || 1)) * 100;
+        return (
+          <Card key={status.title}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-medium">{status.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{status.value} 
+                <span className="text-sm font-normal text-muted-foreground"> / {status.total}</span>
+              </div>
+              <Progress 
+                value={percentage} 
+                className="mt-2 h-3" 
+                style={{ '--indicator-color': status.color } as React.CSSProperties}
+                indicatorClassName={status.color ? 'progress-indicator-custom' : ''} 
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {percentage.toFixed(1)}% del total
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })}
+      {/* Inline style to apply the custom color variable for progress indicator */}
+      <style jsx global>{`
+        .progress-indicator-custom {
+          background-color: var(--indicator-color) !important;
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,11 +1,12 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/layout/sidebar.tsx
+// components/layout/sidebar.tsx
 "use client"
 
 import Link from "next/link";
-import { Bell, LogOut, UserCircle } from "lucide-react"; // Added LogOut, UserCircle
-import { cn } from "@/lib/utils";
+import Image from "next/image"; // IMPORTANTE: Añadir import para Image
+import { LogOut, UserCircle, Settings, Bell as BellIcon } from "lucide-react"; // Renombrado Bell a BellIcon para evitar conflicto
+import { cn } from "@/lib/utils"; //
 import { MainNav } from "./main-nav";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Added Avatar
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,7 +20,7 @@ import {
 
 interface SidebarProps {
   className?: string;
-  isOpen?: boolean; // isOpen might be controlled by PageLayout state
+  isOpen?: boolean;
 }
 
 export function Sidebar({ className, isOpen = true }: SidebarProps) {
@@ -27,29 +28,37 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
     <div
       className={cn(
         "fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background transition-all duration-300 md:flex",
-        !isOpen && "w-0 overflow-hidden opacity-0 md:w-64 md:opacity-100", // Handle open/close for md screens if needed
+        !isOpen && "w-0 overflow-hidden opacity-0 md:w-64 md:opacity-100", 
         className
       )}
     >
       {/* Top Section: Logo */}
       <div className="flex h-16 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <Bell className="h-6 w-6" />
-          <span className="text-xl font-bold">Transport App</span>
+          {/* LOGO MODIFICADO */}
+          <Image 
+            src="/logo-grupo-alliot.png" 
+            alt="Grupo Alliot Logo" 
+            width={32} // Ajusta según el tamaño deseado
+            height={32} // Ajusta según el tamaño deseado
+            className="h-8 w-8" // Clases para mantener tamaño si es necesario
+          />
+          {/* TEXTO MODIFICADO */}
+          <span className="text-xl font-semibold">Grupo Alliot</span>
         </Link>
       </div>
 
       {/* Middle Section: Navigation - takes up remaining space */}
       <div className="flex-1 overflow-auto py-4">
-        <MainNav />
+        <MainNav /> {/* */}
       </div>
       
       {/* Bottom Section: User Profile */}
-      <div className="mt-auto border-t p-2"> {/* Added p-2 for some spacing */}
+      <div className="mt-auto border-t p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start px-2 py-6"> {/* Increased padding */}
-              <Avatar className="h-9 w-9 mr-3"> {/* Slightly larger avatar */}
+            <Button variant="ghost" className="w-full justify-start px-2 py-6">
+              <Avatar className="h-9 w-9 mr-3">
                 <AvatarImage src="/avatars/01.png" alt="Admin" />
                 <AvatarFallback>AD</AvatarFallback>
               </Avatar>
@@ -59,7 +68,7 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 mb-2 ml-2" side="top" align="start"> {/* Opens upwards */}
+          <DropdownMenuContent className="w-56 mb-2 ml-2" side="top" align="start">
             <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
@@ -67,8 +76,8 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
               <span>Perfil</span>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Bell className="mr-2 h-4 w-4" />
-              <span>Notificaciones</span>
+              <Settings className="mr-2 h-4 w-4" /> {/* Usando el icono Settings importado */}
+              <span>Configuración</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>

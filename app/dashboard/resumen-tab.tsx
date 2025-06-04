@@ -1,19 +1,20 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/resumen-tab.tsx
+// components/dashboard/resumen-tab.tsx
 "use client";
 
 import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlarmsByDayChart } from "./charts/alarms-by-day-chart";
 import { AlarmsByTypePieChart } from "./charts/alarms-by-type-pie-chart";
-import { AlarmStatusProgressCards } from "./alarm-status-progress-cards";
+import { AlarmStatusProgressCards } from "./alarm-status-progress-cards"; // Corrected path
 import { getMockAlarmsByDay, getMockAlarmsByType, getMockAlarmStatusProgress } from "@/lib/mock-data";
 
 interface ResumenTabProps {
-  alarms: Alarm[]; // Pass all alarms, or pre-filter by date range in parent
+  alarms: Alarm[];
 }
 
 export function ResumenTab({ alarms }: ResumenTabProps) {
-  const alarmsByDayData = getMockAlarmsByDay(); // Uses its own mock for simplicity now
+  // These mock data functions might eventually take 'alarms' or date range as parameters
+  const alarmsByDayData = getMockAlarmsByDay(); 
   const alarmsByTypeData = getMockAlarmsByType();
   const alarmStatusProgressData = getMockAlarmStatusProgress(alarms);
 
