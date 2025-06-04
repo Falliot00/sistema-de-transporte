@@ -1,9 +1,10 @@
+// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/layout/main-nav.tsx
 "use client"
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ActivitySquare, Bell, LayoutDashboard, Settings, Users } from "lucide-react";
+import { ActivitySquare, Bell, LayoutDashboard, Settings, Users, LineChart } from "lucide-react"; // Added LineChart
 
 interface MainNavProps {
   className?: string;
@@ -22,7 +23,7 @@ export function MainNav({ className }: MainNavProps) {
     {
       href: "/dashboard",
       label: "Dashboard",
-      icon: <LayoutDashboard className="h-5 w-5 mr-2" />,
+      icon: <LineChart className="h-5 w-5 mr-2" />, // Changed icon for Dashboard
       active: pathname === "/dashboard",
     },
     {
