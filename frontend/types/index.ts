@@ -1,91 +1,47 @@
-export type AlarmStatus = 'pending' | 'confirmed' | 'rejected';
+// ... (otras interfaces que puedas tener)
 
-export type AlarmType = 'phone' | 'seatbelt' | 'speed' | 'fatigue' | 'distraction';
-
-export interface Driver {
+export interface Alarm {
   id: string;
-  name: string;
-  license: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  
+  // --- CAMBIO CLAVE ---
+  // Antes quizás era 'number'. Ahora debe ser 'string'.
+  type: string; 
+
+  timestamp: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  driver: {
+    id: string;
+    name: string;
+    license: string;
+  };
+  vehicle: {
+    id: string;
+    licensePlate: string;
+    model: string;
+  };
+  device: {
+    id: string;
+    name: string;
+    serialNumber: string;
+  };
+  media: Media[];
+  comments: Comment[];
 }
 
-export interface Vehicle {
-  id: string;
-  licensePlate: string;
-  model: string;
-}
-
-export interface Device {
-  id: string;
-  name: string;
-  serialNumber: string;
-}
-
-export interface Reviewer {
-  id: string;
-  name: string;
-  email: string;
-}
-
-export interface MediaItem {
+export interface Media {
   id: string;
   type: 'image' | 'video';
   url: string;
-  thumbnailUrl?: string;
-  timestamp: string;
 }
 
 export interface Comment {
   id: string;
+  author: string;
+  timestamp: string;
   text: string;
-  author: {
-    id: string;
-    name: string;
-  };
-  timestamp: string;
-}
-
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
-export interface Alarm {
-  id: string;
-  status: AlarmStatus;
-  type: AlarmType;
-  driver: Driver;
-  vehicle: Vehicle;
-  device: Device;
-  location: Location;
-  timestamp: string;
-  media: MediaItem[];
-  comments: Comment[];
-  reviewer?: Reviewer;
-  reviewedAt?: string;
-}
-
-export interface KPI {
-  id: string;
-  title: string;
-  value: number;
-  icon: string;
-  delta?: number;
-  deltaType?: 'increase' | 'decrease';
-}
-
-export interface AlarmFilterParams {
-  search?: string;
-  status?: AlarmStatus[];
-  type?: AlarmType[];
-  startDate?: string;
-  endDate?: string;
-}
-
-export interface AlarmState {
-  alarms: Alarm[];
-  filteredAlarms: Alarm[];
-  selectedAlarm: Alarm | null;
-  filterParams: AlarmFilterParams;
-  isModalOpen: boolean;
 }

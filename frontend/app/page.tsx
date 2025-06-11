@@ -1,16 +1,11 @@
-// frontend/app/page.tsx
-
 import { PageLayout } from "@/components/layout/page-layout";
-import { AlarmTabs } from "@/components/alarms/alarm-tabs";
+import { AlarmsPage } from "@/components/alarms/alarm-page"; // Cambiamos el nombre para más claridad
 
 export default function Home() {
   return (
-    <PageLayout
-      title="Gestión de Alarmas"
-      description="Revise, confirme o rechace las alarmas generadas por los dispositivos."
-    >
-      {/* El componente AlarmTabs ahora maneja toda la lógica y la UI */}
-      <AlarmTabs />
+    // PageLayout ya no necesita pasar 'title' y 'description' si queremos que el contenido lo maneje
+    <PageLayout>
+      <AlarmsPage />
     </PageLayout>
   );
 }

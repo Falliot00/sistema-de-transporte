@@ -1,3 +1,5 @@
+// backend/prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,7 +13,7 @@ model alarmasHistorico {
   guid        String    @id(map: "PK__alarmasH__497F6CB4A51B299D") @db.VarChar(50)
   dispositivo String?   @db.VarChar(20)
   interno     String?   @db.VarChar(20)
-  alarmType   Int?
+  alarmType   Int?      // Este es el campo que actúa como clave foránea.
   velocidad   Float?
   lng         String?   @db.VarChar(20)
   lat         String?   @db.VarChar(20)
@@ -22,6 +24,15 @@ model alarmasHistorico {
   imagen      String?   @db.VarChar(512)
   video       String?   @db.VarChar(512)
   estado      String?   @db.VarChar(50)
+
+  // --- RELACIÓN AÑADIDA ---
+  // Se crea un campo virtual "typeAlarm" que representa la relación.
+  // Prisma sabe que debe unir `fields: [alarmType]` de esta tabla
+  // con `references: [type]` de la tabla `TypeAlarms`.
+  typeAlarm   TypeAlarms? @relation(fields: [alarmType], references: [type])
+
+  // Mapea este modelo a la tabla "alarmasHistorico" en la base de datos.
+  @@map("alarmasHistorico")
 }
 
 model sysdiagrams {
@@ -32,4 +43,19 @@ model sysdiagrams {
   definition   Bytes?
 
   @@unique([principal_id, name], map: "UK_principal_name")
+  // Mapea este modelo a la tabla "sysdiagrams".
+  @@map("sysdiagrams")
+}
+
+model TypeAlarms {
+  type  Int     @id(map: "PK__typeAlar__E3F852490A79947F")
+  alarm String? @db.VarChar(200)
+
+  // --- RELACIÓN INVERSA AÑADIDA ---
+  // Este campo virtual "alarms" permite navegar desde un tipo de alarma
+  // hacia todas las alarmas históricas de ese tipo. Es una lista o array.
+  alarms alarmasHistorico[]
+
+  // Mapea este modelo a la tabla "typeAlarms".
+  @@map("typeAlarms")
 }

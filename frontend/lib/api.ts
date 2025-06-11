@@ -2,10 +2,10 @@
 
 import { Alarm } from "@/types";
 
+// Aseguramos que la URL de la API esté definida en las variables de entorno.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 if (!API_URL) {
-  throw new Error("Missing NEXT_PUBLIC_API_URL environment variable.");
+  throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }
 
 /**
@@ -21,15 +21,15 @@ export async function getAlarms(): Promise<Alarm[]> {
     return await response.json();
   } catch (error) {
     console.error("Hubo un problema con la operación de fetch:", error);
-    return []; // Devuelve un array vacío en caso de error para no romper la UI.
+    return []; // Devolver un array vacío para no romper la UI en caso de error.
   }
 }
 
 /**
- * Actualiza el estado de una alarma.
- * @param alarmId - El GUID de la alarma.
+ * Actualiza el estado de una alarma (la "revisa").
+ * @param alarmId - El GUID de la alarma a actualizar.
  * @param status - El nuevo estado ('confirmed' o 'rejected').
- * @returns La alarma actualizada.
+ * @returns La alarma con su estado actualizado.
  */
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected'): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
