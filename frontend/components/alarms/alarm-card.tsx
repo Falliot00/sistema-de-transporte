@@ -1,71 +1,58 @@
+// frontend/components/alarms/alarm-card.tsx
+
+"use client";
+
 import { Alarm } from "@/types";
-import { formatDate, getStatusColor, getStatusText, getTypeColor, getTypeText } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Camera, Clock, MapPin, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CarFront, Clock, User } from "lucide-react";
 
 interface AlarmCardProps {
   alarm: Alarm;
-  onClick: (alarm: Alarm) => void;
+  isSelected: boolean;
+  onSelect: () => void;
 }
 
-export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
+// Función para obtener la descripción del tipo de alarma
+function getAlarmTypeDescription(type: number | undefined): string {
+  switch (type) {
+    case 1: return "Exceso de Velocidad";
+    case 2: return "Frenada Brusca";
+    // Añade más casos según sea necesario
+    default: return "Alarma Desconocida";
+  }
+}
+
+export function AlarmCard({ alarm, isSelected, onSelect }: AlarmCardProps) {
   return (
-    <Card 
-      className="cursor-pointer transition-all hover:shadow-md"
-      onClick={() => onClick(alarm)}
+    <div
+      onClick={onSelect}
+      className={cn(
+        "p-4 rounded-lg border cursor-pointer transition-all duration-200",
+        "bg-card text-card-foreground hover:bg-muted/50",
+        isSelected ? "border-primary shadow-md" : "border-border"
+      )}
     >
-      <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between">
-        <div className="flex flex-col gap-1">
-          <div className="font-semibold">{alarm.id}</div>
-          <div className="flex flex-wrap gap-2">
-            <Badge className={getStatusColor(alarm.status)}>
-              {getStatusText(alarm.status)}
-            </Badge>
-            <Badge className={getTypeColor(alarm.type)}>
-              {getTypeText(alarm.type)}
-            </Badge>
-          </div>
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-bold text-md">{getAlarmTypeDescription(alarm.type)}</h3>
+        <Badge variant={alarm.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">
+          {alarm.status}
+        </Badge>
+      </div>
+      <div className="text-sm text-muted-foreground space-y-2">
+        <div className="flex items-center gap-2">
+          <CarFront className="h-4 w-4" />
+          <span>{alarm.vehicle.licensePlate}</span>
         </div>
-        <div className="text-sm text-muted-foreground">
-          <Clock className="h-4 w-4 inline mr-1" />
-          {formatDate(alarm.timestamp)}
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          <span>{alarm.driver.name}</span>
         </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="font-medium">{alarm.driver.name}</span>
-              <span className="text-xs text-muted-foreground">Licencia: {alarm.driver.license}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="font-medium">{alarm.device.name}</span>
-              <span className="text-xs text-muted-foreground">SN: {alarm.device.serialNumber}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{alarm.location.address || 'Ubicación no disponible'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4 text-muted-foreground" />
-              <span>{alarm.media.length} archivos</span>
-            </div>
-            {alarm.reviewer && (
-              <div className="text-xs ml-2">
-                <span className="text-muted-foreground">Revisado por: </span>
-                {alarm.reviewer.name}
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          <span>{new Date(alarm.timestamp!).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
