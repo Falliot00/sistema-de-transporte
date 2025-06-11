@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model alarmasHistorico {
+  guid        String    @id(map: "PK__alarmasH__497F6CB4A51B299D") @db.VarChar(50)
+  dispositivo String?   @db.VarChar(20)
+  interno     String?   @db.VarChar(20)
+  alarmType   Int?
+  velocidad   Float?
+  lng         String?   @db.VarChar(20)
+  lat         String?   @db.VarChar(20)
+  ubi         String?   @db.VarChar(50)
+  patente     String?   @db.VarChar(20)
+  alarmTime   DateTime? @db.DateTime
+  Empresa     String?   @db.VarChar(100)
+  imagen      String?   @db.VarChar(512)
+  video       String?   @db.VarChar(512)
+  estado      String?   @db.VarChar(50)
+}
+
+model sysdiagrams {
+  name         String @db.NVarChar(128)
+  principal_id Int
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61364CBE63") @default(autoincrement())
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}
