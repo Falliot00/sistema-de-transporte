@@ -8,7 +8,7 @@ export default function Home() {
     <PageLayout>
       <AlarmTabs
         listTabContent={<AlarmsPage />}
-        dashboardTabContent={<DashboardPage />}
+        /*dashboardTabContent={<DashboardPage />}*/
       />
     </PageLayout>
   )

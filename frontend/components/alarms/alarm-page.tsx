@@ -13,10 +13,11 @@ import { Input } from "@/components/ui/input";
 import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle } from "lucide-react";
 import { AlarmAnalysisView } from "./alarm-analysis-view";
 import { AlarmReview } from "./alarm-review";
-import { ALARM_STATUS_ES, ALARM_STATUS_ES_PLURAL } from "@/lib/utils";
+import { ALARM_STATUS_ES, ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AdvancedFilters } from "./advanced-filters";
 import { KPICard } from "./kpi-card";
+import { Badge } from "@/components/ui/badge";
 
 export function AlarmsPage() {
     const { toast } = useToast();
@@ -33,9 +34,8 @@ export function AlarmsPage() {
     const [analysisIndex, setAnalysisIndex] = useState(0);
 
     const alarmCounts = useMemo(() => {
-        const currentTotal = masterAlarms.length;
         return {
-            total: currentTotal,
+            total: masterAlarms.length,
             pending: masterAlarms.filter(a => a.status === 'pending').length,
             confirmed: masterAlarms.filter(a => a.status === 'confirmed').length,
             rejected: masterAlarms.filter(a => a.status === 'rejected').length,
@@ -178,12 +178,32 @@ export function AlarmsPage() {
                     </div>
                 </div>
                 <div>
-                    <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }}>
-                        <ToggleGroupItem value="all">Todos ({alarmCounts.total})</ToggleGroupItem>
-                        <ToggleGroupItem value="pending">{ALARM_STATUS_ES_PLURAL.pending} ({alarmCounts.pending})</ToggleGroupItem>
-                        <ToggleGroupItem value="confirmed">{ALARM_STATUS_ES_PLURAL.confirmed} ({alarmCounts.confirmed})</ToggleGroupItem>
-                        <ToggleGroupItem value="rejected">{ALARM_STATUS_ES_PLURAL.rejected} ({alarmCounts.rejected})</ToggleGroupItem>
+                    {/* --- INICIO DE LA SOLUCIÓN --- */}
+                    <ToggleGroup 
+                        type="single" 
+                        variant="outline" 
+                        value={statusFilter} 
+                        onValueChange={(value) => { if (value) setStatusFilter(value); }}
+                        className="flex flex-wrap justify-start"
+                    >
+                        <ToggleGroupItem value="all" className="flex items-center gap-2">
+                            <span>Todos</span>
+                            <Badge variant="default" className="px-2 py-0.5 text-xs font-semibold">{alarmCounts.total}</Badge>
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="pending" className="flex items-center gap-2">
+                            <span>{ALARM_STATUS_ES_PLURAL.pending}</span>
+                            <Badge variant={ALARM_STATUS_VARIANT.pending} className="px-2 py-0.5 text-xs font-semibold">{alarmCounts.pending}</Badge>
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="confirmed" className="flex items-center gap-2">
+                            <span>{ALARM_STATUS_ES_PLURAL.confirmed}</span>
+                            <Badge variant={ALARM_STATUS_VARIANT.confirmed} className="px-2 py-0.5 text-xs font-semibold">{alarmCounts.confirmed}</Badge>
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="rejected" className="flex items-center gap-2">
+                            <span>{ALARM_STATUS_ES_PLURAL.rejected}</span>
+                            <Badge variant={ALARM_STATUS_VARIANT.rejected} className="px-2 py-0.5 text-xs font-semibold">{alarmCounts.rejected}</Badge>
+                        </ToggleGroupItem>
                     </ToggleGroup>
+                     {/* --- FIN DE LA SOLUCIÓN --- */}
                 </div>
             </div>
 
@@ -196,7 +216,6 @@ export function AlarmsPage() {
                 : <div className="text-center text-muted-foreground pt-10 col-span-full">No hay alarmas para la selección actual.</div>}
             </div>
             
-            {/* El código de los modales no ha cambiado */}
             <Dialog open={!!alarmForDetails} onOpenChange={handleDialogClose}>
                 <DialogContent className="max-w-4xl h-[90vh] grid grid-rows-[auto_1fr_auto] p-0 gap-0">
                     {alarmForDetails && (
