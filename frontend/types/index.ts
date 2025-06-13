@@ -42,7 +42,6 @@ export interface PaginationInfo {
     hasPrevPage: boolean;
 }
 
-// Nueva interfaz para los conteos globales de alarmas
 export interface GlobalAlarmCounts {
     total: number;
     pending: number;
@@ -50,11 +49,10 @@ export interface GlobalAlarmCounts {
     rejected: number;
 }
 
-// Nueva interfaz para la respuesta completa de la API de obtener alarmas
 export interface GetAlarmsResponse {
     alarms: Alarm[];
     pagination: PaginationInfo;
-    globalCounts: GlobalAlarmCounts; // Aquí se incluyen los conteos globales
+    globalCounts: GlobalAlarmCounts;
 }
 
 // Interfaz para los parámetros de la función getAlarms
@@ -63,5 +61,5 @@ export interface GetAlarmsParams {
     pageSize?: number;
     status?: string;
     search?: string;
-    type?: string[]; // Si planeas usar este filtro en el backend
+    type?: string[]; // <--- Asegúrate de que esta línea esté presente
 }

@@ -74,27 +74,39 @@ const transformAlarmData = (alarm: any) => {
 export const getAllAlarms = async (req: Request, res: Response) => {
   // Parámetros de paginación y filtros
   const page = parseInt(req.query.page as string) || 1;
-  const pageSize = parseInt(req.query.pageSize as string) || 12; // Ajusta el tamaño de página por defecto si es necesario
+  const pageSize = parseInt(req.query.pageSize as string) || 12;
   const statusFilter = req.query.status as string;
   const search = req.query.search as string;
+  const typeFilters = req.query.type as string[] | string;
 
   const skip = (page - 1) * pageSize;
 
   let whereClause: any = {};
 
-  // Modificación clave: Usamos el mapeo a un array de posibles valores de DB con 'in'
+  // Filtro por estado
   if (statusFilter && statusFilter !== 'all') {
     whereClause.estado = {
         in: DB_QUERY_STATUS_MAP[statusFilter as keyof typeof DB_QUERY_STATUS_MAP]
     };
   }
 
+  // Filtro por búsqueda (chofer, patente, tipo de alarma) -- CORREGIDO: se eliminó 'mode: insensitive'
   if (search) {
     whereClause.OR = [
-      { patente: { contains: search, mode: 'insensitive' } },
-      { interno: { contains: search, mode: 'insensitive' } },
-      { typeAlarm: { alarm: { contains: search, mode: 'insensitive' } } },
+      { patente: { contains: search } }, // <-- 'mode: insensitive' eliminado
+      { interno: { contains: search } }, // <-- 'mode: insensitive' eliminado
+      { typeAlarm: { alarm: { contains: search } } }, // <-- 'mode: insensitive' eliminado
     ];
+  }
+
+  // Filtro por tipo de alarma (CORREGIDO previamente: se eliminó 'mode: insensitive' para el operador 'in')
+  if (typeFilters && (Array.isArray(typeFilters) ? typeFilters.length > 0 : typeFilters.trim() !== '')) {
+      const typesToFilter = Array.isArray(typeFilters) ? typeFilters : [typeFilters];
+      whereClause.typeAlarm = {
+          alarm: {
+              in: typesToFilter,
+          }
+      };
   }
 
   try {
@@ -118,13 +130,13 @@ export const getAllAlarms = async (req: Request, res: Response) => {
 
     // Obtener los conteos globales de todos los estados, usando el mapeo a TODOS los valores de la DB
     const totalConfirmedGlobal = await prisma.alarmasHistorico.count({
-      where: { estado: { in: DB_QUERY_STATUS_MAP.confirmed } }, // Usar 'in' para ambos 'Confirmada' y 'confirmed'
+      where: { estado: { in: DB_QUERY_STATUS_MAP.confirmed } },
     });
     const totalRejectedGlobal = await prisma.alarmasHistorico.count({
-      where: { estado: { in: DB_QUERY_STATUS_MAP.rejected } },   // Usar 'in' para ambos 'Rechazada' y 'rejected'
+      where: { estado: { in: DB_QUERY_STATUS_MAP.rejected } },
     });
     const totalPendingGlobal = await prisma.alarmasHistorico.count({
-      where: { estado: { in: DB_QUERY_STATUS_MAP.pending } },     // Usar 'in' para 'Pendiente' y 'Sospechosa'
+      where: { estado: { in: DB_QUERY_STATUS_MAP.pending } },
     });
     const totalAllAlarmsGlobal = await prisma.alarmasHistorico.count(); // Conteo total de todas las alarmas en la DB
 
@@ -179,8 +191,6 @@ export const reviewAlarm = async (req: Request, res: Response) => {
   }
 
   try {
-    // FIX para TS7053: Aseguramos que 'status' es una clave válida para el mapeo.
-    // Usamos 'keyof typeof DB_QUERY_STATUS_MAP' para ser explícitos.
     const statusToSave = DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP][0]; 
 
     const updatedAlarmFromDb = await prisma.alarmasHistorico.update({

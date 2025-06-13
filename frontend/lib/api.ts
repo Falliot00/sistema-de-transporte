@@ -1,6 +1,6 @@
 // frontend/lib/api.ts
 
-import { Alarm, GetAlarmsResponse, GetAlarmsParams, PaginationInfo } from "@/types"; // Importamos las nuevas interfaces
+import { Alarm, GetAlarmsResponse, GetAlarmsParams, PaginationInfo } from "@/types";
 
 // Aseguramos que la URL de la API esté definida en las variables de entorno.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -20,19 +20,23 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.status) query.append('status', params.status);
     if (params?.search) query.append('search', params.search);
-    // Puedes añadir lógica para type si el backend lo soporta, por ahora no está implementado en el backend
-    // if (params?.type && params.type.length > 0) {
-    //   params.type.forEach(t => query.append('type', t));
-    // }
+    
+    // AÑADIDO: Lógica para enviar múltiples filtros de tipo
+    if (params?.type && params.type.length > 0) {
+      params.type.forEach(t => query.append('type', t));
+    }
 
     const response = await fetch(`${API_URL}/alarmas?${query.toString()}`);
     if (!response.ok) {
-      throw new Error(`Error al obtener los datos: ${response.status}`);
+      // Mejorar el mensaje de error si la respuesta no es OK
+      const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+      throw new Error(`Error al obtener los datos: ${response.status} - ${errorData.message || response.statusText}`);
     }
     return await response.json();
   } catch (error) {
     console.error("Hubo un problema con la operación de fetch en getAlarms:", error);
-    // Devolver una estructura de respuesta por defecto para evitar errores en la UI
+    // Devolver una estructura de respuesta por defecto para evitar errores en la UI.
+    // También asegúrate de que GlobalAlarmCounts tenga los valores por defecto.
     return {
       alarms: [],
       pagination: {
@@ -65,7 +69,8 @@ export async function getPendingAlarmsForAnalysis(page: number = 1, pageSize: nu
   try {
     const response = await fetch(`${API_URL}/alarmas?page=${page}&pageSize=${pageSize}&status=pending`);
     if (!response.ok) {
-      throw new Error(`Error al obtener alarmas pendientes para análisis: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+      throw new Error(`Error al obtener alarmas pendientes para análisis: ${response.status} - ${errorData.message || response.statusText}`);
     }
     const data: GetAlarmsResponse = await response.json(); // Esperamos la misma estructura GetAlarmsResponse
     return {
@@ -95,8 +100,7 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     });
 
     if (!response.ok) {
-        // Mejorar el manejo de errores para mostrar mensajes más específicos.
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
         throw new Error(errorData.message || 'Error al actualizar la alarma');
     }
     return await response.json();

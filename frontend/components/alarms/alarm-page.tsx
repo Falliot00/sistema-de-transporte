@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types"; // Importamos las nuevas interfaces
-import { getAlarms, reviewAlarm, getPendingAlarmsForAnalysis } from "@/lib/api"; // getAlarms ahora devuelve más datos
+import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
+import { getAlarms, reviewAlarm, getPendingAlarmsForAnalysis } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { AlarmCard } from "./alarm-card";
 import { AlarmDetails } from "./alarm-details";
@@ -79,7 +79,7 @@ export function AlarmsPage() {
                 pageSize: 12, // Asegúrate de que este pageSize coincida con el backend o sea configurable
                 status: statusFilter,
                 search: debouncedSearchQuery,
-                // type: typeFilters, // Habilitar si el backend soporta filtro por tipo en getAllAlarms
+                type: typeFilters, // <--- DESCOMENTADA: Ahora se envían los filtros de tipo
             };
             const data = await getAlarms(params); // Ahora getAlarms devuelve GetAlarmsResponse
             setAlarms(data.alarms);
@@ -95,7 +95,7 @@ export function AlarmsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, statusFilter, debouncedSearchQuery]); // Asegurarse de incluir todas las dependencias
+    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters]); // <--- AÑADIDA: typeFilters a las dependencias
 
     useEffect(() => {
         fetchAlarms();
@@ -199,7 +199,7 @@ export function AlarmsPage() {
 
             <div className="text-center">
                 <Button onClick={handleStartAnalysis} disabled={isLoading || isFetchingNextBatch || globalAlarmCounts.pending === 0}>
-                    {isFetchingNextBatch && !isAnalysisMode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                    {isFetchingNextBatch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
                     Analizar {globalAlarmCounts.pending} alarmas pendientes
                 </Button>
             </div>
