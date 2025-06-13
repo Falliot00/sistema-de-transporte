@@ -1,72 +1,81 @@
 // frontend/lib/api.ts
-import { Alarm } from "@/types";
 
+import { Alarm, GetAlarmsResponse, GetAlarmsParams, PaginationInfo } from "@/types"; // Importamos las nuevas interfaces
+
+// Aseguramos que la URL de la API esté definida en las variables de entorno.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_URL) {
   throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }
 
-// --- NUEVOS TIPOS PARA LA RESPUESTA PAGINADA ---
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  totalAlarms: number;
-  totalPages: number;
-}
-
-export interface PaginatedAlarmsResponse {
-  alarms: Alarm[];
-  pagination: PaginationInfo;
-}
-
-// --- NUEVOS PARÁMETROS PARA LA FUNCIÓN ---
-export interface GetAlarmsParams {
-  page?: number;
-  limit?: number;
-  status?: string;
-  search?: string;
-}
-
 /**
- * Obtiene una lista paginada y filtrada de alarmas desde el backend.
- * @param params - Objeto con los parámetros de paginación y filtrado.
- * @returns Una promesa que se resuelve en un objeto con las alarmas y la información de paginación.
+ * Obtiene alarmas desde el backend con paginación y filtros.
+ * @param params - Objeto con parámetros de paginación y filtros.
+ * @returns Una promesa que se resuelve en un objeto GetAlarmsResponse.
  */
-export async function getAlarms(params: GetAlarmsParams = {}): Promise<PaginatedAlarmsResponse> {
-  const { page = 1, limit = 20, status, search } = params;
-  
-  // Construimos la URL con los parámetros de consulta.
-  const query = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
-
-  if (status && status !== 'all') {
-    query.append('status', status);
-  }
-
-  if (search) {
-    query.append('search', search);
-  }
-
+export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
   try {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.status) query.append('status', params.status);
+    if (params?.search) query.append('search', params.search);
+    // Puedes añadir lógica para type si el backend lo soporta, por ahora no está implementado en el backend
+    // if (params?.type && params.type.length > 0) {
+    //   params.type.forEach(t => query.append('type', t));
+    // }
+
     const response = await fetch(`${API_URL}/alarmas?${query.toString()}`);
     if (!response.ok) {
       throw new Error(`Error al obtener los datos: ${response.status}`);
     }
     return await response.json();
   } catch (error) {
-    console.error("Hubo un problema con la operación de fetch:", error);
-    // Devolver una respuesta vacía para no romper la UI en caso de error.
+    console.error("Hubo un problema con la operación de fetch en getAlarms:", error);
+    // Devolver una estructura de respuesta por defecto para evitar errores en la UI
     return {
       alarms: [],
       pagination: {
-        page: 1,
-        limit: 20,
         totalAlarms: 0,
+        currentPage: 1,
+        pageSize: 12,
         totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
       },
+      globalCounts: {
+        total: 0,
+        pending: 0,
+        confirmed: 0,
+        rejected: 0,
+      }
     };
+  }
+}
+
+/**
+ * Función para obtener solo las alarmas pendientes para el modo de análisis.
+ * Esta función es temporalmente independiente de `getAlarms` para mantener la lógica existente de análisis.
+ * Considerar consolidar si la lógica de análisis se integra más con la paginación general.
+ * @param page - Número de página.
+ * @param pageSize - Tamaño de la página.
+ * @returns Un objeto con alarmas pendientes, total y si hay más páginas.
+ */
+export async function getPendingAlarmsForAnalysis(page: number = 1, pageSize: number = 10): Promise<{ alarms: Alarm[]; total: number; hasNextPage: boolean }> {
+  try {
+    const response = await fetch(`${API_URL}/alarmas?page=${page}&pageSize=${pageSize}&status=pending`);
+    if (!response.ok) {
+      throw new Error(`Error al obtener alarmas pendientes para análisis: ${response.status}`);
+    }
+    const data: GetAlarmsResponse = await response.json(); // Esperamos la misma estructura GetAlarmsResponse
+    return {
+      alarms: data.alarms,
+      total: data.globalCounts.pending, // Usamos el conteo global de pendientes
+      hasNextPage: data.pagination.hasNextPage, // Usamos la paginación para saber si hay más
+    };
+  } catch (error) {
+    console.error("Hubo un problema con la operación de fetch en getPendingAlarmsForAnalysis:", error);
+    return { alarms: [], total: 0, hasNextPage: false };
   }
 }
 
@@ -86,34 +95,9 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     });
 
     if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(errorBody.message || 'Error al actualizar la alarma');
+        // Mejorar el manejo de errores para mostrar mensajes más específicos.
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar la alarma');
     }
     return await response.json();
-}
-
-/**
- * Obtiene un lote (página) de alarmas pendientes para el MODO ANÁLISIS.
- * Esta función se mantiene sin cambios para el flujo de análisis rápido.
- * @param page - El número de página a solicitar.
- * @param limit - La cantidad de alarmas por página (lote).
- * @returns Un objeto con las alarmas y la información de paginación para el modo análisis.
- */
-export async function getPendingAlarmsForAnalysis(page: number = 1, limit: number = 10) {
-  try {
-    const response = await fetch(`${API_URL}/alarmas/pending?page=${page}&limit=${limit}`);
-    if (!response.ok) {
-      throw new Error(`Error al obtener las alarmas pendientes: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Hubo un problema con la operación de fetch para alarmas pendientes:", error);
-    return {
-      alarms: [],
-      total: 0,
-      page: 1,
-      limit: 10,
-      hasNextPage: false,
-    };
-  }
 }
