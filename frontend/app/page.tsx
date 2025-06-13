@@ -1,11 +1,15 @@
-import { PageLayout } from "@/components/layout/page-layout";
-import { AlarmsPage } from "@/components/alarms/alarm-page"; // Cambiamos el nombre para más claridad
+import { AlarmTabs } from '@/components/alarms/alarm-tabs'
+import { PageLayout } from '@/components/layout/page-layout'
+import AlarmsPage from '@/components/alarms/alarm-page'
+import DashboardPage from './dashboard/page'
 
 export default function Home() {
   return (
-    // PageLayout ya no necesita pasar 'title' y 'description' si queremos que el contenido lo maneje
     <PageLayout>
-      <AlarmsPage />
+      <AlarmTabs
+        listTabContent={<AlarmsPage />}
+        dashboardTabContent={<DashboardPage />}
+      />
     </PageLayout>
-  );
+  )
 }

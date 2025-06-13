@@ -3,10 +3,27 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// --- INICIO DE LA SOLUCIÓN ---
+
+// 1. Creamos una función de ayuda para validar y limpiar el estado.
+const getAlarmStatus = (dbStatus: string | null | undefined): 'pending' | 'confirmed' | 'rejected' => {
+  // Quitamos espacios en blanco y convertimos a minúsculas para una comparación segura.
+  const trimmedStatus = dbStatus?.trim().toLowerCase();
+
+  // Comprobamos si el estado es uno de los valores finales válidos.
+  if (trimmedStatus === 'confirmed' || trimmedStatus === 'rejected') {
+    return trimmedStatus;
+  }
+  
+  // Si no es 'confirmed' o 'rejected', SIEMPRE será 'pending'.
+  return 'pending';
+};
+
 const transformAlarmData = (alarm: any) => {
   return {
     id: alarm.guid,
-    status: alarm.estado || 'pending',
+    // 2. Usamos nuestra nueva función robusta en lugar de la lógica simple.
+    status: getAlarmStatus(alarm.estado),
     type: alarm.typeAlarm ? alarm.typeAlarm.alarm : 'Tipo Desconocido',
     timestamp: alarm.alarmTime,
     location: {
@@ -37,6 +54,9 @@ const transformAlarmData = (alarm: any) => {
   };
 };
 
+// --- FIN DE LA SOLUCIÓN ---
+
+
 export const getAllAlarms = async (req: Request, res: Response) => {
   try {
     const alarmsFromDb = await prisma.alarmasHistorico.findMany({
@@ -46,6 +66,7 @@ export const getAllAlarms = async (req: Request, res: Response) => {
         typeAlarm: true, 
       },
     });
+    // Ahora esta transformación es segura y siempre producirá datos limpios.
     const transformedAlarms = alarmsFromDb.map(transformAlarmData);
     res.status(200).json(transformedAlarms);
   } catch (error) {
@@ -59,9 +80,7 @@ export const getAlarmById = async (req: Request, res: Response) => {
     try {
         const alarmFromDb = await prisma.alarmasHistorico.findUnique({
             where: { guid: id },
-            include: {
-                typeAlarm: true,
-            },
+            include: { typeAlarm: true },
         });
         if (!alarmFromDb) {
             return res.status(404).json({ message: 'Alarma no encontrada.' });
@@ -74,7 +93,6 @@ export const getAlarmById = async (req: Request, res: Response) => {
     }
 };
 
-// --- FUNCIÓN CORREGIDA CON "EXPORT" ---
 export const reviewAlarm = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -87,7 +105,7 @@ export const reviewAlarm = async (req: Request, res: Response) => {
     const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
       where: { guid: id },
       data: { estado: status },
-      include: { typeAlarm: true } // Incluimos para devolver el objeto completo
+      include: { typeAlarm: true }
     });
     
     const transformedAlarm = transformAlarmData(updatedAlarmFromDb);

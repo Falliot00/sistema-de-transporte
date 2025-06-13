@@ -2,51 +2,51 @@
 
 import { Alarm } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { CarFront, Clock, User, AlertCircle } from "lucide-react";
+import { cn, getAlarmStatusInfo, getColorVariantForType, ALARM_STATUS_BORDER_COLORS } from "@/lib/utils";
+import { CarFront, Clock, User } from "lucide-react";
 
 interface AlarmCardProps {
   alarm: Alarm;
-  isSelected: boolean;
-  onSelect: () => void;
+  onClick: () => void;
 }
 
-// YA NO NECESITAMOS la función getAlarmTypeDescription aquí.
+export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
+  // Con utils.ts corregido, esta función ahora devuelve un objeto válido.
+  const statusInfo = getAlarmStatusInfo(alarm.status);
+  const typeColorVariant = getColorVariantForType(alarm.type);
+  const statusBorderClass = ALARM_STATUS_BORDER_COLORS[alarm.status];
 
-export function AlarmCard({ alarm, isSelected, onSelect }: AlarmCardProps) {
   return (
     <div
-      onClick={onSelect}
+      onClick={onClick}
       className={cn(
-        "p-4 rounded-lg border cursor-pointer transition-all duration-200",
-        "bg-card text-card-foreground hover:bg-muted/50",
-        isSelected ? "border-primary ring-2 ring-primary/50" : "border-border"
+        "bg-card text-card-foreground rounded-lg border border-l-4 p-4 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1",
+        statusBorderClass
       )}
     >
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-bold text-md flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-primary" />
-            {/* Mostramos directamente el string que viene de la API */}
-            {alarm.type || "Alarma Desconocida"}
-        </h3>
-        <Badge variant={alarm.status === 'rejected' ? 'destructive' : alarm.status === 'confirmed' ? 'default' : 'secondary'} className="capitalize">
-          {alarm.status}
-        </Badge>
+      <div className="flex justify-between items-center mb-3">
+        <Badge variant={typeColorVariant} className="font-semibold">{alarm.type}</Badge>
+        <span className="text-xs text-muted-foreground">
+            {new Date(alarm.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
       </div>
-      <div className="text-sm text-muted-foreground space-y-2">
-        {/* ... el resto del componente no cambia ... */}
-        <div className="flex items-center gap-2">
-          <CarFront className="h-4 w-4 flex-shrink-0" />
-          <span>{alarm.vehicle.licensePlate}</span>
+      
+      <div className="space-y-1.5 text-sm mb-4">
+        <div className="flex items-center gap-2 font-medium">
+          <User className="h-4 w-4 text-primary" /> <span>{alarm.driver.name}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 flex-shrink-0" />
-          <span>{alarm.driver.name}</span>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CarFront className="h-4 w-4" /> <span>{alarm.vehicle.licensePlate}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 flex-shrink-0" />
-          <span>{new Date(alarm.timestamp!).toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>
-        </div>
+      </div>
+       
+      <div className="flex justify-between items-center text-xs border-t pt-2 mt-2">
+          <span className="text-muted-foreground flex items-center gap-1">
+             <Clock className="h-3 w-3" />
+             {new Date(alarm.timestamp).toLocaleDateString('es-AR')}
+          </span>
+          {/* Al no ser 'undefined', esta línea ya no causará el error */}
+          <Badge variant={statusInfo.variant} className="capitalize">{statusInfo.label}</Badge>
       </div>
     </div>
   );

@@ -1,74 +1,87 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import { AlarmStatus, AlarmType } from '@/types';
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+import { Alarm } from "@/types"
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('es-AR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric'
-  }).format(date);
+// 1. Definimos las claves de estado para seguridad y consistencia.
+export const ALARM_STATUS_KEYS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  REJECTED: 'rejected',
+} as const;
+
+// 2. Mapeo para etiquetas en español (singular).
+export const ALARM_STATUS_ES: { [key in Alarm['status']]: string } = {
+  [ALARM_STATUS_KEYS.PENDING]: 'Pendiente',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'Sospechosa',
+  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazado',
 };
 
-export const getStatusColor = (status: AlarmStatus): string => {
-  const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    confirmed: 'bg-green-100 text-green-800 border-green-200',
-    rejected: 'bg-red-100 text-red-800 border-red-200'
-  };
-  
-  return statusColors[status] || '';
+// 3. Mapeo para etiquetas en español (plural).
+export const ALARM_STATUS_ES_PLURAL: { [key in Alarm['status']]: string } = {
+  [ALARM_STATUS_KEYS.PENDING]: 'Pendientes',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'Sospechosas',
+  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazados',
 };
 
-export const getStatusText = (status: AlarmStatus): string => {
-  const statusText = {
-    pending: 'Pendiente',
-    confirmed: 'Confirmada',
-    rejected: 'Descartada'
-  };
-  
-  return statusText[status] || '';
+// 4. Mapeo para las variantes de color de los Badges de estado.
+export const ALARM_STATUS_VARIANT: { [key in Alarm['status']]: "warning" | "success" | "destructive" } = {
+  [ALARM_STATUS_KEYS.PENDING]: 'warning',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'success',
+  [ALARM_STATUS_KEYS.REJECTED]: 'destructive',
 };
 
-export const getTypeColor = (type: AlarmType): string => {
-  const typeColors = {
-    phone: 'bg-blue-100 text-blue-800 border-blue-200',
-    seatbelt: 'bg-purple-100 text-purple-800 border-purple-200',
-    speed: 'bg-orange-100 text-orange-800 border-orange-200',
-    fatigue: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    distraction: 'bg-pink-100 text-pink-800 border-pink-200'
-  };
-  
-  return typeColors[type] || '';
+// 5. Mapeo para los colores de borde de las tarjetas.
+export const ALARM_STATUS_BORDER_COLORS: { [key in Alarm['status']]: string } = {
+  [ALARM_STATUS_KEYS.PENDING]: 'border-l-yellow-400',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'border-l-green-500',
+  [ALARM_STATUS_KEYS.REJECTED]: 'border-l-red-500',
 };
 
-export const getTypeText = (type: AlarmType): string => {
-  const typeText = {
-    phone: 'Celular',
-    seatbelt: 'Cinturón',
-    speed: 'Velocidad',
-    fatigue: 'Fatiga',
-    distraction: 'Distracción'
+// 6. Función de ayuda principal - CORREGIDA para que SIEMPRE devuelva un objeto.
+export function getAlarmStatusInfo(status: Alarm['status']) {
+  return {
+    label: ALARM_STATUS_ES[status] || 'Desconocido',
+    variant: ALARM_STATUS_VARIANT[status] || 'warning', // Valor por defecto seguro
   };
-  
-  return typeText[type] || '';
+}
+
+// 7. Lógica para asignar colores a los tipos de alarma.
+export type AlarmTypeVariant = 
+  | 'sky' | 'emerald' | 'amber' 
+  | 'purple' | 'tealDark' | 'rose'
+  | 'brown' | 'deepBlue' | 'deepViolet' | 'darkRed' | 'orangeBlack' | 'muted';
+
+
+const FALLBACK_TYPE_VARIANTS: AlarmTypeVariant[] = [
+  'sky', 'emerald', 'amber', 'purple', 'tealDark', 'rose'
+];
+
+// Mapeo de colores específicos con los NOMBRES CORRECTOS de la base de datos.
+const SPECIFIC_TYPE_COLORS: { [key: string]: AlarmTypeVariant } = {
+  'Sin cinturón': 'deepBlue',
+  'Detección de fatiga': 'deepViolet',
+  'Distracción del conductor': 'brown',
+  'Comportamiento anormal': 'orangeBlack',
+  'Cabeza baja': 'rose',
+  // Puedes añadir más tipos de alarma aquí con su color asignado
 };
 
-export const getTypeIcon = (type: AlarmType): string => {
-  const typeIcons = {
-    phone: 'smartphone',
-    seatbelt: 'alert-triangle',
-    speed: 'car',
-    fatigue: 'bell-ring',
-    distraction: 'bell'
-  };
-  
-  return typeIcons[type] || 'bell';
-};
+export function getColorVariantForType(type: string): AlarmTypeVariant {
+  if (type in SPECIFIC_TYPE_COLORS) {
+    return SPECIFIC_TYPE_COLORS[type];
+  }
+
+  if (!type) return 'sky';
+  let hash = 0;
+  for (let i = 0; i < type.length; i++) {
+    hash = type.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % FALLBACK_TYPE_VARIANTS.length;
+  return FALLBACK_TYPE_VARIANTS[index];
+}
+

@@ -1,92 +1,79 @@
-// frontend/components/alarms/alarm-details.tsx
-
 "use client";
 
 import { Alarm } from "@/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlarmMedia } from "./alarm-media";
-import { AlarmReview } from "./alarm-review"; // Suponiendo que este componente existe y funciona
-import { Clock, MapPin, User, CarFront, Smartphone, AlertTriangle } from "lucide-react";
+import { Clock, MapPin, User, CarFront, Smartphone, AlertCircle } from "lucide-react";
+import { getAlarmStatusInfo } from "@/lib/utils";
 
-// Helper para formatear la fecha
+// Componente auxiliar para mostrar información
+function InfoItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: React.ReactNode }) {
+    return (
+        <div className="flex items-start gap-3">
+            <div className="text-muted-foreground mt-0.5">{icon}</div>
+            <div>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="font-medium text-sm">{value || "No disponible"}</p>
+            </div>
+        </div>
+    );
+}
+
+// Función para formatear la fecha
 function formatTimestamp(dateString?: string): string {
-    if (!dateString) return "Fecha no disponible";
+    if (!dateString) return "No disponible";
     return new Date(dateString).toLocaleString('es-AR', {
-        dateStyle: 'full',
+        dateStyle: 'long',
         timeStyle: 'medium',
     });
 }
 
-// Helper para el color del badge de estado
-function getStatusBadgeVariant(status?: string): "default" | "secondary" | "destructive" {
-  switch (status) {
-    case "confirmed": return "default";
-    case "rejected": return "destructive";
-    case "pending":
-    default:
-      return "secondary";
-  }
-}
-
+// --- INICIO DE LA SOLUCIÓN ---
+// Quitamos las props 'onReview' y 'isSubmitting' que ya no son necesarias aquí.
 interface AlarmDetailsProps {
-  alarm: Alarm | null;
-  onAlarmUpdate: (updatedAlarm: Alarm) => void;
+  alarm: Alarm;
 }
 
-export function AlarmDetails({ alarm, onAlarmUpdate }: AlarmDetailsProps) {
-  // Muestra un estado vacío si no hay alarma seleccionada
+export function AlarmDetails({ alarm }: AlarmDetailsProps) {
+// --- FIN DE LA SOLUCIÓN ---
   if (!alarm) {
-    return (
-      <Card className="h-full flex items-center justify-center bg-muted/50">
-        <div className="text-center p-6">
-          <AlertTriangle className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium">No hay alarma seleccionada</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Haz clic en una alarma de la lista para ver sus detalles.
-          </p>
-        </div>
-      </Card>
-    );
+    return <div className="text-center p-6 text-muted-foreground">No hay datos de alarma para mostrar.</div>;
   }
 
-  // Renderiza la tarjeta de detalles completa
+  const statusInfo = getAlarmStatusInfo(alarm.status);
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <div className="flex flex-col gap-6">
         <div className="flex justify-between items-start gap-4">
             <div>
-                <CardTitle className="text-xl mb-1">{alarm.type}</CardTitle>
-                <CardDescription>Vehículo: {alarm.vehicle.licensePlate}</CardDescription>
+                <CardTitle className="text-xl mb-1 flex items-center gap-2">
+                   <AlertCircle className="h-6 w-6 text-primary" /> {alarm.type}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Vehículo: {alarm.vehicle.licensePlate}</p>
             </div>
-            <Badge variant={getStatusBadgeVariant(alarm.status)} className="capitalize text-sm px-3 py-1">
-                {alarm.status}
-            </Badge>
+            <Badge variant={statusInfo.variant} className="capitalize text-sm px-3 py-1">{statusInfo.label}</Badge>
         </div>
-      </CardHeader>
 
-      <CardContent className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
-        <div className="flex flex-col gap-4">
-            <h4 className="font-semibold">Evidencia Multimedia</h4>
-            <AlarmMedia media={alarm.media} />
+        <div>
+            <h4 className="font-semibold mb-2 text-lg">Evidencia Multimedia</h4>
+            <div className="rounded-lg overflow-hidden border bg-muted/20"><AlarmMedia media={alarm.media} /></div>
         </div>
-        <div className="flex flex-col gap-4">
-            <h4 className="font-semibold">Detalles del Evento</h4>
-            <div className="space-y-4 text-sm">
-                <div className="flex items-center gap-3"><Clock className="h-5 w-5 text-muted-foreground" /><span>{formatTimestamp(alarm.timestamp)}</span></div>
-                <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-muted-foreground mt-1" /><span>{alarm.location.address}</span></div>
-                <div className="flex items-center gap-3"><User className="h-5 w-5 text-muted-foreground" /><span>Chofer: {alarm.driver.name}</span></div>
-                <div className="flex items-center gap-3"><CarFront className="h-5 w-5 text-muted-foreground" /><span>Vehículo: {alarm.vehicle.model}</span></div>
-                <div className="flex items-center gap-3"><Smartphone className="h-5 w-5 text-muted-foreground" /><span>Dispositivo: {alarm.device.name}</span></div>
-            </div>
-        </div>
-      </CardContent>
 
-      <CardFooter className="bg-muted/20 p-4 border-t">
-        <div className="w-full flex justify-end">
-            <AlarmReview alarm={alarm} onAlarmReviewed={onAlarmUpdate} />
-        </div>
-      </CardFooter>
-    </Card>
+        <Card>
+            <CardHeader><CardTitle className="text-lg">Información del Evento</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <InfoItem icon={<Clock className="h-4 w-4" />} label="Fecha y Hora" value={formatTimestamp(alarm.timestamp)} />
+                <InfoItem icon={<MapPin className="h-4 w-4" />} label="Ubicación" value={alarm.location.address} />
+                <InfoItem icon={<User className="h-4 w-4" />} label="Chofer" value={alarm.driver.name} />
+                <InfoItem icon={<CarFront className="h-4 w-4" />} label="Modelo del Vehículo" value={alarm.vehicle.model} />
+                <InfoItem icon={<Smartphone className="h-4 w-4" />} label="Dispositivo" value={alarm.device.name} />
+            </CardContent>
+        </Card>
+
+        {/* --- INICIO DE LA SOLUCIÓN --- */}
+        {/* La sección de revisión se ha movido al componente padre (AlarmsPage) */}
+        {/* --- FIN DE LA SOLUCIÓN --- */}
+    </div>
   );
 }

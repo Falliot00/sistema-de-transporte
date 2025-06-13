@@ -1,22 +1,15 @@
-// frontend/components/alarms/filter-panel.tsx
-
-"use client";
-
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ListFilter } from "lucide-react";
+import { ALARM_STATUS_ES_PLURAL } from "@/lib/utils";
 
-interface FilterPanelProps {
+type FilterPanelProps = {
   statusFilter: string;
   onStatusChange: (status: string) => void;
-}
+};
 
 export function FilterPanel({ statusFilter, onStatusChange }: FilterPanelProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4 p-4 bg-card border rounded-lg">
-      <div className="flex items-center gap-2">
-        <ListFilter className="h-5 w-5" />
-        <h3 className="font-semibold text-md">Filtrar por Estado</h3>
-      </div>
+    <div className="flex items-center justify-between p-4 bg-card border-b">
+      <h2 className="text-lg font-semibold">Filtros</h2>
       <ToggleGroup
         type="single"
         variant="outline"
@@ -24,12 +17,12 @@ export function FilterPanel({ statusFilter, onStatusChange }: FilterPanelProps) 
         onValueChange={(value) => {
           if (value) onStatusChange(value);
         }}
-        aria-label="Filtrar por estado de alarma"
+        aria-label="Filtrar alarmas por estado"
       >
         <ToggleGroupItem value="all" aria-label="Mostrar todos">Todos</ToggleGroupItem>
-        <ToggleGroupItem value="pending" aria-label="Mostrar pendientes">Pendientes</ToggleGroupItem>
-        <ToggleGroupItem value="confirmed" aria-label="Mostrar confirmados">Confirmados</ToggleGroupItem>
-        <ToggleGroupItem value="rejected" aria-label="Mostrar rechazados">Rechazados</ToggleGroupItem>
+        <ToggleGroupItem value="pending" aria-label="Mostrar pendientes">{ALARM_STATUS_ES_PLURAL.pending}</ToggleGroupItem>
+        <ToggleGroupItem value="confirmed" aria-label="Mostrar sospechosas">{ALARM_STATUS_ES_PLURAL.confirmed}</ToggleGroupItem>
+        <ToggleGroupItem value="rejected" aria-label="Mostrar rechazados">{ALARM_STATUS_ES_PLURAL.rejected}</ToggleGroupItem>
       </ToggleGroup>
     </div>
   );

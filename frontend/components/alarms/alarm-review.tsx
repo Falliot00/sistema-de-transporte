@@ -1,80 +1,42 @@
-// frontend/components/alarms/alarm-review.tsx
-
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { reviewAlarm } from "@/lib/api"; // Usamos la función de la API que creamos
-import { Alarm } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AlarmReviewProps {
-  alarm: Alarm;
-  onAlarmReviewed: (updatedAlarm: Alarm) => void; // Callback para actualizar la UI
+  onReview: (status: 'confirmed' | 'rejected') => void;
+  isSubmitting: boolean;
 }
 
-export function AlarmReview({ alarm, onAlarmReviewed }: AlarmReviewProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [comment, setComment] = useState("");
-  const { toast } = useToast();
-
-  const handleSubmit = async (status: 'confirmed' | 'rejected') => {
-    try {
-      const updatedAlarm = await reviewAlarm(alarm.id, status);
-      toast({
-        title: "Alarma Actualizada",
-        description: `La alarma ha sido marcada como ${status}.`,
-      });
-      onAlarmReviewed(updatedAlarm); // Notifica al componente padre del cambio
-      setIsOpen(false); // Cierra el diálogo
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la alarma.",
-        variant: "destructive",
-      });
-    }
-  };
-
+export function AlarmReview({ onReview, isSubmitting }: AlarmReviewProps) {
   return (
-    // El componente <Dialog> envuelve todo
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="default" size="sm">Revisar Alarma</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Revisar Alarma: {alarm.vehicle.licensePlate}</DialogTitle>
-          <DialogDescription>
-            Añada un comentario y luego confirme o rechace la alarma.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <Textarea
-            placeholder="Escribe tu comentario aquí..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
+    // --- INICIO DE LA SOLUCIÓN ---
+    // Quitamos la tarjeta (Card) para que el componente sea más flexible
+    // y aplicamos un layout de grilla para los botones.
+    <div>
+        <h4 className="font-semibold text-md mb-2">Acciones de Revisión</h4>
+        <p className="text-sm text-muted-foreground mb-4">
+            Confirma si esta alarma es una amenaza real o si debe ser rechazada.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button
+                onClick={() => onReview('rejected')}
+                variant="destructive"
+                className="w-full"
+                disabled={isSubmitting}
+            >
+                Rechazar
+            </Button>
+            <Button
+                onClick={() => onReview('confirmed')}
+                variant="success"
+                className="w-full"
+                disabled={isSubmitting}
+            >
+                Marcar como Sospechosa
+            </Button>
         </div>
-        <DialogFooter>
-          <Button variant="destructive" onClick={() => handleSubmit('rejected')}>
-            Rechazar
-          </Button>
-          <Button variant="default" onClick={() => handleSubmit('confirmed')}>
-            Confirmar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </div>
+    // --- FIN DE LA SOLUCIÓN ---
   );
 }

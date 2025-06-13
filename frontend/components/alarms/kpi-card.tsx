@@ -1,33 +1,28 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { KPI } from "@/types";
-import { getIconByName } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import React from "react";
 
 interface KPICardProps {
-  kpi: KPI;
-  className?: string;
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  description?: string;
 }
 
-export function KPICard({ kpi, className }: KPICardProps) {
-  const IconComponent = getIconByName(kpi.icon);
-
+export function KPICard({ title, value, icon, description }: KPICardProps) {
   return (
-    <Card className={cn("transition-all hover:shadow-md", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
-        <IconComponent className="h-4 w-4 text-muted-foreground" />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {/* --- INICIO DE LA SOLUCIÓN --- */}
+        <span className="text-primary">{icon}</span>
+        {/* --- FIN DE LA SOLUCIÓN --- */}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{kpi.value}</div>
-        {kpi.delta !== undefined && (
-          <p className={cn(
-            "mt-1 text-xs",
-            kpi.deltaType === 'increase' 
-              ? "text-green-600" 
-              : "text-red-600"
-          )}>
-            {kpi.deltaType === 'increase' ? '↑' : '↓'} {kpi.delta} desde ayer
-          </p>
+        <div className="text-2xl font-bold">{value}</div>
+        {description && (
+            <p className="text-xs text-muted-foreground">{description}</p>
         )}
       </CardContent>
     </Card>
