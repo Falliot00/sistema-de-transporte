@@ -1,13 +1,17 @@
-// ... (otras interfaces que puedas tener)
+// --- AÑADIR ESTA NUEVA INTERFAZ ---
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  totalAlarms: number;
+  totalPages: number;
+}
+
+// --- El resto de tus tipos existentes ---
 
 export interface Alarm {
   id: string;
   status: 'pending' | 'confirmed' | 'rejected';
-  
-  // --- CAMBIO CLAVE ---
-  // Antes quizás era 'number'. Ahora debe ser 'string'.
   type: string; 
-
   timestamp: string;
   location: {
     latitude: number;
@@ -40,7 +44,7 @@ export interface Media {
 }
 
 export interface Comment {
-  id: string;
+  id:string;
   author: string;
   timestamp: string;
   text: string;

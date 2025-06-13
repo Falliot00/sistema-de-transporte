@@ -1,18 +1,17 @@
+// backend/src/routes/alarmas.ts (SIN CAMBIOS)
 import { Router } from 'express';
-import { getAllAlarms, getAlarmById, reviewAlarm } from '../controllers/alarmaController';
+import { getAllAlarms, getAlarmById, reviewAlarm, getPendingAlarms } from '../controllers/alarmaController';
 
 const router = Router();
 
-// Endpoint para obtener todas las alarmas
-// GET /api/alarmas
+// Este endpoint ahora es mucho más potente.
 router.get('/', getAllAlarms);
 
-// Endpoint para obtener una alarma específica por su ID (guid)
-// GET /api/alarmas/some-guid-123
-router.get('/:id', getAlarmById);
+// Endpoint para el modo análisis (se mantiene)
+router.get('/pending', getPendingAlarms);
 
-// Endpoint para actualizar el estado de una alarma (confirmar/rechazar)
-// PUT /api/alarmas/some-guid-123/review
+// Endpoints de detalle y revisión (se mantienen)
+router.get('/:id', getAlarmById);
 router.put('/:id/review', reviewAlarm);
 
 export default router;
