@@ -21,7 +21,8 @@ export function MainNav({ className }: MainNavProps) {
       active: pathname === "/",
     },
     {
-      href: "/dashboard",
+      //href: "/dashboard",
+      href: "/",
       label: "Dashboard",
       icon: <LineChart className="h-5 w-5 mr-2" />, // Changed icon for Dashboard
       active: pathname === "/dashboard",

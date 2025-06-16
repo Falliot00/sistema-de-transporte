@@ -1,22 +1,26 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+// --- INICIO DE LA SOLUCIÓN ---
 interface AlarmReviewProps {
   onReview: (status: 'confirmed' | 'rejected') => void;
   isSubmitting: boolean;
+  confirmText?: string;
+  rejectText?: string;
 }
 
-export function AlarmReview({ onReview, isSubmitting }: AlarmReviewProps) {
+export function AlarmReview({
+  onReview,
+  isSubmitting,
+  confirmText = "Marcar como Sospechosa",
+  rejectText = "Rechazar"
+}: AlarmReviewProps) {
   return (
-    // --- INICIO DE LA SOLUCIÓN ---
-    // Quitamos la tarjeta (Card) para que el componente sea más flexible
-    // y aplicamos un layout de grilla para los botones.
     <div>
         <h4 className="font-semibold text-md mb-2">Acciones de Revisión</h4>
         <p className="text-sm text-muted-foreground mb-4">
-            Confirma si esta alarma es una amenaza real o si debe ser rechazada.
+            Evalúa la alarma y selecciona una acción. Esta decisión puede ser reevaluada más tarde si es necesario.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button
@@ -25,7 +29,7 @@ export function AlarmReview({ onReview, isSubmitting }: AlarmReviewProps) {
                 className="w-full"
                 disabled={isSubmitting}
             >
-                Rechazar
+                {rejectText}
             </Button>
             <Button
                 onClick={() => onReview('confirmed')}
@@ -33,10 +37,10 @@ export function AlarmReview({ onReview, isSubmitting }: AlarmReviewProps) {
                 className="w-full"
                 disabled={isSubmitting}
             >
-                Marcar como Sospechosa
+                {confirmText}
             </Button>
         </div>
     </div>
-    // --- FIN DE LA SOLUCIÓN ---
   );
 }
+// --- FIN DE LA SOLUCIÓN ---

@@ -1,23 +1,25 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import React from "react";
 
+// --- INICIO DE LA SOLUCIÓN ---
 interface KPICardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
   description?: string;
+  iconClassName?: string; // Prop opcional para estilizar el ícono
 }
 
-export function KPICard({ title, value, icon, description }: KPICardProps) {
+export function KPICard({ title, value, icon, description, iconClassName }: KPICardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {/* --- INICIO DE LA SOLUCIÓN --- */}
-        <span className="text-primary">{icon}</span>
-        {/* --- FIN DE LA SOLUCIÓN --- */}
+        {/* La clase del ícono ahora es dinámica */}
+        <span className={cn("text-muted-foreground", iconClassName)}>{icon}</span>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
@@ -28,3 +30,4 @@ export function KPICard({ title, value, icon, description }: KPICardProps) {
     </Card>
   );
 }
+// --- FIN DE LA SOLUCIÓN ---

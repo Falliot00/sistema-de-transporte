@@ -20,23 +20,20 @@ const badgeVariants = cva(
           "border-transparent bg-green-600 text-primary-foreground hover:bg-green-600/80",
         warning:
           "border-transparent bg-yellow-500 text-secondary-foreground hover:bg-yellow-500/80",
-        
-        // Paleta de Fallback (colores más suaves)
+        // --- INICIO DE LA SOLUCIÓN ---
+        info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80",
+        // --- FIN DE LA SOLUCIÓN ---
         sky: "border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80 dark:bg-sky-900/50 dark:text-sky-200",
         emerald: "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100/80 dark:bg-emerald-900/50 dark:text-emerald-200",
         amber: "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100/80 dark:bg-amber-900/50 dark:text-amber-200",
-        
-        // --- INICIO DE LA SOLUCIÓN: Paleta de colores fuertes solicitada ---
-        brown: "border-transparent bg-amber-800 text-amber-50 hover:bg-amber-800/80 dark:bg-amber-900 dark:text-amber-200", // Para RGB(120, 66, 18)
-        deepBlue: "border-transparent bg-indigo-800 text-indigo-50 hover:bg-indigo-800/80 dark:bg-indigo-900 dark:text-indigo-100", // Para azul(rgb(55 48 163))
-        deepViolet: "border-transparent bg-fuchsia-800 text-fuchsia-50 hover:bg-fuchsia-800/80 dark:bg-fuchsia-900 dark:text-fuchsia-100", // Para violeta(rgb(134 25 143))
-        darkRed: "border-transparent bg-red-900 text-red-50 hover:bg-red-900/80 dark:bg-red-950 dark:text-red-100", // Para RGB(84, 7, 11)
+        brown: "border-transparent bg-amber-800 text-amber-50 hover:bg-amber-800/80 dark:bg-amber-900 dark:text-amber-200",
+        deepBlue: "border-transparent bg-indigo-800 text-indigo-50 hover:bg-indigo-800/80 dark:bg-indigo-900 dark:text-indigo-100",
+        deepViolet: "border-transparent bg-fuchsia-800 text-fuchsia-50 hover:bg-fuchsia-800/80 dark:bg-fuchsia-900 dark:text-fuchsia-100",
+        darkRed: "border-transparent bg-red-900 text-red-50 hover:bg-red-900/80 dark:bg-red-950 dark:text-red-100",
         orangeBlack: "border-transparent bg-[#6e551c] text-amber-50 hover:bg-[#6e551c]/80 dark:bg-[#4a3913] dark:text-amber-200",
-        // Otras variantes fuertes que ya teníamos
         purple: "border-transparent bg-purple-600 text-purple-50 hover:bg-purple-600/80 dark:bg-purple-800 dark:text-purple-100",
         tealDark: "border-transparent bg-teal-600 text-teal-50 hover:bg-teal-600/80 dark:bg-teal-800 dark:text-teal-100",
         rose: "border-transparent bg-rose-600 text-rose-50 hover:bg-rose-600/80 dark:bg-rose-800 dark:text-rose-100",
-        // --- FIN DE LA SOLUCIÓN ---
       },
     },
     defaultVariants: {

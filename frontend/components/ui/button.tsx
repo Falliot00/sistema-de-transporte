@@ -18,10 +18,16 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        // --- INICIO DE LA MODIFICACIÓN ---
         success:
           "bg-green-600 text-primary-foreground hover:bg-green-600/90",
-        // --- FIN DE LA MODIFICACIÓN ---
+        
+        // --- INICIO DE LA SOLUCIÓN ---
+        // Se modifica la variante 'warning' para tener un fondo claro y un borde de color.
+        warning:
+          "border border-yellow-500 bg-yellow-100 text-yellow-800 hover:bg-yellow-200/80 dark:bg-yellow-900/40 dark:border-yellow-600 dark:text-yellow-300 dark:hover:bg-yellow-900/60",
+        info:
+          "border border-blue-500 bg-cyan-100 text-blue-800 hover:bg-cyan-200/80 dark:bg-blue-900/30 dark:border-blue-500 dark:text-blue-300 dark:hover:bg-blue-900/50",
+        // --- FIN DE LA SOLUCIÓN ---
       },
       size: {
         default: "h-10 px-4 py-2",

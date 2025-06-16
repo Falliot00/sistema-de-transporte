@@ -1,3 +1,4 @@
+// frontend/lib/utils.ts
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Alarm } from "@/types"
@@ -6,48 +7,56 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// 1. Definimos las claves de estado para seguridad y consistencia.
+// --- INICIO DE LA SOLUCIÓN ---
 export const ALARM_STATUS_KEYS = {
   PENDING: 'pending',
+  SUSPICIOUS: 'suspicious',
   CONFIRMED: 'confirmed',
   REJECTED: 'rejected',
 } as const;
 
-// 2. Mapeo para etiquetas en español (singular).
-export const ALARM_STATUS_ES: { [key in Alarm['status']]: string } = {
+export const ALARM_STATUS_ES: { [key: string]: string } = {
   [ALARM_STATUS_KEYS.PENDING]: 'Pendiente',
-  [ALARM_STATUS_KEYS.CONFIRMED]: 'Sospechosa',
-  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazado',
+  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'Sospechosa',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'Confirmada',
+  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazada',
 };
 
-// 3. Mapeo para etiquetas en español (plural).
-export const ALARM_STATUS_ES_PLURAL: { [key in Alarm['status']]: string } = {
+export const ALARM_STATUS_ES_PLURAL: { [key: string]: string } = {
   [ALARM_STATUS_KEYS.PENDING]: 'Pendientes',
-  [ALARM_STATUS_KEYS.CONFIRMED]: 'Sospechosas',
-  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazados',
+  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'Sospechosas',
+  [ALARM_STATUS_KEYS.CONFIRMED]: 'Confirmadas',
+  [ALARM_STATUS_KEYS.REJECTED]: 'Rechazadas',
 };
 
-// 4. Mapeo para las variantes de color de los Badges de estado.
-export const ALARM_STATUS_VARIANT: { [key in Alarm['status']]: "warning" | "success" | "destructive" } = {
+// Se añade un nuevo color para 'suspicious'
+export const ALARM_STATUS_VARIANT: { [key: string]: "warning" | "info" | "success" | "destructive" } = {
   [ALARM_STATUS_KEYS.PENDING]: 'warning',
+  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'info',
   [ALARM_STATUS_KEYS.CONFIRMED]: 'success',
   [ALARM_STATUS_KEYS.REJECTED]: 'destructive',
 };
 
-// 5. Mapeo para los colores de borde de las tarjetas.
-export const ALARM_STATUS_BORDER_COLORS: { [key in Alarm['status']]: string } = {
+export const ALARM_STATUS_BORDER_COLORS: { [key: string]: string } = {
   [ALARM_STATUS_KEYS.PENDING]: 'border-l-yellow-400',
+  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'border-l-blue-500', // Color azul para sospechosas
   [ALARM_STATUS_KEYS.CONFIRMED]: 'border-l-green-500',
   [ALARM_STATUS_KEYS.REJECTED]: 'border-l-red-500',
 };
 
-// 6. Función de ayuda principal - CORREGIDA para que SIEMPRE devuelva un objeto.
+// La función ahora devuelve la info correcta para cada estado.
 export function getAlarmStatusInfo(status: Alarm['status']) {
   return {
     label: ALARM_STATUS_ES[status] || 'Desconocido',
-    variant: ALARM_STATUS_VARIANT[status] || 'warning', // Valor por defecto seguro
+    variant: ALARM_STATUS_VARIANT[status] || 'warning',
+    border: ALARM_STATUS_BORDER_COLORS[status] || 'border-l-gray-400'
   };
 }
+
+// Se añade un nuevo color a los badges en badge.tsx
+// (Este cambio se haría en `components/ui/badge.tsx` pero lo menciono aquí para completitud)
+// variants: { ... variant: { ..., info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80" } }
+// --- FIN DE LA SOLUCIÓN ---
 
 // 7. Lógica para asignar colores a los tipos de alarma.
 export type AlarmTypeVariant = 

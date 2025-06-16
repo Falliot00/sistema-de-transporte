@@ -7,7 +7,6 @@ import { AlarmMedia } from "./alarm-media";
 import { Clock, MapPin, User, CarFront, Smartphone, AlertCircle } from "lucide-react";
 import { getAlarmStatusInfo } from "@/lib/utils";
 
-// Componente auxiliar para mostrar información
 function InfoItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: React.ReactNode }) {
     return (
         <div className="flex items-start gap-3">
@@ -20,7 +19,6 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode, label: string
     );
 }
 
-// Función para formatear la fecha
 function formatTimestamp(dateString?: string): string {
     if (!dateString) return "No disponible";
     return new Date(dateString).toLocaleString('es-AR', {
@@ -29,18 +27,17 @@ function formatTimestamp(dateString?: string): string {
     });
 }
 
-// --- INICIO DE LA SOLUCIÓN ---
-// Quitamos las props 'onReview' y 'isSubmitting' que ya no son necesarias aquí.
 interface AlarmDetailsProps {
   alarm: Alarm;
 }
 
 export function AlarmDetails({ alarm }: AlarmDetailsProps) {
-// --- FIN DE LA SOLUCIÓN ---
   if (!alarm) {
     return <div className="text-center p-6 text-muted-foreground">No hay datos de alarma para mostrar.</div>;
   }
 
+  // --- INICIO DE LA SOLUCIÓN ---
+  // Ahora usamos la función getAlarmStatusInfo que ya es consciente de los nuevos estados.
   const statusInfo = getAlarmStatusInfo(alarm.status);
 
   return (
@@ -52,14 +49,18 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">Vehículo: {alarm.vehicle.licensePlate}</p>
             </div>
-            <Badge variant={statusInfo.variant} className="capitalize text-sm px-3 py-1">{statusInfo.label}</Badge>
+            {/* Se muestra la etiqueta y color correctos para "Sospechosa", "Confirmada", etc. */}
+            <Badge variant={statusInfo.variant as any} className="capitalize text-sm px-3 py-1">{statusInfo.label}</Badge>
         </div>
 
         <div>
             <h4 className="font-semibold mb-2 text-lg">Evidencia Multimedia</h4>
-            <div className="rounded-lg overflow-hidden border bg-muted/20"><AlarmMedia media={alarm.media} /></div>
+            {/* Pasamos el flag videoProcessing al componente de media */}
+            <div className="rounded-lg overflow-hidden border bg-muted/20">
+                <AlarmMedia media={alarm.media} videoProcessing={alarm.videoProcessing} />
+            </div>
         </div>
-
+        {/* El resto del componente no necesita cambios */}
         <Card>
             <CardHeader><CardTitle className="text-lg">Información del Evento</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -70,10 +71,7 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
                 <InfoItem icon={<Smartphone className="h-4 w-4" />} label="Dispositivo" value={alarm.device.name} />
             </CardContent>
         </Card>
-
-        {/* --- INICIO DE LA SOLUCIÓN --- */}
-        {/* La sección de revisión se ha movido al componente padre (AlarmsPage) */}
-        {/* --- FIN DE LA SOLUCIÓN --- */}
     </div>
   );
+  // --- FIN DE LA SOLUCIÓN ---
 }

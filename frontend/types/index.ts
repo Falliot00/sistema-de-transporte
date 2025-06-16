@@ -1,10 +1,14 @@
 // frontend/types/index.ts
 
+export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
+
 export interface Alarm {
     id: string;
-    status: 'pending' | 'confirmed' | 'rejected';
+    status: AlarmStatus;
+    rawStatus?: string;
     type: string;
     timestamp: string;
+    videoProcessing?: boolean; // --- INICIO DE LA SOLUCIÓN: Se añade el nuevo flag opcional ---
     location: {
         latitude: number;
         longitude: number;
@@ -32,6 +36,7 @@ export interface Alarm {
     }[];
     comments: string[];
 }
+// --- FIN DE LA SOLUCIÓN ---
 
 export interface PaginationInfo {
     totalAlarms: number;
@@ -45,6 +50,7 @@ export interface PaginationInfo {
 export interface GlobalAlarmCounts {
     total: number;
     pending: number;
+    suspicious: number;
     confirmed: number;
     rejected: number;
 }
@@ -55,11 +61,10 @@ export interface GetAlarmsResponse {
     globalCounts: GlobalAlarmCounts;
 }
 
-// Interfaz para los parámetros de la función getAlarms
 export interface GetAlarmsParams {
     page?: number;
     pageSize?: number;
     status?: string;
     search?: string;
-    type?: string[]; // <--- Asegúrate de que esta línea esté presente
+    type?: string[];
 }
