@@ -27,6 +27,10 @@ yarn-error.log*
 # local env files
 .env
 .env*.local
+/camaras/__pycache__
+
+# Entorno virtual de Python
+.venv/
 
 # vercel
 .vercel

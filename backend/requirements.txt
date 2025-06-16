@@ -1,0 +1,7 @@
+# requirements.txt
+requests
+pandas
+pyodbc
+tqdm
+boto3
+python-dotenv

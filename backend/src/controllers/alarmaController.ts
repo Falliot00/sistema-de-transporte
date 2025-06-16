@@ -1,43 +1,34 @@
 // backend/src/controllers/alarmaController.ts
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { exec } from 'child_process';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
-// --- INICIO DE LA SOLUCIÓN REFINADA PARA ESTADOS ---
-
-// Mapeo de los estados internos de la aplicación (frontend, lógica)
-// a TODOS los valores posibles que pueden aparecer en la columna 'estado' de la base de datos.
+// ... (las funciones getAlarmStatus y transformAlarmData permanecen iguales)
 const DB_QUERY_STATUS_MAP: Record<'pending' | 'confirmed' | 'rejected', string[]> = {
-  pending: ['Pendiente', 'Sospechosa'], // Mapea 'Pendiente' y 'Sospechosa' a nuestro 'pending' interno
-  confirmed: ['Confirmada', 'confirmed'], // Mapea 'Confirmada' y 'confirmed' a nuestro 'confirmed' interno
-  rejected: ['Rechazada', 'rejected'],   // Mapea 'Rechazada' y 'rejected' a nuestro 'rejected' interno
+  pending: ['Pendiente', 'Sospechosa'],
+  confirmed: ['Confirmada', 'confirmed'],
+  rejected: ['Rechazada', 'rejected'],
 };
 
-// Función para transformar el estado leído de la DB a nuestro formato interno normalizado (lowercase English).
-// Esta función ahora es más flexible para manejar todas las variantes conocidas.
 const getAlarmStatus = (dbStatus: string | null | undefined): 'pending' | 'confirmed' | 'rejected' => {
   const lowercasedStatus = dbStatus?.trim().toLowerCase();
-
-  if (!lowercasedStatus) return 'pending'; // Por defecto para null/undefined/vacío
-
-  // Verificamos si el estado se mapea a 'confirmed'
+  if (!lowercasedStatus) return 'pending';
   if (DB_QUERY_STATUS_MAP.confirmed.map(s => s.toLowerCase()).includes(lowercasedStatus)) {
     return 'confirmed';
   }
-  // Verificamos si el estado se mapea a 'rejected'
   if (DB_QUERY_STATUS_MAP.rejected.map(s => s.toLowerCase()).includes(lowercasedStatus)) {
     return 'rejected';
   }
-  // Si no es explícitamente confirmado o rechazado (en cualquiera de sus formas),
-  // se considera pendiente. Esto cubre 'Pendiente', 'Sospechosa' y cualquier otro valor no previsto.
   return 'pending';
 };
 
 const transformAlarmData = (alarm: any) => {
   return {
     id: alarm.guid,
-    status: getAlarmStatus(alarm.estado), // Aquí usamos la función para normalizar el estado al salir de la DB
+    status: getAlarmStatus(alarm.estado),
     type: alarm.typeAlarm ? alarm.typeAlarm.alarm : 'Tipo Desconocido',
     timestamp: alarm.alarmTime,
     location: {
@@ -68,11 +59,10 @@ const transformAlarmData = (alarm: any) => {
   };
 };
 
-// --- FIN DE LA SOLUCIÓN REFINADA PARA ESTADOS ---
 
-
+// ... (las funciones getAllAlarms y getAlarmById permanecen iguales)
 export const getAllAlarms = async (req: Request, res: Response) => {
-  // Parámetros de paginación y filtros
+  // ... (código sin cambios)
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 12;
   const statusFilter = req.query.status as string;
@@ -83,23 +73,20 @@ export const getAllAlarms = async (req: Request, res: Response) => {
 
   let whereClause: any = {};
 
-  // Filtro por estado
   if (statusFilter && statusFilter !== 'all') {
     whereClause.estado = {
         in: DB_QUERY_STATUS_MAP[statusFilter as keyof typeof DB_QUERY_STATUS_MAP]
     };
   }
 
-  // Filtro por búsqueda (chofer, patente, tipo de alarma) -- CORREGIDO: se eliminó 'mode: insensitive'
   if (search) {
     whereClause.OR = [
-      { patente: { contains: search } }, // <-- 'mode: insensitive' eliminado
-      { interno: { contains: search } }, // <-- 'mode: insensitive' eliminado
-      { typeAlarm: { alarm: { contains: search } } }, // <-- 'mode: insensitive' eliminado
+      { patente: { contains: search } },
+      { interno: { contains: search } },
+      { typeAlarm: { alarm: { contains: search } } },
     ];
   }
 
-  // Filtro por tipo de alarma (CORREGIDO previamente: se eliminó 'mode: insensitive' para el operador 'in')
   if (typeFilters && (Array.isArray(typeFilters) ? typeFilters.length > 0 : typeFilters.trim() !== '')) {
       const typesToFilter = Array.isArray(typeFilters) ? typeFilters : [typeFilters];
       whereClause.typeAlarm = {
@@ -110,7 +97,6 @@ export const getAllAlarms = async (req: Request, res: Response) => {
   }
 
   try {
-    // Obtener las alarmas para la página actual con los filtros aplicados
     const alarmsFromDb = await prisma.alarmasHistorico.findMany({
       skip: skip,
       take: pageSize,
@@ -123,12 +109,10 @@ export const getAllAlarms = async (req: Request, res: Response) => {
 
     const transformedAlarms = alarmsFromDb.map(transformAlarmData);
 
-    // Obtener el total de alarmas que coinciden con los filtros (sin paginación)
     const totalAlarmsFiltered = await prisma.alarmasHistorico.count({
-      where: whereClause, // Este total es el de la vista actual (filtrada)
+      where: whereClause,
     });
 
-    // Obtener los conteos globales de todos los estados, usando el mapeo a TODOS los valores de la DB
     const totalConfirmedGlobal = await prisma.alarmasHistorico.count({
       where: { estado: { in: DB_QUERY_STATUS_MAP.confirmed } },
     });
@@ -138,19 +122,18 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     const totalPendingGlobal = await prisma.alarmasHistorico.count({
       where: { estado: { in: DB_QUERY_STATUS_MAP.pending } },
     });
-    const totalAllAlarmsGlobal = await prisma.alarmasHistorico.count(); // Conteo total de todas las alarmas en la DB
+    const totalAllAlarmsGlobal = await prisma.alarmasHistorico.count();
 
     res.status(200).json({
       alarms: transformedAlarms,
       pagination: {
-        totalAlarms: totalAlarmsFiltered, // Este es el total para la paginación actual
+        totalAlarms: totalAlarmsFiltered,
         currentPage: page,
         pageSize: pageSize,
         totalPages: Math.ceil(totalAlarmsFiltered / pageSize),
         hasNextPage: (page * pageSize) < totalAlarmsFiltered,
         hasPrevPage: page > 1,
       },
-      // Campos para los conteos globales que se mostrarán en los KPI cards
       globalCounts: {
         total: totalAllAlarmsGlobal,
         pending: totalPendingGlobal,
@@ -163,7 +146,6 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 };
-
 export const getAlarmById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -182,28 +164,73 @@ export const getAlarmById = async (req: Request, res: Response) => {
     }
 };
 
+
 export const reviewAlarm = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status } = req.body; // status aquí viene como 'confirmed' o 'rejected' desde el frontend
+  const { status } = req.body;
 
   if (!status || !['confirmed', 'rejected'].includes(status)) {
     return res.status(400).json({ message: 'El estado proporcionado no es válido.' });
   }
 
   try {
-    const statusToSave = DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP][0]; 
+    const statusToSave = DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP][0];
 
     const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
       where: { guid: id },
       data: { estado: statusToSave },
       include: { typeAlarm: true }
     });
-    
+
+    if (status === 'confirmed') {
+      console.log(`[+] Estado 'confirmed' detectado para la alarma ${id}. Lanzando script de video...`);
+
+      const dispositivo = updatedAlarmFromDb.dispositivo;
+      const alarmTime = updatedAlarmFromDb.alarmTime;
+      const guid = updatedAlarmFromDb.guid;
+
+      if (dispositivo && alarmTime && guid) {
+        const venvDir = '.venv';
+        const scriptDir = 'camaras';
+        const scriptName = '_2video.py';
+
+        const pythonExecutable = process.platform === 'win32'
+          ? path.join(__dirname, '..', '..', venvDir, 'Scripts', 'python.exe')
+          : path.join(__dirname, '..', '..', venvDir, 'bin', 'python3');
+
+        const scriptPath = path.join(__dirname, '..', '..', scriptDir, scriptName);
+        
+        const formattedAlarmTime = alarmTime.toISOString();
+
+        const command = `"${pythonExecutable}" "${scriptPath}" "${dispositivo}" "${formattedAlarmTime}" "${guid}"`;
+        
+        console.log(`[+] Ejecutando comando: ${command}`);
+
+        // --- INICIO DE LA SOLUCIÓN ---
+        // Añadimos el objeto de opciones para forzar la codificación UTF-8
+        exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
+        // --- FIN DE LA SOLUCIÓN ---
+          if (error) {
+            console.error(`❌ Error al ejecutar el script de Python: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.error(`🐍 Error en script Python (stderr): ${stderr}`);
+            return;
+          }
+          console.log(`🐍 Salida del script Python (stdout):\n${stdout}`);
+        });
+
+      } else {
+        console.warn(`[!] Faltan datos para ejecutar el script de video para la alarma ${id}.`);
+      }
+    }
+
     const transformedAlarm = transformAlarmData(updatedAlarmFromDb);
     res.status(200).json(transformedAlarm);
   } catch (error: any) {
     if (error.code === 'P2025') {
-        return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
+      return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
     }
     console.error(`Error al actualizar la alarma ${id}:`, error);
     res.status(500).json({ message: 'Error interno del servidor.' });
