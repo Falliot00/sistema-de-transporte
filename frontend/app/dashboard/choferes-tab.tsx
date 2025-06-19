@@ -5,28 +5,30 @@ import { useState, useEffect } from 'react';
 import { Driver } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DriverRankingList } from "./driver-ranking-list";
-import { getMockDriverRanking } from "@/lib/mock-data";
+// REMOVIDO: import { getMockDriverRanking } from "@/lib/mock-data";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 
 export function ChoferesTab() {
+  // CAMBIO: Inicializa drivers como un array vacío
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState('efficiencyScore_desc'); // e.g. totalAlarms_asc
+  const [sortOrder, setSortOrder] = useState('efficiencyScore_desc');
 
   useEffect(() => {
-    const allDrivers = getMockDriverRanking(); // This already sorts by efficiencyScore
-    setDrivers(allDrivers);
+    // CAMBIO: No cargar datos mock aquí.
+    setDrivers([]); 
   }, []);
 
   const handleSort = (criteria: string) => {
     setSortOrder(criteria);
     const [key, order] = criteria.split('_') as [keyof Driver, 'asc' | 'desc'];
     
-    const sortedDrivers = [...drivers].sort((a, b) => {
-      const valA = a[key] as number || 0;
-      const valB = b[key] as number || 0;
+    // CAMBIO: Asegurarse de ordenar solo si hay datos.
+    const sortedDrivers = [...filteredDrivers].sort((a, b) => { // Ordenar sobre los ya filtrados para la UI
+      const valA = (a as any)[key] || 0; // Casteo a any para acceder a propiedades dinámicamente
+      const valB = (b as any)[key] || 0;
       if (order === 'asc') {
         return valA - valB;
       }

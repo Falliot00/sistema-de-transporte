@@ -3,19 +3,21 @@
 import { Alarm } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge"; // Importa Badge
+import { getColorVariantForType } from "@/lib/utils"; // Importa la función para el color del tipo
 
-// --- INICIO DE LA SOLUCIÓN ---
 interface AlarmAnalysisViewProps {
   alarm: Alarm;
   onAction: (action: 'confirmed' | 'rejected' | 'skip') => void;
   isSubmitting: boolean;
   current: number;
   total: number;
-  confirmText?: string; // Nueva prop para el texto del botón
+  confirmText?: string; 
 }
 
 export function AlarmAnalysisView({ alarm, onAction, isSubmitting, current, total, confirmText }: AlarmAnalysisViewProps) {
   const primaryMedia = alarm.media?.find(m => m.type === 'video') || alarm.media?.[0];
+  const typeColorVariant = getColorVariantForType(alarm.type); // Obtiene la variante de color para el tipo
 
   return (
     <div className="flex flex-col h-full w-full items-center p-4">
@@ -50,6 +52,13 @@ export function AlarmAnalysisView({ alarm, onAction, isSubmitting, current, tota
         )}
       </div>
 
+      {/* Tipo de alarma */}
+      <div className="mb-4"> {/* Añade margen inferior para separar de los botones */}
+        <Badge variant={typeColorVariant} className="text-lg px-4 py-2">
+          {alarm.type}
+        </Badge>
+      </div>
+
       <div className="grid grid-cols-3 gap-4 w-full max-w-lg flex-shrink-0">
         <Button
           variant="destructive"
@@ -76,11 +85,9 @@ export function AlarmAnalysisView({ alarm, onAction, isSubmitting, current, tota
           disabled={isSubmitting}
           className="h-14 text-lg"
         >
-          {/* El texto del botón ahora es dinámico */}
           {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : (confirmText || 'Confirmar')}
         </Button>
       </div>
     </div>
   );
 }
-// --- FIN DE LA SOLUCIÓN ---

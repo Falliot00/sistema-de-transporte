@@ -5,15 +5,16 @@ import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HourlyDistributionChart } from "./charts/hourly-distribution-chart";
 import { WeeklyTrendChart } from "./charts/weekly-trend-chart";
-import { getMockHourlyDistribution, getMockWeeklyTrend } from "@/lib/mock-data";
+// REMOVIDO: import { getMockHourlyDistribution, getMockWeeklyTrend } from "@/lib/mock-data";
 
 interface TendenciasTabProps {
   alarms: Alarm[]; // Placeholder, specific data fetching/processing might be needed
 }
 
 export function TendenciasTab({ alarms }: TendenciasTabProps) {
-  const hourlyData = getMockHourlyDistribution();
-  const weeklyData = getMockWeeklyTrend();
+  // CAMBIO: Datos vacíos para las gráficas.
+  const hourlyData = [];
+  const weeklyData = [];
 
   return (
     <div className="space-y-6 mt-4">

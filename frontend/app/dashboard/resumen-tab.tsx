@@ -5,18 +5,19 @@ import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlarmsByDayChart } from "./charts/alarms-by-day-chart";
 import { AlarmsByTypePieChart } from "./charts/alarms-by-type-pie-chart";
-import { AlarmStatusProgressCards } from "./alarm-status-progress-cards"; // Corrected path
-import { getMockAlarmsByDay, getMockAlarmsByType, getMockAlarmStatusProgress } from "@/lib/mock-data";
+import { AlarmStatusProgressCards } from "./alarm-status-progress-cards";
+// REMOVIDO: import { getMockAlarmsByDay, getMockAlarmsByType, getMockAlarmStatusProgress } from "@/lib/mock-data";
 
 interface ResumenTabProps {
-  alarms: Alarm[];
+  alarms: Alarm[]; // Todavía se pasa alarms, aunque vacío por ahora
 }
 
 export function ResumenTab({ alarms }: ResumenTabProps) {
-  // These mock data functions might eventually take 'alarms' or date range as parameters
-  const alarmsByDayData = getMockAlarmsByDay(); 
-  const alarmsByTypeData = getMockAlarmsByType();
-  const alarmStatusProgressData = getMockAlarmStatusProgress(alarms);
+  // CAMBIO: Datos vacíos para las gráficas.
+  // En un sistema real, estas funciones procesarían 'alarms' o harían sus propias fetches.
+  const alarmsByDayData = []; 
+  const alarmsByTypeData = [];
+  const alarmStatusProgressData = []; 
 
   return (
     <div className="space-y-6 mt-4">

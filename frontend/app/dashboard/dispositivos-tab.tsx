@@ -6,14 +6,21 @@ import { Device } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeviceStatusSummary } from "./device-status-summary";
 import { TopDevicesList } from "./top-devices-list";
-import { getMockDeviceStatusSummary, getMockTopDevices } from "@/lib/mock-data";
+// REMOVIDO: import { getMockDeviceStatusSummary, getMockTopDevices } from "@/lib/mock-data";
 
 export function DispositivosTab() {
-  const [statusSummary, setStatusSummary] = useState(getMockDeviceStatusSummary());
+  // CAMBIO: Inicializar con datos vacíos o 0
+  const [statusSummary, setStatusSummary] = useState({
+    active: 0,
+    maintenance: 0,
+    offline: 0,
+    total: 0,
+  });
   const [topDevices, setTopDevices] = useState<Device[]>([]);
 
   useEffect(() => {
-    setTopDevices(getMockTopDevices());
+    // CAMBIO: No cargar datos mock aquí.
+    setTopDevices([]);
   }, []);
 
   return (

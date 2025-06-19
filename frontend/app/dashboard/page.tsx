@@ -5,14 +5,14 @@ import dynamic from 'next/dynamic';
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { KPICard } from "@/components/alarms/kpi-card";
-import { mockDashboardKPIs, generateInitialMockAlarms, getAlarmCounts } from "@/lib/mock-data";
+// REMOVIDO: import { mockDashboardKPIs, generateInitialMockAlarms, getAlarmCounts } from "@/lib/mock-data";
 import { Alarm } from "@/types";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-// import { Button } from "@/components/ui/button"; // Button import can be removed if not directly used for "Actualizar"
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRange } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Bell, Percent, Activity, Server } from "lucide-react"; // Importar iconos directamente
 
 // Lazy load tab content
 const ResumenTab = dynamic(() => 
@@ -47,30 +47,60 @@ export default function DashboardPage() {
     from: new Date(new Date().setDate(new Date().getDate() - 29)),
     to: new Date(),
   });
-  const [alarms, setAlarms] = useState<Alarm[]>([]);
+  // CAMBIO: alarms se inicializa como un array vacío
+  const [alarms, setAlarms] = useState<Alarm[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("resumen");
 
   useEffect(() => {
+    // CAMBIO: No cargar datos mock aquí.
+    // En un sistema real, aquí iría la lógica para cargar datos reales de tu API
+    // basada en el dateRange seleccionado.
     setIsLoading(true);
-    const fetchedAlarms = generateInitialMockAlarms();
-    setAlarms(fetchedAlarms);
-    setTimeout(() => setIsLoading(false), 500); // Shorter delay for UI dev
+    // Simular carga de datos (vacíos por ahora)
+    setTimeout(() => {
+      setAlarms([]); // Asegurarse de que las alarmas estén vacías
+      setIsLoading(false);
+    }, 500); // Pequeño delay para simular una carga
   }, [dateRange]);
 
-  const dashboardKpis = mockDashboardKPIs.map(kpi => {
-    const newKpi = {...kpi}; // Clone kpi to avoid mutating the original mock
-    if (newKpi.id === "dashboard-confirmation-rate") {
-      const counts = getAlarmCounts(alarms);
-      if ((counts.confirmed + counts.rejected) > 0) {
-        newKpi.value = parseFloat(((counts.confirmed / (counts.confirmed + counts.rejected)) * 100).toFixed(1)) || 0;
-      } else {
-        newKpi.value = 0;
-      }
-    }
-    // Add other dynamic KPI calculations if needed
-    return newKpi;
-  });
+  // CAMBIO: Definición de KPIs que no dependen de mock-data.ts
+  const dashboardKpis = [
+    {
+      id: "dashboard-total-alarms",
+      title: "Total Alarmas (Mes)",
+      value: isLoading ? "..." : alarms.length, // Mostrar el total real de alarmas (0 por ahora)
+      icon: <Bell className="h-4 w-4" />,
+      delta: null, // No hay delta sin datos históricos
+      deltaType: 'neutral',
+    },
+    {
+      id: "dashboard-confirmation-rate",
+      title: "Tasa de Confirmación",
+      value: isLoading ? "..." : (alarms.length > 0 ? "0%" : "0%"), // Sin datos, 0%
+      icon: <Percent className="h-4 w-4" />,
+      delta: null,
+      deltaType: 'neutral',
+      suffix: '%', 
+    },
+    {
+      id: "dashboard-response-time",
+      title: "Tiempo Resp. Prom.",
+      value: isLoading ? "..." : "-", // O "N/A"
+      icon: <Activity className="h-4 w-4" />, 
+      delta: null,
+      deltaType: 'neutral', 
+      suffix: ' min', 
+    },
+    {
+      id: "dashboard-active-devices",
+      title: "Dispositivos Activos",
+      value: isLoading ? "..." : "0", // Sin datos, 0 dispositivos
+      icon: <Server className="h-4 w-4" />, 
+      delta: null,
+      deltaType: 'neutral',
+    },
+  ];
 
   const handleDateRangeChange = (newRange?: DateRange) => {
     setDateRange(newRange);
@@ -117,8 +147,14 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {dashboardKpis.map((kpi) => (
-            // Ensure KPICard handles suffix if present in kpi object, or format value here
-            <KPICard key={kpi.id} kpi={{...kpi, value: `${kpi.value}${kpi.suffix || ''}`}} />
+            <KPICard 
+              key={kpi.id} 
+              title={kpi.title} 
+              value={kpi.value} 
+              icon={kpi.icon} 
+              // Si tienes description y otros campos en KPICard, pásalos también
+              // Asegúrate de que KPICard pueda manejar `null` o `undefined` para delta/deltaType si no se usan
+            />
           ))}
         </div>
 

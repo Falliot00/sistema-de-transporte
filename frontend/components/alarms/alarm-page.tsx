@@ -19,6 +19,7 @@ import { AdvancedFilters } from "./advanced-filters";
 import { KPICard } from "./kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "../ui/pagination-controls";
+import { alarmTypes } from "@/lib/mock-data"; // Importar la lista completa de alarmTypes
 
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -78,7 +79,8 @@ export default function AlarmsPage() {
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters]);
 
-    const uniqueAlarmTypes = useMemo(() => Array.from(new Set(alarms.map(a => a.type))), [alarms]);
+    // MODIFICADO: uniqueAlarmTypes ya no se usa, ahora se pasa la lista completa desde mock-data
+    // const uniqueAlarmTypes = useMemo(() => Array.from(new Set(alarms.map(a => a.type))), [alarms]);
 
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? globalAlarmCounts.pending : globalAlarmCounts.suspicious;
@@ -122,15 +124,27 @@ export default function AlarmsPage() {
         if (!currentAlarm) return;
         setIsSubmitting(true);
         try {
+            // CRITICAL SECURITY CHECK:
+            // Ensure that the status update logic correctly reflects your business rules.
+            // For 'pending' alarms, 'confirmed' action means marking as 'suspicious' in DB.
+            // For 'suspicious' alarms, 'confirmed' action means marking as 'confirmed' in DB.
             if (currentAlarm.status === 'pending') {
-                await reviewAlarm(currentAlarm.id, action);
+                // When reviewing a 'pending' alarm, the 'confirmed' action means it becomes 'suspicious'
+                await reviewAlarm(currentAlarm.id, action === 'confirmed' ? 'confirmed' : action); 
             } else if (currentAlarm.status === 'suspicious') {
+                // When reviewing a 'suspicious' alarm, 'confirmed' means final confirmation
                 if (action === 'confirmed') await confirmAlarm(currentAlarm.id);
                 else await reviewAlarm(currentAlarm.id, action);
             }
             toast({ title: "Alarma Actualizada" });
             if (analysisIndex >= analysisAlarms.length - 1) {
                 setAnalysisAlarms([]);
+                setAnalysisIndex(0); // Reset index after processing all in current batch
+                if (!hasNextPageAnalysis) {
+                    setIsAnalysisMode(false); // Close analysis mode if no more pages
+                } else {
+                    handleLoadNextBatch(); // Load next batch if available
+                }
             } else {
                 setAnalysisIndex(prev => prev + 1);
             }
@@ -138,6 +152,8 @@ export default function AlarmsPage() {
             toast({ title: "Error", description: err.message, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
+            // Refresh main alarm list counts immediately after an action
+            fetchAlarms();
         }
     };
     
@@ -145,6 +161,7 @@ export default function AlarmsPage() {
         if (!alarmForDetails) return;
         setIsSubmitting(true);
         try {
+            // When reviewing a 'pending' alarm from details, 'confirmed' means it becomes 'suspicious'
             await reviewAlarm(alarmForDetails.id, action);
             toast({ title: "Alarma Actualizada" });
             fetchAlarms();
@@ -171,17 +188,16 @@ export default function AlarmsPage() {
         }
     };
 
-    // --- INICIO DE LA SOLUCIÓN: Lógica para determinar el texto del botón ---
+    // Lógica para determinar el texto del botón "confirmar" en el modo de análisis
     const currentAnalysisAlarm = analysisAlarms[analysisIndex];
-    let confirmButtonText = "Confirmar"; // Texto por defecto
+    let confirmButtonText = "Confirmar"; 
     if (currentAnalysisAlarm) {
         if (currentAnalysisAlarm.status === 'pending') {
-            confirmButtonText = "Sospechosa";
+            confirmButtonText = "Marcar como Sospechosa";
         } else if (currentAnalysisAlarm.status === 'suspicious') {
             confirmButtonText = "Confirmar";
         }
     }
-    // --- FIN DE LA SOLUCIÓN ---
 
     return (
         <div className="space-y-6">
@@ -215,7 +231,8 @@ export default function AlarmsPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
-                    <AdvancedFilters availableTypes={uniqueAlarmTypes} selectedTypes={typeFilters} onSelectionChange={setTypeFilters} />
+                    {/* MODIFICADO: Pasar la lista completa de alarmTypes a AdvancedFilters */}
+                    <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onSelectionChange={setTypeFilters} />
                 </div>
                 <div>
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">

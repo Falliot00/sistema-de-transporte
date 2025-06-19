@@ -6,10 +6,7 @@ import DashboardPage from './dashboard/page'
 export default function Home() {
   return (
     <PageLayout>
-      <AlarmTabs
-        listTabContent={<AlarmsPage />}
-        /*dashboardTabContent={<DashboardPage />}*/
-      />
+      <AlarmsPage />
     </PageLayout>
   )
 }

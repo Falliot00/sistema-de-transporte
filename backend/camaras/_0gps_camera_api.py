@@ -914,6 +914,7 @@ class GPSCameraAPI:
 
             if response.status_code == 200 and response.content:
                 output_path = f'./temp/{archivo}.grec'
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 with open(output_path, 'wb') as f:
                     f.write(response.content)
                 return {'success': True,'archivo':archivo ,'path': output_path, 'size': len(response.content)}
