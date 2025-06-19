@@ -22,12 +22,18 @@ const getAlarmStatusForFrontend = (dbStatus: string | null | undefined): 'pendin
   return 'pending';
 };
 
+// REVERTIDO: Se elimina la lógica de formato de fecha manual. Se vuelve a pasar el objeto Date directamente.
+// JSON.stringify se encargará de convertirlo a un string ISO 8601 UTC estándar.
 const transformAlarmData = (alarm: any) => ({
     id: alarm.guid,
     status: getAlarmStatusForFrontend(alarm.estado),
     rawStatus: alarm.estado,
     type: alarm.typeAlarm ? alarm.typeAlarm.alarm : 'Tipo Desconocido',
-    timestamp: alarm.alarmTime,
+    timestamp: alarm.alarmTime, // Se pasa el objeto Date directamente
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Se añade el campo velocidad al objeto de la alarma.
+    speed: alarm.velocidad,
+    // --- FIN DE LA MODIFICACIÓN ---
     videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
     location: {
       latitude: parseFloat(alarm.lat) || 0,
@@ -35,7 +41,12 @@ const transformAlarmData = (alarm: any) => ({
       address: alarm.ubi || 'Dirección no disponible',
     },
     driver: { id: `chofer-${alarm.interno}`, name: `Chofer ${alarm.interno || 'Desconocido'}`, license: 'Licencia pendiente' },
-    vehicle: { id: `vehiculo-${alarm.patente}`, licensePlate: alarm.patente || 'Patente desconocida', model: 'Modelo pendiente' },
+    vehicle: { 
+      id: `vehiculo-${alarm.patente}`, 
+      licensePlate: alarm.patente || 'Patente desconocida', 
+      model: 'Modelo pendiente',
+      interno: alarm.interno || 'N/A', 
+    },
     device: { id: `disp-${alarm.dispositivo}`, name: `Dispositivo ${alarm.dispositivo || 'Desconocido'}`, serialNumber: alarm.dispositivo || 'N/A' },
     media: [
       ...(alarm.imagen ? [{ id: 'img1', type: 'image' as const, url: alarm.imagen }] : []),
@@ -54,15 +65,12 @@ export const getAllAlarms = async (req: Request, res: Response) => {
   const skip = (page - 1) * pageSize;
   let whereClause: any = {};
 
-  // --- INICIO DE LA SOLUCIÓN: Lógica de filtrado más limpia ---
-  // Ahora cada estado lógico del frontend corresponde a un único estado en la BD.
   if (statusFilter && statusFilter !== 'all') {
     const dbStates = DB_QUERY_STATUS_MAP[statusFilter as keyof typeof DB_QUERY_STATUS_MAP];
     if (dbStates) {
         whereClause.estado = { in: dbStates };
     }
   }
-  // --- FIN DE LA SOLUCIÓN ---
 
   if (search) {
     whereClause.OR = [
@@ -101,8 +109,6 @@ export const getAllAlarms = async (req: Request, res: Response) => {
   }
 };
 
-// El resto de las funciones (getAlarmById, reviewAlarm, confirmFinalAlarm) no necesitan cambios.
-// ... (resto del archivo)
 export const getAlarmById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {

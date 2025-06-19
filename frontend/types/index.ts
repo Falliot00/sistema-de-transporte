@@ -1,15 +1,15 @@
 // frontend/types/index.ts
-
+// ... (existing types remain the same)
 export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
 
-// NUEVA INTERFAZ EXPORTADA: MediaItem
 export interface MediaItem {
     id: string;
     type: 'image' | 'video';
     url: string;
-    thumbnailUrl?: string; // Si usas miniaturas para imágenes/videos
-    timestamp?: string; // Opcional, si cada media tiene su propio timestamp
+    thumbnailUrl?: string; 
+    timestamp?: string; 
 }
+
 
 export interface Alarm {
     id: string;
@@ -18,6 +18,10 @@ export interface Alarm {
     type: string;
     timestamp: string;
     videoProcessing?: boolean;
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Se añade el campo opcional speed
+    speed?: number;
+    // --- FIN DE LA MODIFICACIÓN ---
     location: {
         latitude: number;
         longitude: number;
@@ -32,15 +36,15 @@ export interface Alarm {
         id: string;
         licensePlate: string;
         model: string;
+        interno?: string;
     };
     device: {
         id: string;
         name: string;
         serialNumber: string;
     };
-    media: MediaItem[]; // <-- Ahora usa la interfaz MediaItem exportada
+    media: MediaItem[];
     comments: string[];
-    // Añadir propiedades opcionales para la revisión si aún no están:
     reviewer?: {
         id: string;
         name: string;
@@ -48,7 +52,7 @@ export interface Alarm {
     };
     reviewedAt?: string;
 }
-
+// ... (rest of the file remains the same)
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -80,22 +84,18 @@ export interface GetAlarmsParams {
     type?: string[];
 }
 
-// También es buena práctica definir un tipo para los KPI si se usan en mock-data.ts y en la UI
 export interface KPI {
     id: string;
     title: string;
     value: string | number;
-    icon: string; // Nombre del icono como string
+    icon: string; 
     delta?: number;
     deltaType?: 'increase' | 'decrease' | 'neutral';
     suffix?: string;
 }
 
-// Tipo de alarma (para los filtros en AdvancedFilters)
-// Basado en el uso en mock-data.ts
 export type AlarmType = 'Distracción del conductor' | 'Sin cinturón' | 'Cabeza baja' | 'Detección de fatiga' | 'Comportamiento anormal';
 
-// Interfaz para Driver (utilizado en Dashboard > ChoferesTab)
 export interface Driver {
     id: string;
     name: string;
@@ -106,7 +106,6 @@ export interface Driver {
     avatar?: string;
 }
 
-// Interfaz para Device (utilizado en Dashboard > DispositivosTab)
 export interface Device {
     id: string;
     name: string;

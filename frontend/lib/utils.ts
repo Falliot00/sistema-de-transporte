@@ -7,7 +7,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// --- INICIO DE LA SOLUCIÓN ---
 export const ALARM_STATUS_KEYS = {
   PENDING: 'pending',
   SUSPICIOUS: 'suspicious',
@@ -29,7 +28,6 @@ export const ALARM_STATUS_ES_PLURAL: { [key: string]: string } = {
   [ALARM_STATUS_KEYS.REJECTED]: 'Rechazadas',
 };
 
-// Se añade un nuevo color para 'suspicious'
 export const ALARM_STATUS_VARIANT: { [key: string]: "warning" | "info" | "success" | "destructive" } = {
   [ALARM_STATUS_KEYS.PENDING]: 'warning',
   [ALARM_STATUS_KEYS.SUSPICIOUS]: 'info',
@@ -39,12 +37,11 @@ export const ALARM_STATUS_VARIANT: { [key: string]: "warning" | "info" | "succes
 
 export const ALARM_STATUS_BORDER_COLORS: { [key: string]: string } = {
   [ALARM_STATUS_KEYS.PENDING]: 'border-l-yellow-400',
-  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'border-l-blue-500', // Color azul para sospechosas
+  [ALARM_STATUS_KEYS.SUSPICIOUS]: 'border-l-blue-500',
   [ALARM_STATUS_KEYS.CONFIRMED]: 'border-l-green-500',
   [ALARM_STATUS_KEYS.REJECTED]: 'border-l-red-500',
 };
 
-// La función ahora devuelve la info correcta para cada estado.
 export function getAlarmStatusInfo(status: Alarm['status']) {
   return {
     label: ALARM_STATUS_ES[status] || 'Desconocido',
@@ -53,12 +50,6 @@ export function getAlarmStatusInfo(status: Alarm['status']) {
   };
 }
 
-// Se añade un nuevo color a los badges en badge.tsx
-// (Este cambio se haría en `components/ui/badge.tsx` pero lo menciono aquí para completitud)
-// variants: { ... variant: { ..., info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80" } }
-// --- FIN DE LA SOLUCIÓN ---
-
-// 7. Lógica para asignar colores a los tipos de alarma.
 export type AlarmTypeVariant = 
   | 'sky' | 'emerald' | 'amber' 
   | 'purple' | 'tealDark' | 'rose'
@@ -69,14 +60,12 @@ const FALLBACK_TYPE_VARIANTS: AlarmTypeVariant[] = [
   'sky', 'emerald', 'amber', 'purple', 'tealDark', 'rose'
 ];
 
-// Mapeo de colores específicos con los NOMBRES CORRECTOS de la base de datos.
 const SPECIFIC_TYPE_COLORS: { [key: string]: AlarmTypeVariant } = {
   'Sin cinturón': 'deepBlue',
   'Detección de fatiga': 'deepViolet',
   'Distracción del conductor': 'brown',
   'Comportamiento anormal': 'orangeBlack',
   'Cabeza baja': 'rose',
-  // Puedes añadir más tipos de alarma aquí con su color asignado
 };
 
 export function getColorVariantForType(type: string): AlarmTypeVariant {
@@ -94,3 +83,30 @@ export function getColorVariantForType(type: string): AlarmTypeVariant {
   return FALLBACK_TYPE_VARIANTS[index];
 }
 
+/**
+ * Corrige y formatea un timestamp de alarma.
+ * La API devuelve un string de fecha/hora en formato ISO UTC (terminado en 'Z'),
+ * pero el valor numérico corresponde a la hora local de Argentina (ART).
+ * Esta función elimina la 'Z' para que el navegador interprete la fecha en su zona horaria local,
+ * evitando así una conversión incorrecta desde UTC.
+ * @param dateString - El string de timestamp de la alarma, ej: "2024-06-19T15:30:00.000Z"
+ * @param options - Opciones de formato para toLocaleString.
+ * @returns La fecha y hora formateada.
+ */
+export function formatCorrectedTimestamp(
+  dateString?: string,
+  options: Intl.DateTimeFormatOptions = {}
+): string {
+  if (!dateString) return "No disponible";
+
+  // Si el string termina en 'Z' (indicador de UTC), lo eliminamos.
+  const localDateString = dateString.endsWith('Z') ? dateString.slice(0, -1) : dateString;
+  
+  const date = new Date(localDateString);
+  
+  if (isNaN(date.getTime())) {
+    return "Fecha inválida";
+  }
+  
+  return date.toLocaleString('es-AR', options);
+}

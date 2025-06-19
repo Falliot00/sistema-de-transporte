@@ -2,7 +2,7 @@
 
 import { Alarm } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { cn, getAlarmStatusInfo, getColorVariantForType, ALARM_STATUS_BORDER_COLORS } from "@/lib/utils";
+import { cn, getAlarmStatusInfo, getColorVariantForType, ALARM_STATUS_BORDER_COLORS, formatCorrectedTimestamp } from "@/lib/utils";
 import { CarFront, Clock, User } from "lucide-react";
 
 interface AlarmCardProps {
@@ -11,7 +11,6 @@ interface AlarmCardProps {
 }
 
 export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
-  // Con utils.ts corregido, esta función ahora devuelve un objeto válido.
   const statusInfo = getAlarmStatusInfo(alarm.status);
   const typeColorVariant = getColorVariantForType(alarm.type);
   const statusBorderClass = ALARM_STATUS_BORDER_COLORS[alarm.status];
@@ -26,8 +25,9 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
     >
       <div className="flex justify-between items-center mb-3">
         <Badge variant={typeColorVariant} className="font-semibold">{alarm.type}</Badge>
+        {/* MODIFICADO: Se usa la nueva función para formatear la hora */}
         <span className="text-xs text-muted-foreground">
-            {new Date(alarm.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+            {formatCorrectedTimestamp(alarm.timestamp, { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
       
@@ -41,11 +41,11 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
       </div>
        
       <div className="flex justify-between items-center text-xs border-t pt-2 mt-2">
+          {/* MODIFICADO: Se usa la nueva función para formatear la fecha */}
           <span className="text-muted-foreground flex items-center gap-1">
              <Clock className="h-3 w-3" />
-             {new Date(alarm.timestamp).toLocaleDateString('es-AR')}
+             {formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'short' })}
           </span>
-          {/* Al no ser 'undefined', esta línea ya no causará el error */}
           <Badge variant={statusInfo.variant} className="capitalize">{statusInfo.label}</Badge>
       </div>
     </div>
