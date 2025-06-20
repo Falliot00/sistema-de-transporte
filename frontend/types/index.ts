@@ -1,5 +1,4 @@
 // frontend/types/index.ts
-// ... (existing types remain the same)
 export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
 
 export interface MediaItem {
@@ -18,10 +17,7 @@ export interface Alarm {
     type: string;
     timestamp: string;
     videoProcessing?: boolean;
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Se añade el campo opcional speed
     speed?: number;
-    // --- FIN DE LA MODIFICACIÓN ---
     location: {
         latitude: number;
         longitude: number;
@@ -52,7 +48,7 @@ export interface Alarm {
     };
     reviewedAt?: string;
 }
-// ... (rest of the file remains the same)
+
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -76,13 +72,19 @@ export interface GetAlarmsResponse {
     globalCounts: GlobalAlarmCounts;
 }
 
+// --- INICIO DE LA SOLUCIÓN ---
+// Se añaden los campos opcionales para el rango de fechas.
 export interface GetAlarmsParams {
     page?: number;
     pageSize?: number;
     status?: string;
     search?: string;
     type?: string[];
+    startDate?: string;
+    endDate?: string;
 }
+// --- FIN DE LA SOLUCIÓN ---
+
 
 export interface KPI {
     id: string;

@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { exec } from 'child_process';
 import path from 'path';
 
+// ... (El resto de las importaciones y funciones iniciales sin cambios) ...
+
 const prisma = new PrismaClient();
 
 const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'rejected', string[]> = {
@@ -22,18 +24,38 @@ const getAlarmStatusForFrontend = (dbStatus: string | null | undefined): 'pendin
   return 'pending';
 };
 
-// REVERTIDO: Se elimina la lógica de formato de fecha manual. Se vuelve a pasar el objeto Date directamente.
-// JSON.stringify se encargará de convertirlo a un string ISO 8601 UTC estándar.
+const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
+    if (alarm.dispositivo && alarm.alarmTime && alarm.guid) {
+        const venvDir = '.venv';
+        const scriptDir = 'camaras';
+        const scriptName = '_2video.py';
+
+        const pythonExecutable = process.platform === 'win32'
+          ? path.join(__dirname, '..', '..', venvDir, 'Scripts', 'python.exe')
+          : path.join(__dirname, '..', '..', venvDir, 'bin', 'python3');
+
+        const scriptPath = path.join(__dirname, '..', '..', scriptDir, scriptName);
+        
+        const formattedAlarmTime = alarm.alarmTime.toISOString();
+        const command = `"${pythonExecutable}" "${scriptPath}" "${alarm.dispositivo}" "${formattedAlarmTime}" "${alarm.guid}"`;
+        
+        console.log(`[+] Ejecutando comando de video: ${command}`);
+
+        exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
+          if (error) console.error(`❌ Error al ejecutar el script de Python: ${error.message}`);
+          if (stderr) console.error(`🐍 Error en script Python (stderr): ${stderr}`);
+          if (stdout) console.log(`🐍 Salida del script Python (stdout):\n${stdout}`);
+        });
+    }
+};
+
 const transformAlarmData = (alarm: any) => ({
     id: alarm.guid,
     status: getAlarmStatusForFrontend(alarm.estado),
     rawStatus: alarm.estado,
     type: alarm.typeAlarm ? alarm.typeAlarm.alarm : 'Tipo Desconocido',
-    timestamp: alarm.alarmTime, // Se pasa el objeto Date directamente
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Se añade el campo velocidad al objeto de la alarma.
+    timestamp: alarm.alarmTime,
     speed: alarm.velocidad,
-    // --- FIN DE LA MODIFICACIÓN ---
     videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
     location: {
       latitude: parseFloat(alarm.lat) || 0,
@@ -55,12 +77,15 @@ const transformAlarmData = (alarm: any) => ({
     comments: [],
 });
 
+// ... (getAllAlarms, getAlarmById sin cambios) ...
 export const getAllAlarms = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const pageSize = parseInt(req.query.pageSize as string) || 12;
   const statusFilter = req.query.status as string;
   const search = req.query.search as string;
   const typeFilters = req.query.type as string[] | string;
+  const startDate = req.query.startDate as string;
+  const endDate = req.query.endDate as string;
 
   const skip = (page - 1) * pageSize;
   let whereClause: any = {};
@@ -70,6 +95,12 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     if (dbStates) {
         whereClause.estado = { in: dbStates };
     }
+  }
+
+  if (startDate && endDate) {
+    const endOfDay = new Date(endDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+    whereClause.alarmTime = { gte: new Date(startDate), lte: endOfDay };
   }
 
   if (search) {
@@ -89,14 +120,16 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     const alarmsFromDb = await prisma.alarmasHistorico.findMany({
       skip, take: pageSize, orderBy: { alarmTime: 'desc' }, where: whereClause, include: { typeAlarm: true },
     });
-    const transformedAlarms = alarmsFromDb.map(transformAlarmData);
     const totalAlarmsFiltered = await prisma.alarmasHistorico.count({ where: whereClause });
 
-    const totalConfirmedGlobal = await prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.confirmed } } });
-    const totalRejectedGlobal = await prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.rejected } } });
-    const totalSuspiciousGlobal = await prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.suspicious } } });
-    const totalPendingGlobal = await prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.pending } } });
+    const globalWhere = (status: keyof typeof DB_QUERY_STATUS_MAP) => ({ estado: { in: DB_QUERY_STATUS_MAP[status] } });
+    const totalConfirmedGlobal = await prisma.alarmasHistorico.count({ where: globalWhere('confirmed') });
+    const totalRejectedGlobal = await prisma.alarmasHistorico.count({ where: globalWhere('rejected') });
+    const totalSuspiciousGlobal = await prisma.alarmasHistorico.count({ where: globalWhere('suspicious') });
+    const totalPendingGlobal = await prisma.alarmasHistorico.count({ where: globalWhere('pending') });
     const totalAllAlarmsGlobal = await prisma.alarmasHistorico.count();
+    
+    const transformedAlarms = alarmsFromDb.map(transformAlarmData);
 
     res.status(200).json({
       alarms: transformedAlarms,
@@ -145,40 +178,13 @@ export const reviewAlarm = async (req: Request, res: Response) => {
 
     if (statusToSave === 'Sospechosa') {
       console.log(`[+] Estado 'Sospechosa' detectado para la alarma ${id}. Lanzando script de video...`);
-      const dispositivo = updatedAlarmFromDb.dispositivo;
-      const alarmTime = updatedAlarmFromDb.alarmTime;
-      const guid = updatedAlarmFromDb.guid;
-
-      if (dispositivo && alarmTime && guid) {
-        const venvDir = '.venv';
-        const scriptDir = 'camaras';
-        const scriptName = '_2video.py';
-
-        const pythonExecutable = process.platform === 'win32'
-          ? path.join(__dirname, '..', '..', venvDir, 'Scripts', 'python.exe')
-          : path.join(__dirname, '..', '..', venvDir, 'bin', 'python3');
-
-        const scriptPath = path.join(__dirname, '..', '..', scriptDir, scriptName);
-        
-        const formattedAlarmTime = alarmTime.toISOString();
-        const command = `"${pythonExecutable}" "${scriptPath}" "${dispositivo}" "${formattedAlarmTime}" "${guid}"`;
-        
-        console.log(`[+] Ejecutando comando: ${command}`);
-
-        exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
-          if (error) console.error(`❌ Error al ejecutar el script de Python: ${error.message}`);
-          if (stderr) console.error(`🐍 Error en script Python (stderr): ${stderr}`);
-          if (stdout) console.log(`🐍 Salida del script Python (stdout):\n${stdout}`);
-        });
-      }
+      triggerVideoScript(updatedAlarmFromDb);
     }
 
     const transformedAlarm = transformAlarmData(updatedAlarmFromDb);
     res.status(200).json(transformedAlarm);
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
-    }
+    if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
     console.error(`Error al revisar la alarma ${id}:`, error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
@@ -203,3 +209,54 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
+
+export const reEvaluateAlarm = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
+        if (!DB_QUERY_STATUS_MAP.rejected.map(s => s.toLowerCase()).includes(alarm.estado?.toLowerCase() || '')) {
+            return res.status(400).json({ message: `Solo se puede re-evaluar una alarma "Rechazada". Estado actual: ${alarm.estado}` });
+        }
+        const updatedAlarm = await prisma.alarmasHistorico.update({
+            where: { guid: id },
+            data: { estado: 'Sospechosa' },
+            include: { typeAlarm: true }
+        });
+        console.log(`[+] Alarma ${id} re-evaluada como 'Sospechosa'. Lanzando script de video...`);
+        triggerVideoScript(updatedAlarm);
+        const transformedAlarm = transformAlarmData(updatedAlarm);
+        res.status(200).json(transformedAlarm);
+    } catch (error: any) {
+        if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma que intentas re-evaluar no existe.' });
+        console.error(`Error al re-evaluar la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+// --- INICIO DE LA SOLUCIÓN: Nuevo controlador para reintentar video ---
+export const retryVideoDownload = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+
+        if (!alarm) {
+            return res.status(404).json({ message: 'Alarma no encontrada.' });
+        }
+        
+        if (alarm.estado !== 'Sospechosa') {
+            return res.status(400).json({ message: `Solo se puede reintentar el video para una alarma "Sospechosa".` });
+        }
+
+        console.log(`[+] Reintentando descarga de video para la alarma ${id}...`);
+        triggerVideoScript(alarm);
+        
+        // 202 Accepted es un buen código de estado para una acción que se ha iniciado pero no completado.
+        res.status(202).json({ message: 'Se ha iniciado el re-procesamiento del video.' });
+
+    } catch (error: any) {
+        console.error(`Error al reintentar el video para la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+// --- FIN DE LA SOLUCIÓN ---

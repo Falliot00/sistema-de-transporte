@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
-import { getAlarms, reviewAlarm, confirmAlarm } from "@/lib/api";
+import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { AlarmCard } from "./alarm-card";
 import { AlarmDetails } from "./alarm-details";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
+import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { AlarmAnalysisView } from "./alarm-analysis-view";
 import { AlarmReview } from "./alarm-review";
 import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT } from "@/lib/utils";
@@ -19,7 +19,10 @@ import { AdvancedFilters } from "./advanced-filters";
 import { KPICard } from "./kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "../ui/pagination-controls";
-import { alarmTypes } from "@/lib/mock-data"; // Importar la lista completa de alarmTypes
+import { alarmTypes } from "@/lib/mock-data"; 
+import { DateRangePicker } from "../ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { subDays } from "date-fns";
 
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -45,8 +48,16 @@ export default function AlarmsPage() {
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
 
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: subDays(new Date(), 29),
+        to: new Date(),
+    });
+
     const [alarmForDetails, setAlarmForDetails] = useState<Alarm | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    
+    const [reviewableAlarms, setReviewableAlarms] = useState<Alarm[]>([]);
+    const [currentReviewIndex, setCurrentReviewIndex] = useState(-1);
     
     const [isAnalysisMode, setIsAnalysisMode] = useState(false);
     const [analysisAlarms, setAnalysisAlarms] = useState<Alarm[]>([]);
@@ -60,7 +71,15 @@ export default function AlarmsPage() {
         setIsLoading(true);
         setError(null);
         try {
-            const params: GetAlarmsParams = { page: currentPage, pageSize: 12, status: statusFilter, search: debouncedSearchQuery, type: typeFilters };
+            const params: GetAlarmsParams = { 
+                page: currentPage, 
+                pageSize: 12, 
+                status: statusFilter, 
+                search: debouncedSearchQuery, 
+                type: typeFilters,
+                startDate: dateRange?.from?.toISOString(),
+                endDate: dateRange?.to?.toISOString(),
+            };
             const data = await getAlarms(params);
             setAlarms(data.alarms);
             setPaginationInfo(data.pagination);
@@ -74,14 +93,102 @@ export default function AlarmsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters]);
+    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
 
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
-    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters]);
+    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
 
-    // MODIFICADO: uniqueAlarmTypes ya no se usa, ahora se pasa la lista completa desde mock-data
-    // const uniqueAlarmTypes = useMemo(() => Array.from(new Set(alarms.map(a => a.type))), [alarms]);
+    const handleCardClick = (clickedAlarm: Alarm) => {
+        if (clickedAlarm.status === 'suspicious') {
+            const suspiciousAlarms = alarms.filter(a => a.status === 'suspicious');
+            const index = suspiciousAlarms.findIndex(a => a.id === clickedAlarm.id);
+            setReviewableAlarms(suspiciousAlarms);
+            setCurrentReviewIndex(index);
+        } else {
+            setReviewableAlarms([]);
+            setCurrentReviewIndex(-1);
+        }
+        setAlarmForDetails(clickedAlarm);
+    };
 
+    const handleNextInDetails = () => {
+        const nextIndex = currentReviewIndex + 1;
+        if (nextIndex < reviewableAlarms.length) {
+            setCurrentReviewIndex(nextIndex);
+            setAlarmForDetails(reviewableAlarms[nextIndex]);
+        }
+    };
+    
+    const handlePreviousInDetails = () => {
+        const prevIndex = currentReviewIndex - 1;
+        if (prevIndex >= 0) {
+            setCurrentReviewIndex(prevIndex);
+            setAlarmForDetails(reviewableAlarms[prevIndex]);
+        }
+    };
+    
+    const handleDialogAction = async (action: 'confirmed' | 'rejected') => {
+        if (!alarmForDetails) return;
+        
+        const alarmIdToUpdate = alarmForDetails.id;
+        setIsSubmitting(true);
+        try {
+            if (action === 'confirmed') {
+                await confirmAlarm(alarmIdToUpdate);
+                toast({ title: "Alarma Confirmada" });
+            } else {
+                await reviewAlarm(alarmIdToUpdate, action);
+                toast({ title: "Alarma Rechazada" });
+            }
+    
+            await fetchAlarms(); 
+    
+            const updatedReviewableList = reviewableAlarms.filter(a => a.id !== alarmIdToUpdate);
+            
+            if (currentReviewIndex < updatedReviewableList.length) {
+                setReviewableAlarms(updatedReviewableList);
+                setAlarmForDetails(updatedReviewableList[currentReviewIndex]);
+            } else {
+                setAlarmForDetails(null);
+            }
+    
+        } catch (error: any) {
+            toast({ title: "Error", variant: "destructive", description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleReEvaluate = async () => {
+        if (!alarmForDetails) return;
+        setIsSubmitting(true);
+        try {
+            await reEvaluateAlarm(alarmForDetails.id);
+            toast({ title: "Alarma Re-evaluada", description: "El estado ha sido cambiado a 'Sospechosa'." });
+            setAlarmForDetails(null); 
+            fetchAlarms(); 
+        } catch (error: any) {
+            toast({ title: "Error", variant: "destructive", description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const handleDialogReview = async (action: 'confirmed' | 'rejected') => {
+        if (!alarmForDetails) return;
+        setIsSubmitting(true);
+        try {
+            await reviewAlarm(alarmForDetails.id, action);
+            toast({ title: "Alarma Actualizada" });
+            fetchAlarms();
+            setAlarmForDetails(null);
+        } catch (error: any) {
+            toast({ title: "Error", variant: "destructive", description: error.message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? globalAlarmCounts.pending : globalAlarmCounts.suspicious;
         if (count === 0) {
@@ -113,38 +220,25 @@ export default function AlarmsPage() {
 
     const handleAnalysisAction = async (action: 'confirmed' | 'rejected' | 'skip') => {
         if (action === 'skip') {
-            if (analysisIndex >= analysisAlarms.length - 1) {
-                setAnalysisAlarms([]); 
-            } else {
-                setAnalysisIndex(prev => prev + 1);
-            }
+            if (analysisIndex >= analysisAlarms.length - 1) setAnalysisAlarms([]); 
+            else setAnalysisIndex(prev => prev + 1);
             return;
         }
         const currentAlarm = analysisAlarms[analysisIndex];
         if (!currentAlarm) return;
         setIsSubmitting(true);
         try {
-            // CRITICAL SECURITY CHECK:
-            // Ensure that the status update logic correctly reflects your business rules.
-            // For 'pending' alarms, 'confirmed' action means marking as 'suspicious' in DB.
-            // For 'suspicious' alarms, 'confirmed' action means marking as 'confirmed' in DB.
-            if (currentAlarm.status === 'pending') {
-                // When reviewing a 'pending' alarm, the 'confirmed' action means it becomes 'suspicious'
-                await reviewAlarm(currentAlarm.id, action === 'confirmed' ? 'confirmed' : action); 
-            } else if (currentAlarm.status === 'suspicious') {
-                // When reviewing a 'suspicious' alarm, 'confirmed' means final confirmation
+            if (currentAlarm.status === 'pending') await reviewAlarm(currentAlarm.id, action === 'confirmed' ? 'confirmed' : action); 
+            else if (currentAlarm.status === 'suspicious') {
                 if (action === 'confirmed') await confirmAlarm(currentAlarm.id);
                 else await reviewAlarm(currentAlarm.id, action);
             }
             toast({ title: "Alarma Actualizada" });
             if (analysisIndex >= analysisAlarms.length - 1) {
                 setAnalysisAlarms([]);
-                setAnalysisIndex(0); // Reset index after processing all in current batch
-                if (!hasNextPageAnalysis) {
-                    setIsAnalysisMode(false); // Close analysis mode if no more pages
-                } else {
-                    handleLoadNextBatch(); // Load next batch if available
-                }
+                setAnalysisIndex(0);
+                if (!hasNextPageAnalysis) setIsAnalysisMode(false);
+                else handleLoadNextBatch(); 
             } else {
                 setAnalysisIndex(prev => prev + 1);
             }
@@ -152,51 +246,14 @@ export default function AlarmsPage() {
             toast({ title: "Error", description: err.message, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
-            // Refresh main alarm list counts immediately after an action
             fetchAlarms();
-        }
-    };
-    
-    const handleDialogReview = async (action: 'confirmed' | 'rejected') => {
-        if (!alarmForDetails) return;
-        setIsSubmitting(true);
-        try {
-            // When reviewing a 'pending' alarm from details, 'confirmed' means it becomes 'suspicious'
-            await reviewAlarm(alarmForDetails.id, action);
-            toast({ title: "Alarma Actualizada" });
-            fetchAlarms();
-            setAlarmForDetails(null);
-        } catch (error: any) {
-            toast({ title: "Error", variant: "destructive", description: error.message });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    const handleFinalConfirmation = async () => {
-        if (!alarmForDetails) return;
-        setIsSubmitting(true);
-        try {
-            await confirmAlarm(alarmForDetails.id);
-            toast({ title: "Alarma Confirmada" });
-            fetchAlarms();
-            setAlarmForDetails(null);
-        } catch (error: any) {
-            toast({ title: "Error", variant: "destructive", description: error.message });
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
-    // Lógica para determinar el texto del botón "confirmar" en el modo de análisis
     const currentAnalysisAlarm = analysisAlarms[analysisIndex];
     let confirmButtonText = "Confirmar"; 
     if (currentAnalysisAlarm) {
-        if (currentAnalysisAlarm.status === 'pending') {
-            confirmButtonText = "Marcar como Sospechosa";
-        } else if (currentAnalysisAlarm.status === 'suspicious') {
-            confirmButtonText = "Confirmar";
-        }
+        if (currentAnalysisAlarm.status === 'pending') confirmButtonText = "Sospechosa";
     }
 
     return (
@@ -205,7 +262,6 @@ export default function AlarmsPage() {
                 <h1 className="text-3xl font-bold">Gestión de Alarmas</h1>
                 <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p>
             </div>
-            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <KPICard title="Total de Alarmas" value={isLoading ? '...' : globalAlarmCounts.total} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
                 <KPICard title="Pendientes" value={isLoading ? '...' : globalAlarmCounts.pending} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />
@@ -213,26 +269,26 @@ export default function AlarmsPage() {
                 <KPICard title="Confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
                 <KPICard title="Rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
             </div>
-
             <div className="flex justify-center gap-4 flex-wrap">
                 <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoading || globalAlarmCounts.pending === 0} variant="warning">
-                    <PlayCircle className="mr-2 h-4 w-4" />
-                    Analizar {globalAlarmCounts.pending} alarmas pendientes
+                    <PlayCircle className="mr-2 h-4 w-4" /> Analizar {globalAlarmCounts.pending} alarmas pendientes
                 </Button>
                 <Button onClick={() => handleStartAnalysis('suspicious')} disabled={isLoading || globalAlarmCounts.suspicious === 0} variant="info">
-                    <PlayCircle className="mr-2 h-4 w-4" />
-                    Analizar {globalAlarmCounts.suspicious} alarmas sospechosas
+                    <PlayCircle className="mr-2 h-4 w-4" /> Analizar {globalAlarmCounts.suspicious} alarmas sospechosas
                 </Button>
             </div>
-
             <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="flex flex-col sm:flex-row gap-1 justify-between items-center">
                     <div className="relative w-full flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
-                    {/* MODIFICADO: Pasar la lista completa de alarmTypes a AdvancedFilters */}
-                    <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onSelectionChange={setTypeFilters} />
+                    <div className="flex gap-2 items-center flex-wrap justify-end">
+                        <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onSelectionChange={setTypeFilters} />
+                    </div>
+                    <div className="flex gap-2 items-center flex-wrap justify-end">
+                       <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+                    </div>
                 </div>
                 <div>
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
@@ -244,32 +300,62 @@ export default function AlarmsPage() {
                     </ToggleGroup>
                 </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)
                 : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div>
                 : alarms.length > 0 ? alarms.map((alarm) => (
-                    <AlarmCard key={alarm.id} alarm={alarm} onClick={() => setAlarmForDetails(alarm)} />
+                    <AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} />
                 ))
                 : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>}
             </div>
             
-            {paginationInfo && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
+            {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             
             <Dialog open={!!alarmForDetails} onOpenChange={(open) => !open && setAlarmForDetails(null)}>
-                <DialogContent className="max-w-4xl h-[90vh] grid grid-rows-[auto_1fr_auto] p-0 gap-0">
+                 <DialogContent className="max-w-4xl h-[90vh] grid grid-rows-[1fr_auto] p-0 gap-0">
                     {alarmForDetails && (
                         <>
-                            <DialogHeader className="p-6 border-b"><DialogTitle>Detalles de Alarma: {alarmForDetails.type}</DialogTitle></DialogHeader>
-                            <div className="overflow-y-auto p-6"><AlarmDetails alarm={alarmForDetails} /></div>
-                            {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && (
+                            {reviewableAlarms.length > 0 && (
+                                <>
+                                <Button variant="outline" size="icon" onClick={handlePreviousInDetails} disabled={currentReviewIndex <= 0} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 ml-4 bg-background/80 hover:bg-background z-50">
+                                    <ChevronLeft className="h-6 w-6" />
+                                    <span className="sr-only">Anterior</span>
+                                </Button>
+                                <Button variant="outline" size="icon" onClick={handleNextInDetails} disabled={currentReviewIndex >= reviewableAlarms.length - 1} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 mr-4 bg-background/80 hover:bg-background z-50">
+                                    <ChevronRight className="h-6 w-6" />
+                                    <span className="sr-only">Siguiente</span>
+                                </Button>
+                                </>
+                            )}
+                            
+                            <div className="overflow-y-auto p-6">
+                                <AlarmDetails alarm={alarmForDetails} />
+                            </div>
+
+                            {alarmForDetails.status === 'pending' && (
                                 <DialogFooter className="p-6 border-t sm:justify-start">
                                     <div className="w-full">
-                                        {alarmForDetails.status === 'pending' && <AlarmReview onReview={handleDialogReview} isSubmitting={isSubmitting} confirmText="Sospechosa" />}
-                                        {alarmForDetails.status === 'suspicious' && <AlarmReview onReview={(action) => action === 'confirmed' ? handleFinalConfirmation() : handleDialogReview(action)} isSubmitting={isSubmitting} confirmText="Confirmar" />}
+                                        <AlarmReview onReview={handleDialogReview} isSubmitting={isSubmitting} confirmText="Sospechosa" />
                                     </div>
                                 </DialogFooter>
                             )}
+                            {alarmForDetails.status === 'suspicious' && (
+                                <DialogFooter className="p-6 border-t sm:justify-start">
+                                    <div className="w-full">
+                                        <AlarmReview onReview={handleDialogAction} isSubmitting={isSubmitting} confirmText="Confirmar" />
+                                    </div>
+                                </DialogFooter>
+                            )}
+                            {/* --- INICIO DE LA SOLUCIÓN: Botón condicional para re-evaluar --- */}
+                            {alarmForDetails.status === 'rejected' && (
+                                <DialogFooter className="p-6 border-t sm:justify-start">
+                                    <Button onClick={handleReEvaluate} disabled={isSubmitting} variant="success">
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Sospechosa
+                                    </Button>
+                                </DialogFooter>
+                            )}
+                            {/* --- FIN DE LA SOLUCIÓN --- */}
                         </>
                     )}
                 </DialogContent>
@@ -284,7 +370,7 @@ export default function AlarmsPage() {
                             isSubmitting={isSubmitting}
                             current={analysisIndex + 1}
                             total={analysisAlarms.length}
-                            confirmText={confirmButtonText} // Se pasa la prop con el texto correcto
+                            confirmText={confirmButtonText}
                         />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center">

@@ -4,25 +4,65 @@ import { MediaItem } from "@/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Play, Loader2, VideoOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Loader2, VideoOff, RefreshCw } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
-
 // --- INICIO DE LA SOLUCIÓN ---
+import { retryVideo } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+// --- FIN DE LA SOLUCIÓN ---
+
+
+// --- INICIO DE LA SOLUCIÓN: Componente Placeholder con lógica ---
+const VideoProcessingPlaceholder = ({ alarmId }: { alarmId: string }) => {
+    const { toast } = useToast();
+    const [isRetrying, setIsRetrying] = useState(false);
+
+    const handleRetry = async () => {
+        setIsRetrying(true);
+        try {
+            const response = await retryVideo(alarmId);
+            toast({
+                title: "Solicitud Enviada",
+                description: response.message,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "No se pudo reintentar la descarga.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsRetrying(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-background/50 rounded-md p-4">
+            <Loader2 className="h-8 w-8 animate-spin mb-3" />
+            <p className="font-semibold">Procesando video...</p>
+            <p className="text-xs mb-3">Esto puede tardar unos minutos.</p>
+            <Button onClick={handleRetry} disabled={isRetrying} size="sm">
+                {isRetrying ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Reintentar
+            </Button>
+        </div>
+    );
+};
+// --- FIN DE LA SOLUCIÓN ---
+
+
 interface AlarmMediaProps {
   media: MediaItem[];
-  videoProcessing?: boolean; // Nuevo prop para manejar el estado de carga
+  videoProcessing?: boolean;
+  alarmId: string; // ID de la alarma es ahora requerido
 }
 
-// Componente para mostrar cuando el video se está procesando
-const VideoProcessingPlaceholder = () => (
-    <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-background/50 rounded-md p-4">
-        <Loader2 className="h-8 w-8 animate-spin mb-3" />
-        <p className="font-semibold">Procesando video...</p>
-        <p className="text-xs">Esto puede tardar unos minutos. Por favor, revise nuevamente más tarde.</p>
-    </div>
-);
 
-export function AlarmMedia({ media, videoProcessing = false }: AlarmMediaProps) {
+export function AlarmMedia({ media, videoProcessing = false, alarmId }: AlarmMediaProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -55,7 +95,8 @@ export function AlarmMedia({ media, videoProcessing = false }: AlarmMediaProps) 
             {videoProcessing && videos.length === 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     <MediaGrid items={images} onItemClick={openDialogWithItem} />
-                    <VideoProcessingPlaceholder />
+                    {/* Usar el nuevo componente con lógica */}
+                    <VideoProcessingPlaceholder alarmId={alarmId} />
                 </div>
             ) : (
                 <MediaGrid items={media} onItemClick={openDialogWithItem} />
@@ -68,7 +109,7 @@ export function AlarmMedia({ media, videoProcessing = false }: AlarmMediaProps) 
         
         <TabsContent value="videos" className="mt-4">
             {videoProcessing && videos.length === 0 ? (
-                <VideoProcessingPlaceholder />
+                <VideoProcessingPlaceholder alarmId={alarmId} />
             ) : videos.length > 0 ? (
                 <MediaGrid items={videos} onItemClick={openDialogWithItem} />
             ) : (
@@ -127,8 +168,9 @@ function MediaGrid({ items, onItemClick }: MediaGridProps) {
           className="relative aspect-square rounded-md overflow-hidden cursor-pointer group"
           onClick={() => onItemClick(item.id)}
         >
+          {/* Se usa el thumbnail si está disponible, sino la url principal */}
           <img
-            src={item.url} // Usamos la URL principal que debería ser una miniatura o la imagen/video mismo
+            src={item.thumbnailUrl || item.url}
             alt={`Media ${item.id}`}
             className="object-cover w-full h-full transition-transform group-hover:scale-105"
           />
@@ -142,4 +184,3 @@ function MediaGrid({ items, onItemClick }: MediaGridProps) {
     </div>
   );
 }
-// --- FIN DE LA SOLUCIÓN ---

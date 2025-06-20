@@ -18,11 +18,13 @@ const badgeVariants = cva(
         muted: "border-transparent bg-muted text-muted-foreground",
         success:
           "border-transparent bg-green-600 text-primary-foreground hover:bg-green-600/80",
-        warning:
-          "border-transparent bg-yellow-500 text-secondary-foreground hover:bg-yellow-500/80",
         // --- INICIO DE LA SOLUCIÓN ---
-        info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80",
+        // Se ha cambiado `text-secondary-foreground` por `text-primary-foreground`
+        // para que el texto sea blanco sobre el fondo amarillo, mejorando el contraste.
+        warning:
+          "border-transparent bg-yellow-500 text-primary-foreground hover:bg-yellow-500/80",
         // --- FIN DE LA SOLUCIÓN ---
+        info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80",
         sky: "border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80 dark:bg-sky-900/50 dark:text-sky-200",
         emerald: "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100/80 dark:bg-emerald-900/50 dark:text-emerald-200",
         amber: "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100/80 dark:bg-amber-900/50 dark:text-amber-200",

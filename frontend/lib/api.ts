@@ -6,6 +6,7 @@ if (!API_URL) {
   throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }
 
+// ... getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm sin cambios ...
 export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
   try {
     const query = new URLSearchParams();
@@ -16,6 +17,9 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
     if (params?.type && params.type.length > 0) {
       params.type.forEach(t => query.append('type', t));
     }
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+
     const response = await fetch(`${API_URL}/alarmas?${query.toString()}`);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -31,10 +35,6 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
     };
   }
 }
-
-// --- INICIO DE LA SOLUCIÓN: Se elimina getPendingAlarmsForAnalysis ---
-// Esta función ya no es necesaria, ya que getAlarms puede manejar todos los casos.
-// --- FIN DE LA SOLUCIÓN ---
 
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected'): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
@@ -60,3 +60,29 @@ export async function confirmAlarm(alarmId: string): Promise<Alarm> {
     }
     return await response.json();
 }
+
+export async function reEvaluateAlarm(alarmId: string): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al re-evaluar la alarma');
+    }
+    return await response.json();
+}
+
+// --- INICIO DE LA SOLUCIÓN: Nueva función de API para reintentar video ---
+export async function retryVideo(alarmId: string): Promise<{ message: string }> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/retry-video`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al reintentar la descarga del video');
+    }
+    return await response.json();
+}
+// --- FIN DE LA SOLUCIÓN ---

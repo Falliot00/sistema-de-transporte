@@ -1,31 +1,36 @@
 // backend/src/routes/alarmas.ts
-import { Router, Request, Response, RequestHandler } from 'express'; // Importar RequestHandler
-import { getAllAlarms, getAlarmById, reviewAlarm, confirmFinalAlarm } from '../controllers/alarmaController';
+import { Router, Request, Response } from 'express';
+// --- INICIO DE LA SOLUCIÓN: Importar nuevo controlador ---
+import { getAllAlarms, getAlarmById, reviewAlarm, confirmFinalAlarm, reEvaluateAlarm, retryVideoDownload } from '../controllers/alarmaController';
+// --- FIN DE LA SOLUCIÓN ---
 
 const router = Router();
 
-// Endpoint para obtener todas las alarmas
-// FIX: Envolver el controlador en una función async para asegurar la firma correcta
 router.get('/', async (req: Request, res: Response) => {
     await getAllAlarms(req, res);
 });
 
-// Endpoint para obtener una alarma específica por su ID
-// FIX: Envolver el controlador en una función async para asegurar la firma correcta
 router.get('/:id', async (req: Request, res: Response) => {
     await getAlarmById(req, res);
 });
 
-// Endpoint para la PRIMERA revisión (Pendiente -> Sospechosa o Rechazada)
-// FIX: Envolver el controlador en una función async para asegurar la firma correcta
 router.put('/:id/review', async (req: Request, res: Response) => {
     await reviewAlarm(req, res);
 });
 
-// NUEVO Endpoint para la confirmación FINAL (Sospechosa -> Confirmada)
-// FIX: Envolver el controlador en una función async para asegurar la firma correcta
 router.put('/:id/confirm', async (req: Request, res: Response) => {
     await confirmFinalAlarm(req, res);
 });
+
+router.put('/:id/re-evaluate', async (req: Request, res: Response) => {
+    await reEvaluateAlarm(req, res);
+});
+
+// --- INICIO DE LA SOLUCIÓN: Nueva ruta POST para reintentar ---
+router.post('/:id/retry-video', async (req: Request, res: Response) => {
+    await retryVideoDownload(req, res);
+});
+// --- FIN DE LA SOLUCIÓN ---
+
 
 export default router;
