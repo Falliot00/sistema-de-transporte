@@ -1,3 +1,4 @@
+// frontend/components/alarms/alarm-page.tsx
 'use client'
 
 import { useEffect, useState, useCallback } from "react";
@@ -20,11 +21,12 @@ import { AdvancedFilters } from "./advanced-filters";
 import { KPICard } from "./kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "../ui/pagination-controls";
-import { alarmTypes } from "@/lib/mock-data"; 
+import { alarmTypes } from "@/lib/mock-data";
 import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { subDays } from "date-fns";
 
+// ... (Hook useDebounce sin cambios)
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
     useEffect(() => {
@@ -108,41 +110,39 @@ export default function AlarmsPage() {
 
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
-
-    // --- INICIO DE LA SOLUCIÓN ---
-    // La lógica se simplifica para permitir la navegación en TODAS las alarmas de la página actual.
+    
     const handleCardClick = (clickedAlarm: Alarm) => {
-        // La lista navegable es siempre la lista de alarmas actualmente visible.
         const navigableAlarms = alarms;
-        
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id);
-
-        // Inicializa el hook de navegación con la lista completa y el índice de la alarma clickeada.
         initializeNavigation(navigableAlarms, index > -1 ? index : 0);
         setIsDialogOpen(true);
     };
-    // --- FIN DE LA SOLUCIÓN ---
 
     const handleDialogClose = () => {
         setIsDialogOpen(false);
         resetNavigation();
     };
 
-    const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string }) => {
+    const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => {
         if (!alarmForDetails) return;
         
-        const { action, description } = payload;
+        const { action, description, choferId } = payload;
         const alarmIdToUpdate = alarmForDetails.id;
         setIsSubmitting(true);
 
         try {
             if (alarmForDetails.status === 'pending') {
-                await reviewAlarm(alarmIdToUpdate, action, description);
+                await reviewAlarm(alarmIdToUpdate, action, description, choferId);
             } else if (alarmForDetails.status === 'suspicious') {
+                if (!choferId) {
+                    toast({ title: "Error de Validación", description: "Se requiere un chofer para confirmar la alarma.", variant: "destructive" });
+                    setIsSubmitting(false);
+                    return;
+                }
                 if (action === 'confirmed') {
-                    await confirmAlarm(alarmIdToUpdate, description);
+                    await confirmAlarm(alarmIdToUpdate, description, choferId);
                 } else {
-                    await reviewAlarm(alarmIdToUpdate, action, description);
+                    await reviewAlarm(alarmIdToUpdate, action, description, choferId);
                 }
             }
             
@@ -166,7 +166,7 @@ export default function AlarmsPage() {
         }
     };
 
-    const handleReEvaluate = async (payload: { action: 'confirmed' | 'rejected', description: string }) => {
+    const handleReEvaluate = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => {
         if (!alarmForDetails || payload.action === 'rejected') {
             handleDialogClose();
             return;
@@ -185,6 +185,7 @@ export default function AlarmsPage() {
         }
     };
     
+    // ... (resto del componente sin cambios)
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? globalAlarmCounts.pending : globalAlarmCounts.suspicious;
         if (count === 0) {
@@ -340,6 +341,8 @@ export default function AlarmsPage() {
             
             {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             
+            {/* --- INICIO DE LA SOLUCIÓN --- */}
+            {/* Se restauran los botones de navegación a su posición original, fuera del componente de detalles */}
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
                  <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                     {alarmForDetails && (
@@ -364,29 +367,25 @@ export default function AlarmsPage() {
                             {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected') && (
                                 <DialogFooter className="p-6 border-t sm:justify-start bg-background">
                                     <div className="w-full">
-                                        {alarmForDetails.status === 'pending' && (
+                                        {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && (
                                             <AlarmActionForm
+                                                alarm={alarmForDetails}
                                                 onAction={handleDialogAction}
                                                 isSubmitting={isSubmitting}
-                                                confirmText="Marcar como Sospechosa"
+                                                confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'}
                                                 initialDescription={alarmForDetails.descripcion || ''}
-                                            />
-                                        )}
-                                        {alarmForDetails.status === 'suspicious' && (
-                                            <AlarmActionForm
-                                                onAction={handleDialogAction}
-                                                isSubmitting={isSubmitting}
-                                                confirmText="Confirmar Alarma"
-                                                initialDescription={alarmForDetails.descripcion || ''}
+                                                showDriverSelector={true}
                                             />
                                         )}
                                         {alarmForDetails.status === 'rejected' && (
                                             <AlarmActionForm
+                                                alarm={alarmForDetails}
                                                 onAction={handleReEvaluate}
                                                 isSubmitting={isSubmitting}
                                                 confirmText="Marcar como Sospechosa"
                                                 rejectText="Mantener Rechazada"
                                                 initialDescription={alarmForDetails.descripcion || ''}
+                                                showDriverSelector={false}
                                             />
                                         )}
                                     </div>
@@ -396,6 +395,7 @@ export default function AlarmsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+            {/* --- FIN DE LA SOLUCIÓN --- */}
             
             <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) fetchAlarms(); setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">

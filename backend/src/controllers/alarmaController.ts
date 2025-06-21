@@ -15,6 +15,7 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 };
 
 const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
+    // ... (sin cambios en esta función)
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
         return;
@@ -32,6 +33,7 @@ const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date
 };
 
 export const getAllAlarms = async (req: Request, res: Response) => {
+    // ... (sin cambios en esta función)
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 12;
     const statusFilter = req.query.status as string;
@@ -46,9 +48,6 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     if (statusFilter && statusFilter !== 'all') {
       const dbStates = DB_QUERY_STATUS_MAP[statusFilter as keyof typeof DB_QUERY_STATUS_MAP];
       if (dbStates) {
-          // SQL Server es case-insensitive por defecto en la mayoría de las instalaciones (collations CI_AS),
-          // por lo que el `mode: 'insensitive'` puede ser redundante y a veces problemático.
-          // Lo mantenemos simple.
           whereClause.estado = { in: dbStates };
       }
     }
@@ -103,19 +102,13 @@ export const getAllAlarms = async (req: Request, res: Response) => {
           globalCounts: { total: totalAllAlarmsGlobal, pending: totalPendingGlobal, suspicious: totalSuspiciousGlobal, confirmed: totalConfirmedGlobal, rejected: totalRejectedGlobal },
         });
     } catch (error) {
-        // --- INICIO DE LA SOLUCIÓN ---
-        // Manejo de errores mejorado para diagnóstico.
         console.error("⛔ [ERROR] Falla en getAllAlarms:", error);
-        // Devolvemos un error 500 con un mensaje claro, pero el detalle importante
-        // queda registrado en la consola del servidor para que lo puedas depurar.
         res.status(500).json({ message: 'Error interno del servidor al consultar las alarmas.' });
-        // --- FIN DE LA SOLUCIÓN ---
     }
 };
 
-// ... (El resto de los controladores no necesitan cambios, pero se incluyen para la completitud del archivo)
-
 export const getAlarmById = async (req: Request, res: Response) => {
+    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarmFromDb = await prisma.alarmasHistorico.findUnique({
@@ -135,19 +128,37 @@ export const getAlarmById = async (req: Request, res: Response) => {
 
 export const reviewAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { status, descripcion } = req.body;
+    const { status, descripcion, choferId } = req.body;
 
     if (!status || !['confirmed', 'rejected'].includes(status)) {
         return res.status(400).json({ message: 'La acción proporcionada no es válida. Debe ser "confirmed" o "rejected".' });
     }
 
     try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
+        
         const statusToSave = status === 'confirmed' ? 'Sospechosa' : 'Rechazada';
-        const dataToUpdate: { estado: string; descripcion?: string } = { estado: statusToSave };
+        const dataToUpdate: { estado: string; descripcion?: string; choferId?: number } = { estado: statusToSave };
 
-        if (descripcion) {
-            dataToUpdate.descripcion = descripcion;
+        if (descripcion) dataToUpdate.descripcion = descripcion;
+        
+        // --- SOLUCIÓN: Lógica de asignación y validación de chofer ---
+        if (statusToSave === 'Sospechosa') {
+            if (!choferId) {
+                return res.status(400).json({ message: "La asignación de un chofer es obligatoria al marcar como sospechosa." });
+            }
+            const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
+            if (!choferToAssign) {
+                return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
+            }
+            // CRITICAL SECURITY CHECK: Validar que la empresa del chofer coincide con la de la alarma
+            if (choferToAssign.empresa !== alarm.Empresa) {
+                return res.status(400).json({ message: `El chofer ${choferToAssign.nombre} no pertenece a la empresa ${alarm.Empresa}.` });
+            }
+            dataToUpdate.choferId = choferId;
         }
+        // --- FIN SOLUCIÓN ---
 
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
@@ -169,17 +180,31 @@ export const reviewAlarm = async (req: Request, res: Response) => {
 
 export const confirmFinalAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { descripcion } = req.body;
+    const { descripcion, choferId } = req.body;
 
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
         if (alarm.estado !== 'Sospechosa') return res.status(400).json({ message: `Solo se puede confirmar una alarma en estado "Sospechosa".` });
         
-        const dataToUpdate: { estado: string; descripcion?: string } = { estado: 'Confirmada' };
-        if (descripcion) {
-            dataToUpdate.descripcion = descripcion;
+        const dataToUpdate: { estado: string; descripcion?: string, choferId?: number } = { estado: 'Confirmada' };
+        if (descripcion) dataToUpdate.descripcion = descripcion;
+        
+        // --- SOLUCIÓN: Lógica de asignación y validación de chofer ---
+        if (!choferId) {
+            return res.status(400).json({ message: "La selección de un chofer es obligatoria." });
         }
+        const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
+
+        if (!choferToAssign) {
+            return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
+        }
+        // CRITICAL SECURITY CHECK
+        if (choferToAssign.empresa !== alarm.Empresa) {
+            return res.status(400).json({ message: `El chofer ${choferToAssign.nombre} no pertenece a la empresa ${alarm.Empresa}.` });
+        }
+        dataToUpdate.choferId = choferId;
+        // --- FIN SOLUCIÓN ---
 
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
@@ -195,6 +220,7 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
 };
 
 export const reEvaluateAlarm = async (req: Request, res: Response) => {
+    // ... (sin cambios en esta función)
     const { id } = req.params;
     const { descripcion } = req.body;
 
@@ -226,6 +252,7 @@ export const reEvaluateAlarm = async (req: Request, res: Response) => {
 };
 
 export const retryVideoDownload = async (req: Request, res: Response) => {
+    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });

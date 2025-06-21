@@ -6,8 +6,8 @@ if (!API_URL) {
   throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }
 
-// ... getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm sin cambios ...
 export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
+  // ... (sin cambios en esta función)
   try {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
@@ -38,11 +38,11 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
 
 // --- INICIO DE CAMBIOS ---
 
-export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string): Promise<Alarm> {
+export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string, choferId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, descripcion: description }), // Enviamos la descripción
+        body: JSON.stringify({ status, descripcion: description, choferId }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -51,11 +51,11 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     return await response.json();
 }
 
-export async function confirmAlarm(alarmId: string, description?: string): Promise<Alarm> {
+export async function confirmAlarm(alarmId: string, description?: string, choferId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descripcion: description }), // Enviamos la descripción
+        body: JSON.stringify({ descripcion: description, choferId }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -68,7 +68,7 @@ export async function reEvaluateAlarm(alarmId: string, description?: string): Pr
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descripcion: description }), // Enviamos la descripción
+        body: JSON.stringify({ descripcion: description }), // La re-evaluación no cambia de chofer
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -77,7 +77,8 @@ export async function reEvaluateAlarm(alarmId: string, description?: string): Pr
     return await response.json();
 }
 
-// --- INICIO DE LA SOLUCIÓN: Nueva función de API para reintentar video ---
+// --- FIN DE CAMBIOS ---
+
 export async function retryVideo(alarmId: string): Promise<{ message: string }> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/retry-video`, {
         method: 'POST',
@@ -89,15 +90,7 @@ export async function retryVideo(alarmId: string): Promise<{ message: string }> 
     }
     return await response.json();
 }
-// --- FIN DE LA SOLUCIÓN ---
 
-// --- INICIO DE CÓDIGO NUEVO ---
-
-/**
- * Obtiene la lista de choferes, opcionalmente filtrada por un término de búsqueda.
- * @param query - Término de búsqueda opcional.
- * @returns Una promesa que resuelve a un array de objetos Driver.
- */
 export async function getDrivers(query?: string): Promise<Driver[]> {
     try {
         const url = new URL(`${API_URL}/choferes`);
@@ -115,11 +108,6 @@ export async function getDrivers(query?: string): Promise<Driver[]> {
     }
 }
 
-/**
- * Obtiene los detalles y estadísticas de un único chofer.
- * @param id - El ID del chofer a obtener.
- * @returns Una promesa que resuelve al objeto Driver con sus estadísticas.
- */
 export async function getDriverDetails(id: string): Promise<Driver> {
     try {
         const response = await fetch(`${API_URL}/choferes/${id}`);
@@ -137,4 +125,3 @@ export async function getDriverDetails(id: string): Promise<Driver> {
         throw error;
     }
 }
-// --- FIN DE CÓDIGO NUEVO ---

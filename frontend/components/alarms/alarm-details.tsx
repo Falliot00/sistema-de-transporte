@@ -7,33 +7,23 @@ import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlarmMedia } from "./alarm-media";
-import { Clock, CarFront, User, FileText, MapPin, Gauge, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, CarFront, User, FileText, MapPin, Gauge, Building } from "lucide-react";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 
 const AlarmLocationMap = dynamic(() => import('./alarm-location-map'), {
     ssr: false,
     loading: () => <Skeleton className="h-full w-full" />,
 });
 
+// --- INICIO DE LA SOLUCIÓN ---
+// Se simplifica la interfaz, ya no maneja la navegación.
 interface AlarmDetailsProps {
   alarm: Alarm;
-  onNext?: () => void;
-  onPrevious?: () => void;
-  hasNext?: boolean;
-  hasPrevious?: boolean;
-  isNavigable?: boolean; // Prop para controlar la visibilidad de los botones
 }
 
-export function AlarmDetails({ 
-    alarm, 
-    onNext, 
-    onPrevious, 
-    hasNext, 
-    hasPrevious, 
-    isNavigable = false 
-}: AlarmDetailsProps) {
+export function AlarmDetails({ alarm }: AlarmDetailsProps) {
+// --- FIN DE LA SOLUCIÓN ---
   const statusInfo = getAlarmStatusInfo(alarm.status);
 
   const position = useMemo((): [number, number] | null => {
@@ -45,20 +35,6 @@ export function AlarmDetails({
 
   return (
     <div className="flex flex-col gap-6 relative">
-        {/* Los botones de navegación ahora se renderizan dentro del componente de detalles */}
-        {isNavigable && (
-            <>
-                <Button variant="outline" size="icon" onClick={onPrevious} disabled={!hasPrevious} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 rounded-full h-10 w-10 bg-background/80 hover:bg-background z-10">
-                    <ChevronLeft className="h-5 w-5" />
-                    <span className="sr-only">Anterior</span>
-                </Button>
-                <Button variant="outline" size="icon" onClick={onNext} disabled={!hasNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 rounded-full h-10 w-10 bg-background/80 hover:bg-background z-10">
-                    <ChevronRight className="h-5 w-5" />
-                    <span className="sr-only">Siguiente</span>
-                </Button>
-            </>
-        )}
-        
         <div className="flex justify-between items-start gap-4">
             <div className="flex-grow">
                  <CardTitle className="text-xl">
@@ -73,6 +49,7 @@ export function AlarmDetails({
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
                 <div className="space-y-4">
                     <InfoItem icon={<Clock className="h-4 w-4" />} label="Fecha y Hora" value={formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'long', timeStyle: 'medium' })} />
+                    <InfoItem icon={<Building className="h-4 w-4" />} label="Empresa" value={alarm.company} />
                     <InfoItem icon={<User className="h-4 w-4" />} label="Chofer Asignado" value={alarm.driver.name} />
                     <InfoItem icon={<FileText className="h-4 w-4" />} label="DNI" value={alarm.driver.license} />
                     <InfoItem icon={<CarFront className="h-4 w-4" />} label="Vehiculo (Interno)" value={alarm.vehicle.interno || 'N/A'} />

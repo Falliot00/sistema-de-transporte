@@ -28,7 +28,15 @@ export interface Driver {
     anios: number | null;
     empresa: string | null;
     stats?: DriverStats;
-    alarmas?: Alarm[]; // <-- SOLUCIÓN: Propiedad añadida para las alarmas recientes
+    alarmas?: Alarm[]; // <-- Propiedad para las alarmas recientes
+}
+
+export interface Vehicle {
+    id: string;
+    licensePlate: string;
+    model: string;
+    interno?: string;
+    company?: string; // <-- SOLUCIÓN: Añadido campo de empresa
 }
 
 export interface Alarm {
@@ -40,6 +48,7 @@ export interface Alarm {
     videoProcessing?: boolean;
     speed?: number;
     descripcion?: string;
+    company?: string; // <-- SOLUCIÓN: Añadido campo de empresa
     location: {
         latitude: number;
         longitude: number;
@@ -49,13 +58,9 @@ export interface Alarm {
         id: string;
         name: string;
         license: string;
+        company?: string;
     };
-    vehicle: {
-        id: string;
-        licensePlate: string;
-        model: string;
-        interno?: string;
-    };
+    vehicle: Vehicle; // <-- Usando la interfaz Vehicle
     device: {
         id: string;
         name: string;

@@ -30,9 +30,9 @@ export const transformAlarmData = (alarm: any) => ({
     rawStatus: alarm.estado,
     type: alarm.typeAlarm?.alarm || 'Tipo Desconocido',
     timestamp: alarm.alarmTime,
-    speed: alarm.velocidad,
     videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
     descripcion: alarm.descripcion,
+    company: alarm.Empresa || 'Empresa Desconocida', // <-- SOLUCIÓN: Añadido campo de empresa
     location: {
       latitude: parseFloat(alarm.lat) || 0,
       longitude: parseFloat(alarm.lng) || 0,
@@ -42,16 +42,19 @@ export const transformAlarmData = (alarm: any) => ({
         id: alarm.chofer.choferes_id.toString(),
         name: `${alarm.chofer.nombre} ${alarm.chofer.apellido}`,
         license: alarm.chofer.dni || 'DNI no disponible',
+        company: alarm.chofer.empresa || 'Empresa Desconocida',
     } : {
         id: 'chofer-no-asignado',
         name: 'Chofer No Asignado',
         license: '-',
+        company: alarm.Empresa || 'Empresa Desconocida',
     },
     vehicle: { 
       id: `vehiculo-${alarm.patente}`, 
       licensePlate: alarm.patente || 'Patente desconocida', 
       model: 'Modelo pendiente',
-      interno: alarm.interno || 'N/A', 
+      interno: alarm.interno || 'N/A',
+      company: alarm.Empresa || 'Empresa Desconocida', // <-- SOLUCIÓN: Añadido campo de empresa
     },
     device: { id: `disp-${alarm.dispositivo}`, name: `Dispositivo ${alarm.dispositivo || 'Desconocido'}`, serialNumber: alarm.dispositivo || 'N/A' },
     media: [
