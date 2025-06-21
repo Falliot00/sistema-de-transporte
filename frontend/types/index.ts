@@ -1,4 +1,5 @@
 // frontend/types/index.ts
+
 export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
 
 export interface MediaItem {
@@ -9,18 +10,27 @@ export interface MediaItem {
     timestamp?: string; 
 }
 
-// Se alinea el tipo Driver con el modelo Choferes de Prisma
-export interface Driver {
-    id: string; // Será choferes_id convertido a string
-    name: string;
-    license: string; // Usaremos DNI aquí
-    // Campos opcionales que pueden venir de la DB
-    avatar?: string;
-    totalAlarms?: number;
-    confirmationRate?: number;
-    efficiencyScore?: number;
+// NUEVO: Tipo para las estadísticas de un chofer
+export interface DriverStats {
+    total: number;
+    pending: number;
+    suspicious: number;
+    confirmed: number;
+    rejected: number;
 }
 
+// MODIFICADO: El tipo Driver ahora es completo para reflejar el modelo de la DB
+// y puede incluir las estadísticas.
+export interface Driver {
+    choferes_id: number;
+    nombre: string;
+    apellido: string;
+    foto: string | null;
+    dni: string | null;
+    anios: number | null;
+    empresa: string | null;
+    stats?: DriverStats; // Las estadísticas son opcionales
+}
 
 export interface Alarm {
     id: string;
@@ -30,13 +40,17 @@ export interface Alarm {
     timestamp: string;
     videoProcessing?: boolean;
     speed?: number;
-    descripcion?: string; // NUEVO: Se añade el campo descripción.
+    descripcion?: string;
     location: {
         latitude: number;
         longitude: number;
         address: string;
     };
-    driver: Driver; // MODIFICADO: ahora es un objeto Driver completo, no solo `id` y `name`.
+    driver: { // Usaremos un subconjunto de Driver aquí para las alarmas
+        id: string;
+        name: string;
+        license: string;
+    };
     vehicle: {
         id: string;
         licensePlate: string;
@@ -58,7 +72,6 @@ export interface Alarm {
     reviewedAt?: string;
 }
 
-// ... (El resto de los tipos como PaginationInfo, GlobalAlarmCounts, GetAlarmsResponse, GetAlarmsParams, KPI, etc., se mantienen igual)
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -81,6 +94,7 @@ export interface GetAlarmsResponse {
     pagination: PaginationInfo;
     globalCounts: GlobalAlarmCounts;
 }
+
 export interface GetAlarmsParams {
     page?: number;
     pageSize?: number;
@@ -90,10 +104,6 @@ export interface GetAlarmsParams {
     startDate?: string;
     endDate?: string;
 }
-
-// ... (resto de tipos sin cambios)
-// --- FIN DE LA SOLUCIÓN ---
-
 
 export interface KPI {
     id: string;
@@ -107,16 +117,7 @@ export interface KPI {
 
 export type AlarmType = 'Distracción del conductor' | 'Sin cinturón' | 'Cabeza baja' | 'Detección de fatiga' | 'Comportamiento anormal';
 
-export interface Driver {
-    id: string;
-    name: string;
-    license: string;
-    totalAlarms?: number;
-    confirmationRate?: number;
-    efficiencyScore?: number;
-    avatar?: string;
-}
-
+// El tipo Device se mantiene para otras partes del dashboard
 export interface Device {
     id: string;
     name: string;

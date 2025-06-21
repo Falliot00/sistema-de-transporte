@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ActivitySquare, Bell, LayoutDashboard, Settings, Users, LineChart } from "lucide-react"; // Added LineChart
+import { ActivitySquare, Bell, LayoutDashboard, Settings, Users, LineChart } from "lucide-react";
 
 interface MainNavProps {
   className?: string;
@@ -13,6 +13,7 @@ interface MainNavProps {
 export function MainNav({ className }: MainNavProps) {
   const pathname = usePathname();
 
+  // Se usa startsWith para que las subrutas de /drivers (ej. /drivers/1) también activen el enlace.
   const routes = [
     {
       href: "/",
@@ -21,29 +22,28 @@ export function MainNav({ className }: MainNavProps) {
       active: pathname === "/",
     },
     {
-      //href: "/dashboard",
       href: "/dashboard",
       label: "Dashboard",
-      icon: <LineChart className="h-5 w-5 mr-2" />, // Changed icon for Dashboard
-      active: pathname === "/dashboard",
+      icon: <LineChart className="h-5 w-5 mr-2" />,
+      active: pathname.startsWith("/dashboard"),
     },
     {
       href: "/drivers",
       label: "Choferes",
       icon: <Users className="h-5 w-5 mr-2" />,
-      active: pathname === "/drivers",
+      active: pathname.startsWith("/drivers"), // MODIFICADO: para subrutas
     },
     {
       href: "/devices",
       label: "Dispositivos",
       icon: <ActivitySquare className="h-5 w-5 mr-2" />,
-      active: pathname === "/devices",
+      active: pathname.startsWith("/devices"),
     },
     {
       href: "/settings",
       label: "Configuración",
       icon: <Settings className="h-5 w-5 mr-2" />,
-      active: pathname === "/settings",
+      active: pathname.startsWith("/settings"),
     },
   ];
 
