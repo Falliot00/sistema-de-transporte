@@ -1,8 +1,7 @@
-// frontend/components/drivers/recent-alarms-table.tsx
 "use client";
 
 import { Alarm } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +15,15 @@ interface RecentAlarmsTableProps {
 
 export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
     return (
-        <Card>
+        <Card className="h-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <History className="h-6 w-6" />
+                    <History className="h-6 w-6 text-primary" />
                     Alarmas Recientes
                 </CardTitle>
+                <CardDescription>
+                    Últimas 10 alarmas registradas para este chofer.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 {alarms && alarms.length > 0 ? (
@@ -46,6 +48,7 @@ export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
                                                 <Badge variant={statusInfo.variant as any} className="capitalize">{statusInfo.label}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
+                                                {/* CRITICAL: Este link permite una navegación fluida al detalle de la alarma */}
                                                 <Button asChild variant="ghost" size="icon">
                                                     <Link href={`/?alarmId=${alarm.id}`} aria-label="Ver detalles de la alarma">
                                                         <Eye className="h-4 w-4" />
@@ -59,7 +62,7 @@ export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
                         </Table>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/50 rounded-lg">
+                    <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/50 rounded-lg h-48">
                         <p className="font-semibold">Este chofer no tiene alarmas recientes.</p>
                     </div>
                 )}

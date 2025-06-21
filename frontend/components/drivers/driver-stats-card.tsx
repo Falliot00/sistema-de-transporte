@@ -1,9 +1,8 @@
-// frontend/components/drivers/driver-stats-card.tsx
 "use client";
 
 import { DriverStats } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress"; // Importamos nuestro componente mejorado
+import { Progress } from "@/components/ui/progress";
 import { Bell, Clock, CheckCircle, XCircle, AlertTriangle, BarChartHorizontal } from "lucide-react";
 
 interface DriverStatsCardProps {
@@ -11,11 +10,10 @@ interface DriverStatsCardProps {
 }
 
 export function DriverStatsCard({ stats }: DriverStatsCardProps) {
-
     const total = stats?.total ?? 0;
 
     const statItems = [
-        { title: "Pendientes", value: stats?.pending ?? 0, Icon: Clock, colorClass: "bg-yellow-500", textColor: "text-yellow-500" },
+        { title: "Pendientes", value: stats?.pending ?? 0, Icon: Clock, colorClass: "bg-yellow-400", textColor: "text-yellow-500" },
         { title: "Sospechosas", value: stats?.suspicious ?? 0, Icon: AlertTriangle, colorClass: "bg-blue-500", textColor: "text-blue-500" },
         { title: "Confirmadas", value: stats?.confirmed ?? 0, Icon: CheckCircle, colorClass: "bg-green-500", textColor: "text-green-500" },
         { title: "Rechazadas", value: stats?.rejected ?? 0, Icon: XCircle, colorClass: "bg-red-500", textColor: "text-red-500" },
@@ -25,11 +23,11 @@ export function DriverStatsCard({ stats }: DriverStatsCardProps) {
         <Card className="h-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                    <BarChartHorizontal className="h-6 w-6" />
+                    <BarChartHorizontal className="h-6 w-6 text-primary" />
                     Rendimiento de Alarmas
                 </CardTitle>
                 <CardDescription>
-                    Desglose del historial de alarmas del chofer. Total: <span className="font-bold text-foreground">{total}</span>.
+                    Desglose del historial de alarmas. Total: <span className="font-bold text-foreground">{total}</span>.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -51,7 +49,6 @@ export function DriverStatsCard({ stats }: DriverStatsCardProps) {
                                         </div>
                                         <span className="font-semibold">{item.value} <span className="text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span></span>
                                     </div>
-                                    {/* SOLUCIÓN: Ahora pasamos la clase de color a la prop correcta `indicatorClassName` */}
                                     <Progress value={percentage} indicatorClassName={item.colorClass} className="h-2" />
                                 </div>
                             );
