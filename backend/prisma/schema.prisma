@@ -9,11 +9,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model alarmasHistorico {
-  guid        String    @id(map: "PK__alarmasH__497F6CB4A51B299D") @db.VarChar(50)
+model AlarmasHistorico {
+  guid        String    @id(map: "PK__alarmasH__497F6CB4A51B299D") @map("guid") @db.VarChar(50)
   dispositivo String?   @db.VarChar(20)
   interno     String?   @db.VarChar(20)
-  alarmType   Int?      // Este es el campo que actúa como clave foránea.
+  alarmTypeId Int?      @map("alarmType")
   velocidad   Float?
   lng         String?   @db.VarChar(20)
   lat         String?   @db.VarChar(20)
@@ -24,18 +24,49 @@ model alarmasHistorico {
   imagen      String?   @db.VarChar(512)
   video       String?   @db.VarChar(512)
   estado      String?   @db.VarChar(50)
+  descripcion String?   @db.VarChar(512)
+  choferId    Int?      @map("chofer")
 
-  // --- RELACIÓN AÑADIDA ---
-  // Se crea un campo virtual "typeAlarm" que representa la relación.
-  // Prisma sabe que debe unir `fields: [alarmType]` de esta tabla
-  // con `references: [type]` de la tabla `TypeAlarms`.
-  typeAlarm   TypeAlarms? @relation(fields: [alarmType], references: [type])
+  // --- RELACIÓN CON CHÓFERES ---
+  // Se establece la relación explícita con el modelo Choferes.
+  // El campo `choferId` de esta tabla referencia a `choferes_id` de la tabla Choferes.
+  // onDelete y onUpdate se establecen en NoAction para respetar la configuración existente de la base de datos.
+  chofer   Choferes?  @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // --- RELACIÓN CON TIPO DE ALARMAS ---
+  // Se añade la relación explícita con el modelo TypeAlarms para consistencia.
+  typeAlarm TypeAlarms? @relation(fields: [alarmTypeId], references: [type], onDelete: NoAction, onUpdate: NoAction)
 
-  // Mapea este modelo a la tabla "alarmasHistorico" en la base de datos.
   @@map("alarmasHistorico")
 }
 
-model sysdiagrams {
+model TypeAlarms {
+  type    Int     @id(map: "PK__typeAlar__E3F852490A79947F")
+  alarm   String? @db.VarChar(200)
+
+  // Relación inversa para poder navegar desde un tipo de alarma a todas las alarmas de ese tipo.
+  alarmas AlarmasHistorico[]
+
+  @@map("typeAlarms")
+}
+
+model Choferes {
+  choferes_id Int     @id(map: "PK_choferes") @map("choferes_id")
+  nombre      String  @db.VarChar(50)
+  apellido    String  @db.VarChar(50)
+  foto        String? @db.VarChar(255)
+  dni         String? @db.VarChar(50)
+  anios       Int?
+  empresa     String? @db.VarChar(50)
+
+  // --- RELACIÓN INVERSA CON ALARMAS ---
+  // Permite navegar desde un chofer a todas sus alarmas históricas.
+  alarmas     AlarmasHistorico[]
+
+  @@map("choferes")
+}
+
+model Sysdiagrams {
   name         String @db.NVarChar(128)
   principal_id Int
   diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61364CBE63") @default(autoincrement())
@@ -43,19 +74,5 @@ model sysdiagrams {
   definition   Bytes?
 
   @@unique([principal_id, name], map: "UK_principal_name")
-  // Mapea este modelo a la tabla "sysdiagrams".
   @@map("sysdiagrams")
-}
-
-model TypeAlarms {
-  type  Int     @id(map: "PK__typeAlar__E3F852490A79947F")
-  alarm String? @db.VarChar(200)
-
-  // --- RELACIÓN INVERSA AÑADIDA ---
-  // Este campo virtual "alarms" permite navegar desde un tipo de alarma
-  // hacia todas las alarmas históricas de ese tipo. Es una lista o array.
-  alarms alarmasHistorico[]
-
-  // Mapea este modelo a la tabla "typeAlarms".
-  @@map("typeAlarms")
 }
