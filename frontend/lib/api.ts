@@ -36,11 +36,13 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
   }
 }
 
-export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected'): Promise<Alarm> {
+// --- INICIO DE CAMBIOS ---
+
+export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, descripcion: description }), // Enviamos la descripción
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -49,10 +51,11 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     return await response.json();
 }
 
-export async function confirmAlarm(alarmId: string): Promise<Alarm> {
+export async function confirmAlarm(alarmId: string, description?: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descripcion: description }), // Enviamos la descripción
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -61,10 +64,11 @@ export async function confirmAlarm(alarmId: string): Promise<Alarm> {
     return await response.json();
 }
 
-export async function reEvaluateAlarm(alarmId: string): Promise<Alarm> {
+export async function reEvaluateAlarm(alarmId: string, description?: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descripcion: description }), // Enviamos la descripción
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));

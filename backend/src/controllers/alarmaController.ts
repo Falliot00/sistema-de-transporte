@@ -177,9 +177,11 @@ export const getAlarmById = async (req: Request, res: Response) => {
 
 // Las demás funciones (reviewAlarm, confirmFinalAlarm, etc.) también se benefician del `include`
 // para devolver el objeto completo y actualizado al frontend.
+// --- INICIO DE CAMBIOS ---
+
 export const reviewAlarm = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, descripcion } = req.body; // Se extrae la descripción del cuerpo
 
   if (!status || !['confirmed', 'rejected'].includes(status)) {
     return res.status(400).json({ message: 'La acción proporcionada no es válida.' });
@@ -187,14 +189,23 @@ export const reviewAlarm = async (req: Request, res: Response) => {
 
   try {
     const statusToSave = status === 'confirmed' ? 'Sospechosa' : 'Rechazada';
+    
+    const dataToUpdate: { estado: string; descripcion?: string } = {
+        estado: statusToSave,
+    };
+
+    // Si se proporciona una descripción y el estado es 'Sospechosa', se añade a la actualización.
+    if (statusToSave === 'Sospechosa' && descripcion) {
+        dataToUpdate.descripcion = descripcion;
+    }
+
     const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
       where: { guid: id },
-      data: { estado: statusToSave },
-      include: { chofer: true, typeAlarm: true } // AÑADIDO
+      data: dataToUpdate,
+      include: { chofer: true, typeAlarm: true }
     });
 
     if (statusToSave === 'Sospechosa') {
-      console.log(`[+] Estado 'Sospechosa' detectado para la alarma ${id}. Lanzando script de video...`);
       triggerVideoScript(updatedAlarmFromDb);
     }
 
@@ -202,61 +213,67 @@ export const reviewAlarm = async (req: Request, res: Response) => {
     res.status(200).json(transformedAlarm);
   } catch (error: any) {
     if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma que intentas actualizar no existe.' });
-    console.error(`Error al revisar la alarma ${id}:`, error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 };
 
-
-// Las demás funciones (confirmFinalAlarm, reEvaluateAlarm, retryVideoDownload) no necesitan grandes cambios,
-// pero se benefician de devolver el objeto completo gracias al `include`.
-
-// ... (El resto de los controladores confirmFinalAlarm, reEvaluateAlarm, etc. se mantienen igual pero ahora incluyen los datos del chofer al devolver la respuesta.)
-
 export const confirmFinalAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
+    const { descripcion } = req.body; // Se extrae la descripción
+
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
-        if (alarm.estado !== 'Sospechosa') return res.status(400).json({ message: `Solo se puede confirmar una alarma "Sospechosa". Estado actual: ${alarm.estado}` });
+        if (alarm.estado !== 'Sospechosa') return res.status(400).json({ message: `Solo se puede confirmar una alarma "Sospechosa".` });
+        
+        const dataToUpdate: { estado: string; descripcion?: string } = { estado: 'Confirmada' };
+        if (descripcion) {
+            dataToUpdate.descripcion = descripcion;
+        }
+
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
-            data: { estado: 'Confirmada' },
-            include: { typeAlarm: true }
+            data: dataToUpdate,
+            include: { chofer: true, typeAlarm: true }
         });
         const transformedAlarm = transformAlarmData(updatedAlarm);
         res.status(200).json(transformedAlarm);
     } catch (error: any) {
-        if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma que intentas confirmar no existe.' });
-        console.error(`Error al confirmar la alarma ${id}:`, error);
+        if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma no existe.' });
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
 
 export const reEvaluateAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
+    const { descripcion } = req.body; // Se extrae la descripción
+
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
         if (!DB_QUERY_STATUS_MAP.rejected.map(s => s.toLowerCase()).includes(alarm.estado?.toLowerCase() || '')) {
-            return res.status(400).json({ message: `Solo se puede re-evaluar una alarma "Rechazada". Estado actual: ${alarm.estado}` });
+            return res.status(400).json({ message: `Solo se puede re-evaluar una alarma "Rechazada".` });
         }
+        
+        const dataToUpdate: { estado: string; descripcion?: string } = { estado: 'Sospechosa' };
+        if (descripcion) {
+            dataToUpdate.descripcion = descripcion;
+        }
+
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
-            data: { estado: 'Sospechosa' },
-            include: { typeAlarm: true }
+            data: dataToUpdate,
+            include: { chofer: true, typeAlarm: true }
         });
-        console.log(`[+] Alarma ${id} re-evaluada como 'Sospechosa'. Lanzando script de video...`);
+
         triggerVideoScript(updatedAlarm);
         const transformedAlarm = transformAlarmData(updatedAlarm);
         res.status(200).json(transformedAlarm);
     } catch (error: any) {
-        if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma que intentas re-evaluar no existe.' });
-        console.error(`Error al re-evaluar la alarma ${id}:`, error);
+        if (error.code === 'P2025') return res.status(404).json({ message: 'La alarma no existe.' });
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
-
 // --- INICIO DE LA SOLUCIÓN: Nuevo controlador para reintentar video ---
 export const retryVideoDownload = async (req: Request, res: Response) => {
     const { id } = req.params;
