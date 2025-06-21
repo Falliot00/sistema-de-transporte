@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
 import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAlarmNavigation } from "@/hooks/use-alarm-navigation"; // IMPORTANTE: Importar el nuevo hook
 import { AlarmCard } from "./alarm-card";
 import { AlarmDetails } from "./alarm-details";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +54,23 @@ export default function AlarmsPage() {
         to: new Date(),
     });
 
-    const [alarmForDetails, setAlarmForDetails] = useState<Alarm | null>(null);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     
-    const [reviewableAlarms, setReviewableAlarms] = useState<Alarm[]>([]);
-    const [currentReviewIndex, setCurrentReviewIndex] = useState(-1);
+    // --- INICIO DE LA SOLUCIÓN: Usar el hook de navegación ---
+    const { 
+        currentAlarm: alarmForDetails, 
+        initialize: initializeNavigation, 
+        reset: resetNavigation, 
+        goToNext, 
+        goToPrevious, 
+        hasNext, 
+        hasPrevious,
+        isNavigating,
+        removeAlarm,
+    } = useAlarmNavigation();
+    // --- FIN DE LA SOLUCIÓN ---
+
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     
     const [isAnalysisMode, setIsAnalysisMode] = useState(false);
     const [analysisAlarms, setAnalysisAlarms] = useState<Alarm[]>([]);
@@ -99,34 +112,23 @@ export default function AlarmsPage() {
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
 
     const handleCardClick = (clickedAlarm: Alarm) => {
+        let navigableAlarms: Alarm[] = [];
         if (clickedAlarm.status === 'suspicious') {
-            const suspiciousAlarms = alarms.filter(a => a.status === 'suspicious');
-            const index = suspiciousAlarms.findIndex(a => a.id === clickedAlarm.id);
-            setReviewableAlarms(suspiciousAlarms);
-            setCurrentReviewIndex(index);
+            navigableAlarms = alarms.filter(a => a.status === 'suspicious');
         } else {
-            setReviewableAlarms([]);
-            setCurrentReviewIndex(-1);
+            navigableAlarms = [clickedAlarm];
         }
-        setAlarmForDetails(clickedAlarm);
+        
+        const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id);
+        initializeNavigation(navigableAlarms, index);
+        setIsDialogOpen(true);
     };
 
-    const handleNextInDetails = () => {
-        const nextIndex = currentReviewIndex + 1;
-        if (nextIndex < reviewableAlarms.length) {
-            setCurrentReviewIndex(nextIndex);
-            setAlarmForDetails(reviewableAlarms[nextIndex]);
-        }
-    };
-    
-    const handlePreviousInDetails = () => {
-        const prevIndex = currentReviewIndex - 1;
-        if (prevIndex >= 0) {
-            setCurrentReviewIndex(prevIndex);
-            setAlarmForDetails(reviewableAlarms[prevIndex]);
-        }
-    };
-    
+    const handleDialogClose = () => {
+        setIsDialogOpen(false);
+        resetNavigation();
+    }
+
     const handleDialogAction = async (action: 'confirmed' | 'rejected') => {
         if (!alarmForDetails) return;
         
@@ -141,16 +143,15 @@ export default function AlarmsPage() {
                 toast({ title: "Alarma Rechazada" });
             }
     
-            await fetchAlarms(); 
-    
-            const updatedReviewableList = reviewableAlarms.filter(a => a.id !== alarmIdToUpdate);
+            removeAlarm(alarmIdToUpdate);
             
-            if (currentReviewIndex < updatedReviewableList.length) {
-                setReviewableAlarms(updatedReviewableList);
-                setAlarmForDetails(updatedReviewableList[currentReviewIndex]);
-            } else {
-                setAlarmForDetails(null);
+            if (alarmIdToUpdate === alarmForDetails.id) {
+                if(hasNext) goToNext();
+                else if(hasPrevious) goToPrevious();
+                else handleDialogClose();
             }
+    
+            await fetchAlarms(); 
     
         } catch (error: any) {
             toast({ title: "Error", variant: "destructive", description: error.message });
@@ -165,7 +166,7 @@ export default function AlarmsPage() {
         try {
             await reEvaluateAlarm(alarmForDetails.id);
             toast({ title: "Alarma Re-evaluada", description: "El estado ha sido cambiado a 'Sospechosa'." });
-            setAlarmForDetails(null); 
+            handleDialogClose(); 
             fetchAlarms(); 
         } catch (error: any) {
             toast({ title: "Error", variant: "destructive", description: error.message });
@@ -181,7 +182,7 @@ export default function AlarmsPage() {
             await reviewAlarm(alarmForDetails.id, action);
             toast({ title: "Alarma Actualizada" });
             fetchAlarms();
-            setAlarmForDetails(null);
+            handleDialogClose();
         } catch (error: any) {
             toast({ title: "Error", variant: "destructive", description: error.message });
         } finally {
@@ -311,55 +312,51 @@ export default function AlarmsPage() {
             
             {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             
-            <Dialog open={!!alarmForDetails} onOpenChange={(open) => !open && setAlarmForDetails(null)}>
-                 <DialogContent className="max-w-4xl h-[90vh] grid grid-rows-[1fr_auto] p-0 gap-0">
+            {/* --- INICIO DE LA SOLUCIÓN --- */}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
+                <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                     {alarmForDetails && (
                         <>
-                            {reviewableAlarms.length > 0 && (
+                            {/* Los botones de navegación ahora son hermanos del DialogContent para posicionarse fuera de él */}
+                            {isNavigating && (
                                 <>
-                                <Button variant="outline" size="icon" onClick={handlePreviousInDetails} disabled={currentReviewIndex <= 0} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 ml-4 bg-background/80 hover:bg-background z-50">
-                                    <ChevronLeft className="h-6 w-6" />
-                                    <span className="sr-only">Anterior</span>
-                                </Button>
-                                <Button variant="outline" size="icon" onClick={handleNextInDetails} disabled={currentReviewIndex >= reviewableAlarms.length - 1} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 mr-4 bg-background/80 hover:bg-background z-50">
-                                    <ChevronRight className="h-6 w-6" />
-                                    <span className="sr-only">Siguiente</span>
-                                </Button>
+                                    <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">
+                                        <ChevronLeft className="h-6 w-6" />
+                                        <span className="sr-only">Anterior</span>
+                                    </Button>
+                                    <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">
+                                        <ChevronRight className="h-6 w-6" />
+                                        <span className="sr-only">Siguiente</span>
+                                    </Button>
                                 </>
                             )}
-                            
-                            <div className="overflow-y-auto p-6">
+
+                            <div className="p-6 overflow-y-auto flex-grow">
+                                {/* AlarmDetails ya no necesita las props de navegación */}
                                 <AlarmDetails alarm={alarmForDetails} />
                             </div>
 
-                            {alarmForDetails.status === 'pending' && (
-                                <DialogFooter className="p-6 border-t sm:justify-start">
-                                    <div className="w-full">
-                                        <AlarmReview onReview={handleDialogReview} isSubmitting={isSubmitting} confirmText="Sospechosa" />
-                                    </div>
-                                </DialogFooter>
-                            )}
-                            {alarmForDetails.status === 'suspicious' && (
-                                <DialogFooter className="p-6 border-t sm:justify-start">
-                                    <div className="w-full">
+                            <DialogFooter className="p-6 border-t sm:justify-start">
+                                <div className="w-full">
+                                    {alarmForDetails.status === 'pending' && (
+                                        <AlarmReview onReview={handleDialogAction} isSubmitting={isSubmitting} confirmText="Sospechosa"/>
+                                    )}
+                                    {alarmForDetails.status === 'suspicious' && (
                                         <AlarmReview onReview={handleDialogAction} isSubmitting={isSubmitting} confirmText="Confirmar" />
-                                    </div>
-                                </DialogFooter>
-                            )}
-                            {/* --- INICIO DE LA SOLUCIÓN: Botón condicional para re-evaluar --- */}
-                            {alarmForDetails.status === 'rejected' && (
-                                <DialogFooter className="p-6 border-t sm:justify-start">
-                                    <Button onClick={handleReEvaluate} disabled={isSubmitting} variant="success">
-                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Sospechosa
-                                    </Button>
-                                </DialogFooter>
-                            )}
-                            {/* --- FIN DE LA SOLUCIÓN --- */}
+                                    )}
+                                    {alarmForDetails.status === 'rejected' && (
+                                        <Button onClick={handleReEvaluate} disabled={isSubmitting} variant="success">
+                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Marcar como Sospechosa
+                                        </Button>
+                                    )}
+                                </div>
+                            </DialogFooter>
                         </>
                     )}
                 </DialogContent>
             </Dialog>
+             {/* --- FIN DE LA SOLUCIÓN --- */}
             
             <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) fetchAlarms(); setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">

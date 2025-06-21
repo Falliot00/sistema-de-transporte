@@ -9,6 +9,18 @@ export interface MediaItem {
     timestamp?: string; 
 }
 
+// Se alinea el tipo Driver con el modelo Choferes de Prisma
+export interface Driver {
+    id: string; // Será choferes_id convertido a string
+    name: string;
+    license: string; // Usaremos DNI aquí
+    // Campos opcionales que pueden venir de la DB
+    avatar?: string;
+    totalAlarms?: number;
+    confirmationRate?: number;
+    efficiencyScore?: number;
+}
+
 
 export interface Alarm {
     id: string;
@@ -18,16 +30,13 @@ export interface Alarm {
     timestamp: string;
     videoProcessing?: boolean;
     speed?: number;
+    descripcion?: string; // NUEVO: Se añade el campo descripción.
     location: {
         latitude: number;
         longitude: number;
         address: string;
     };
-    driver: {
-        id: string;
-        name: string;
-        license: string;
-    };
+    driver: Driver; // MODIFICADO: ahora es un objeto Driver completo, no solo `id` y `name`.
     vehicle: {
         id: string;
         licensePlate: string;
@@ -49,6 +58,7 @@ export interface Alarm {
     reviewedAt?: string;
 }
 
+// ... (El resto de los tipos como PaginationInfo, GlobalAlarmCounts, GetAlarmsResponse, GetAlarmsParams, KPI, etc., se mantienen igual)
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -71,9 +81,6 @@ export interface GetAlarmsResponse {
     pagination: PaginationInfo;
     globalCounts: GlobalAlarmCounts;
 }
-
-// --- INICIO DE LA SOLUCIÓN ---
-// Se añaden los campos opcionales para el rango de fechas.
 export interface GetAlarmsParams {
     page?: number;
     pageSize?: number;
@@ -83,6 +90,8 @@ export interface GetAlarmsParams {
     startDate?: string;
     endDate?: string;
 }
+
+// ... (resto de tipos sin cambios)
 // --- FIN DE LA SOLUCIÓN ---
 
 

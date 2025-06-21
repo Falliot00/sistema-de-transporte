@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config';
 import alarmasRouter from './routes/alarmas';
+import choferesRouter from './routes/choferes'; // IMPORTANTE: Importar el nuevo router
 
 console.log("2. Módulos importados correctamente.");
 
@@ -23,12 +24,12 @@ app.get('/api', (req, res) => {
 });
 
 app.use('/api/alarmas', alarmasRouter);
+app.use('/api/choferes', choferesRouter); // IMPORTANTE: Registrar el nuevo router
 
 console.log("4. Rutas configuradas.");
 
 // Iniciar el servidor
 app.listen(config.port, () => {
-  // Este es el mensaje que no estás viendo
   console.log(`🚀 Servidor corriendo en http://localhost:${config.port}`);
 });
 

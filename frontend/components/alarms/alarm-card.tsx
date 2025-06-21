@@ -1,3 +1,4 @@
+// frontend/components/alarms/alarm-card.tsx
 "use client";
 
 import { Alarm } from "@/types";
@@ -25,7 +26,6 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
     >
       <div className="flex justify-between items-center mb-3">
         <Badge variant={typeColorVariant} className="font-semibold">{alarm.type}</Badge>
-        {/* MODIFICADO: Se usa la nueva función para formatear la hora */}
         <span className="text-xs text-muted-foreground">
             {formatCorrectedTimestamp(alarm.timestamp, { hour: '2-digit', minute: '2-digit' })}
         </span>
@@ -33,20 +33,20 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
       
       <div className="space-y-1.5 text-sm mb-4">
         <div className="flex items-center gap-2 font-medium">
+          {/* CRÍTICO: Ahora se usa alarm.driver.name que viene del objeto completo */}
           <User className="h-4 w-4 text-primary" /> <span>{alarm.driver.name}</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <CarFront className="h-4 w-4" /> <span>{alarm.vehicle.licensePlate}</span>
+          <CarFront className="h-4 w-4" /> <span>{alarm.vehicle.interno} - {alarm.vehicle.licensePlate}</span>
         </div>
       </div>
        
       <div className="flex justify-between items-center text-xs border-t pt-2 mt-2">
-          {/* MODIFICADO: Se usa la nueva función para formatear la fecha */}
           <span className="text-muted-foreground flex items-center gap-1">
              <Clock className="h-3 w-3" />
              {formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'short' })}
           </span>
-          <Badge variant={statusInfo.variant} className="capitalize">{statusInfo.label}</Badge>
+          <Badge variant={statusInfo.variant as any} className="capitalize">{statusInfo.label}</Badge>
       </div>
     </div>
   );

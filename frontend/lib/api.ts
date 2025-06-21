@@ -1,5 +1,5 @@
 // frontend/lib/api.ts
-import { Alarm, GetAlarmsResponse, GetAlarmsParams } from "@/types";
+import { Alarm, Driver, GetAlarmsResponse, GetAlarmsParams } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_URL) {
@@ -84,5 +84,29 @@ export async function retryVideo(alarmId: string): Promise<{ message: string }> 
         throw new Error(errorData.message || 'Error al reintentar la descarga del video');
     }
     return await response.json();
+}
+// --- FIN DE LA SOLUCIÓN ---
+
+// --- INICIO DE LA SOLUCIÓN: Nueva función para obtener choferes ---
+export async function getChoferes(): Promise<Driver[]> {
+    try {
+        const response = await fetch(`${API_URL}/choferes`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+            throw new Error(`Error al obtener los choferes: ${response.status} - ${errorData.message || response.statusText}`);
+        }
+        const choferesFromDb = await response.json();
+
+        // Mapeamos los datos de la DB al tipo `Driver` del frontend
+        return choferesFromDb.map((chofer: any) => ({
+            id: chofer.choferes_id.toString(),
+            name: `${chofer.nombre} ${chofer.apellido}`,
+            license: chofer.dni || 'N/A'
+        }));
+
+    } catch (error) {
+        console.error("Hubo un problema con la operación de fetch en getChoferes:", error);
+        return []; // Devolver un array vacío en caso de error
+    }
 }
 // --- FIN DE LA SOLUCIÓN ---
