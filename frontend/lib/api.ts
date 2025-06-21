@@ -94,20 +94,23 @@ export async function retryVideo(alarmId: string): Promise<{ message: string }> 
 // --- INICIO DE CÓDIGO NUEVO ---
 
 /**
- * Obtiene la lista completa de choferes desde el backend.
+ * Obtiene la lista de choferes, opcionalmente filtrada por un término de búsqueda.
+ * @param query - Término de búsqueda opcional.
  * @returns Una promesa que resuelve a un array de objetos Driver.
  */
-export async function getDrivers(): Promise<Driver[]> {
+export async function getDrivers(query?: string): Promise<Driver[]> {
     try {
-        const response = await fetch(`${API_URL}/choferes`);
+        const url = new URL(`${API_URL}/choferes`);
+        if (query) {
+            url.searchParams.append('search', query);
+        }
+        const response = await fetch(url.toString());
         if (!response.ok) {
-            // Arroja un error que será capturado por el componente que llama
             throw new Error(`Error al obtener los choferes: ${response.statusText}`);
         }
         return await response.json();
     } catch (error) {
         console.error("Hubo un problema con la operación de fetch en getDrivers:", error);
-        // Propaga el error para que el componente pueda manejarlo (ej. mostrar un mensaje de error)
         throw error;
     }
 }

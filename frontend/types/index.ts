@@ -10,7 +10,6 @@ export interface MediaItem {
     timestamp?: string; 
 }
 
-// NUEVO: Tipo para las estadísticas de un chofer
 export interface DriverStats {
     total: number;
     pending: number;
@@ -19,8 +18,7 @@ export interface DriverStats {
     rejected: number;
 }
 
-// MODIFICADO: El tipo Driver ahora es completo para reflejar el modelo de la DB
-// y puede incluir las estadísticas.
+// MODIFICADO: Se añade la propiedad opcional 'alarmas'
 export interface Driver {
     choferes_id: number;
     nombre: string;
@@ -29,7 +27,8 @@ export interface Driver {
     dni: string | null;
     anios: number | null;
     empresa: string | null;
-    stats?: DriverStats; // Las estadísticas son opcionales
+    stats?: DriverStats;
+    alarmas?: Alarm[]; // <-- SOLUCIÓN: Propiedad añadida para las alarmas recientes
 }
 
 export interface Alarm {
@@ -46,7 +45,7 @@ export interface Alarm {
         longitude: number;
         address: string;
     };
-    driver: { // Usaremos un subconjunto de Driver aquí para las alarmas
+    driver: {
         id: string;
         name: string;
         license: string;
@@ -72,6 +71,7 @@ export interface Alarm {
     reviewedAt?: string;
 }
 
+// ... (El resto de los tipos permanece igual)
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -94,7 +94,6 @@ export interface GetAlarmsResponse {
     pagination: PaginationInfo;
     globalCounts: GlobalAlarmCounts;
 }
-
 export interface GetAlarmsParams {
     page?: number;
     pageSize?: number;
@@ -117,7 +116,6 @@ export interface KPI {
 
 export type AlarmType = 'Distracción del conductor' | 'Sin cinturón' | 'Cabeza baja' | 'Detección de fatiga' | 'Comportamiento anormal';
 
-// El tipo Device se mantiene para otras partes del dashboard
 export interface Device {
     id: string;
     name: string;

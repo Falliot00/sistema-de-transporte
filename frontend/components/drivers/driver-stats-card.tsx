@@ -3,6 +3,7 @@
 
 import { DriverStats } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress"; // Importamos nuestro componente mejorado
 import { Bell, Clock, CheckCircle, XCircle, AlertTriangle, BarChartHorizontal } from "lucide-react";
 
 interface DriverStatsCardProps {
@@ -11,12 +12,13 @@ interface DriverStatsCardProps {
 
 export function DriverStatsCard({ stats }: DriverStatsCardProps) {
 
+    const total = stats?.total ?? 0;
+
     const statItems = [
-        { title: "Alarmas Totales", value: stats?.total ?? 0, Icon: Bell, color: "text-foreground" },
-        { title: "Pendientes", value: stats?.pending ?? 0, Icon: Clock, color: "text-yellow-500" },
-        { title: "Sospechosas", value: stats?.suspicious ?? 0, Icon: AlertTriangle, color: "text-blue-500" },
-        { title: "Confirmadas", value: stats?.confirmed ?? 0, Icon: CheckCircle, color: "text-green-500" },
-        { title: "Rechazadas", value: stats?.rejected ?? 0, Icon: XCircle, color: "text-red-500" },
+        { title: "Pendientes", value: stats?.pending ?? 0, Icon: Clock, colorClass: "bg-yellow-500", textColor: "text-yellow-500" },
+        { title: "Sospechosas", value: stats?.suspicious ?? 0, Icon: AlertTriangle, colorClass: "bg-blue-500", textColor: "text-blue-500" },
+        { title: "Confirmadas", value: stats?.confirmed ?? 0, Icon: CheckCircle, colorClass: "bg-green-500", textColor: "text-green-500" },
+        { title: "Rechazadas", value: stats?.rejected ?? 0, Icon: XCircle, colorClass: "bg-red-500", textColor: "text-red-500" },
     ];
 
     return (
@@ -24,28 +26,36 @@ export function DriverStatsCard({ stats }: DriverStatsCardProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
                     <BarChartHorizontal className="h-6 w-6" />
-                    Estadísticas de Alarmas
+                    Rendimiento de Alarmas
                 </CardTitle>
                 <CardDescription>
-                    Resumen del historial de alarmas asociadas a este chofer.
+                    Desglose del historial de alarmas del chofer. Total: <span className="font-bold text-foreground">{total}</span>.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                {stats?.total === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/50 rounded-lg">
+                {total === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/50 rounded-lg h-48">
                         <Bell className="h-12 w-12 text-muted-foreground mb-3" />
                         <p className="font-semibold">Sin alarmas registradas</p>
-                        <p className="text-sm text-muted-foreground">Este chofer no tiene alarmas asociadas en su historial.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {statItems.map(item => (
-                            <div key={item.title} className="p-4 bg-muted/50 rounded-lg flex flex-col items-center justify-center text-center">
-                                <item.Icon className={`h-8 w-8 mb-2 ${item.color}`} />
-                                <p className="text-2xl font-bold">{item.value}</p>
-                                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{item.title}</p>
-                            </div>
-                        ))}
+                    <div className="space-y-4">
+                        {statItems.map(item => {
+                            const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                            return (
+                                <div key={item.title}>
+                                    <div className="flex justify-between items-center mb-1 text-sm">
+                                        <div className="flex items-center gap-2 font-medium">
+                                            <item.Icon className={`h-4 w-4 ${item.textColor}`} />
+                                            <span>{item.title}</span>
+                                        </div>
+                                        <span className="font-semibold">{item.value} <span className="text-xs text-muted-foreground">({percentage.toFixed(0)}%)</span></span>
+                                    </div>
+                                    {/* SOLUCIÓN: Ahora pasamos la clase de color a la prop correcta `indicatorClassName` */}
+                                    <Progress value={percentage} indicatorClassName={item.colorClass} className="h-2" />
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </CardContent>

@@ -59,7 +59,7 @@ export function Sidebar({ className, isOpen = true }: SidebarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start px-2 py-6">
               <Avatar className="h-9 w-9 mr-3">
-                <AvatarImage src="/avatars/01.png" alt="Admin" />
+               {/* <AvatarImage src="/avatars/01.png" alt="Admin" />*/}
                 <AvatarFallback>AD</AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start">
