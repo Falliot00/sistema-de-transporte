@@ -84,7 +84,7 @@ export default function DriversPage() {
     
     return (
         <div className="space-y-6">
-            {/*
+            
              <Breadcrumb>
                 <BreadcrumbList>
                     <BreadcrumbItem>
@@ -96,7 +96,7 @@ export default function DriversPage() {
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
-            */}
+            
             <div>
                 <h1 className="text-3xl font-bold">Plantel de Choferes</h1>
                 <p className="text-muted-foreground">

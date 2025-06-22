@@ -53,7 +53,7 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ i
 
     return (
         <div className="space-y-6">
-            {/*
+            
             <Breadcrumb>
                 <BreadcrumbList>
                     <BreadcrumbItem>
@@ -69,7 +69,7 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ i
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
-            */}
+            
             <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-md">
                     <AvatarImage src={driver.foto || ''} alt={driverFullName} className="object-cover" />

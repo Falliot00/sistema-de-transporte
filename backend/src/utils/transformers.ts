@@ -31,8 +31,10 @@ export const transformAlarmData = (alarm: any) => ({
     type: alarm.typeAlarm?.alarm || 'Tipo Desconocido',
     timestamp: alarm.alarmTime,
     videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
+    // FIX: Se añade el campo `speed` que faltaba. Se mapea desde `alarm.velocidad` de la DB.
+    speed: alarm.velocidad,
     descripcion: alarm.descripcion,
-    company: alarm.Empresa || 'Empresa Desconocida', // <-- SOLUCIÓN: Añadido campo de empresa
+    company: alarm.Empresa || 'Empresa Desconocida',
     location: {
       latitude: parseFloat(alarm.lat) || 0,
       longitude: parseFloat(alarm.lng) || 0,
@@ -54,7 +56,7 @@ export const transformAlarmData = (alarm: any) => ({
       licensePlate: alarm.patente || 'Patente desconocida', 
       model: 'Modelo pendiente',
       interno: alarm.interno || 'N/A',
-      company: alarm.Empresa || 'Empresa Desconocida', // <-- SOLUCIÓN: Añadido campo de empresa
+      company: alarm.Empresa || 'Empresa Desconocida',
     },
     device: { id: `disp-${alarm.dispositivo}`, name: `Dispositivo ${alarm.dispositivo || 'Desconocido'}`, serialNumber: alarm.dispositivo || 'N/A' },
     media: [

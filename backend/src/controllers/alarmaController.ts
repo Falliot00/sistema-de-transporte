@@ -143,9 +143,9 @@ export const reviewAlarm = async (req: Request, res: Response) => {
 
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
-        // --- SOLUCIÓN: Lógica de asignación y validación de chofer ---
         if (statusToSave === 'Sospechosa') {
-            if (!choferId) {
+            // FIX: Cambiamos `!choferId` por una validación que no falle con el ID 0.
+            if (typeof choferId !== 'number') {
                 return res.status(400).json({ message: "La asignación de un chofer es obligatoria al marcar como sospechosa." });
             }
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
@@ -158,7 +158,6 @@ export const reviewAlarm = async (req: Request, res: Response) => {
             }
             dataToUpdate.choferId = choferId;
         }
-        // --- FIN SOLUCIÓN ---
 
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
@@ -190,8 +189,8 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         const dataToUpdate: { estado: string; descripcion?: string, choferId?: number } = { estado: 'Confirmada' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
-        // --- SOLUCIÓN: Lógica de asignación y validación de chofer ---
-        if (!choferId) {
+        // FIX: Cambiamos `!choferId` por una validación que no falle con el ID 0.
+        if (typeof choferId !== 'number') {
             return res.status(400).json({ message: "La selección de un chofer es obligatoria." });
         }
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
@@ -204,7 +203,6 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
             return res.status(400).json({ message: `El chofer ${choferToAssign.nombre} no pertenece a la empresa ${alarm.Empresa}.` });
         }
         dataToUpdate.choferId = choferId;
-        // --- FIN SOLUCIÓN ---
 
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
