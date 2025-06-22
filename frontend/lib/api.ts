@@ -7,7 +7,7 @@ if (!API_URL) {
 }
 
 export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
-  // ... (sin cambios en esta función)
+  // ... (sin cambios)
   try {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
@@ -36,9 +36,8 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
   }
 }
 
-// --- INICIO DE CAMBIOS ---
-
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string, choferId?: number): Promise<Alarm> {
+    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +50,24 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     return await response.json();
 }
 
+// --- INICIO DE LA SOLUCIÓN: Nueva función para asignar chofer ---
+export async function assignDriver(alarmId: string, choferId: number | null): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/assign-driver`, {
+        method: 'PATCH', // Usamos PATCH para actualizaciones parciales
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ choferId }), // Enviamos el ID del chofer o null
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al asignar el chofer');
+    }
+    return await response.json();
+}
+// --- FIN DE LA SOLUCIÓN ---
+
+
 export async function confirmAlarm(alarmId: string, description?: string, choferId?: number): Promise<Alarm> {
+    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -65,10 +81,11 @@ export async function confirmAlarm(alarmId: string, description?: string, chofer
 }
 
 export async function reEvaluateAlarm(alarmId: string, description?: string): Promise<Alarm> {
+    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descripcion: description }), // La re-evaluación no cambia de chofer
+        body: JSON.stringify({ descripcion: description }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -77,9 +94,8 @@ export async function reEvaluateAlarm(alarmId: string, description?: string): Pr
     return await response.json();
 }
 
-// --- FIN DE CAMBIOS ---
-
 export async function retryVideo(alarmId: string): Promise<{ message: string }> {
+    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/retry-video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,6 +108,7 @@ export async function retryVideo(alarmId: string): Promise<{ message: string }> 
 }
 
 export async function getDrivers(query?: string): Promise<Driver[]> {
+    // ... (sin cambios)
     try {
         const url = new URL(`${API_URL}/choferes`);
         if (query) {
@@ -109,6 +126,7 @@ export async function getDrivers(query?: string): Promise<Driver[]> {
 }
 
 export async function getDriverDetails(id: string): Promise<Driver> {
+    // ... (sin cambios)
     try {
         const response = await fetch(`${API_URL}/choferes/${id}`);
         if (!response.ok) {
