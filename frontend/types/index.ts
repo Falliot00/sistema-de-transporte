@@ -18,7 +18,6 @@ export interface DriverStats {
     rejected: number;
 }
 
-// MODIFICADO: Se añade la propiedad opcional 'alarmas'
 export interface Driver {
     choferes_id: number;
     nombre: string;
@@ -28,7 +27,7 @@ export interface Driver {
     anios: number | null;
     empresa: string | null;
     stats?: DriverStats;
-    alarmas?: Alarm[]; // <-- Propiedad para las alarmas recientes
+    alarmas?: Alarm[];
 }
 
 export interface Vehicle {
@@ -36,7 +35,7 @@ export interface Vehicle {
     licensePlate: string;
     model: string;
     interno?: string;
-    company?: string; // <-- SOLUCIÓN: Añadido campo de empresa
+    company?: string;
 }
 
 export interface Alarm {
@@ -48,7 +47,7 @@ export interface Alarm {
     videoProcessing?: boolean;
     speed?: number;
     descripcion?: string;
-    company?: string; // <-- SOLUCIÓN: Añadido campo de empresa
+    company?: string;
     location: {
         latitude: number;
         longitude: number;
@@ -60,7 +59,7 @@ export interface Alarm {
         license: string;
         company?: string;
     };
-    vehicle: Vehicle; // <-- Usando la interfaz Vehicle
+    vehicle: Vehicle;
     device: {
         id: string;
         name: string;
@@ -76,7 +75,6 @@ export interface Alarm {
     reviewedAt?: string;
 }
 
-// ... (El resto de los tipos permanece igual)
 export interface PaginationInfo {
     totalAlarms: number;
     currentPage: number;
@@ -107,6 +105,9 @@ export interface GetAlarmsParams {
     type?: string[];
     startDate?: string;
     endDate?: string;
+    // --- INICIO DE LA SOLUCIÓN: Añadir nuevo parámetro ---
+    company?: string[];
+    // --- FIN DE LA SOLUCIÓN ---
 }
 
 export interface KPI {

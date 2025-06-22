@@ -35,6 +35,8 @@ function useDebounce(value: string, delay: number): string {
     return debouncedValue;
 }
 
+const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera']; // Empresas disponibles para filtrar
+
 export default function AlarmsPage() {
     const { toast } = useToast();
     
@@ -49,6 +51,10 @@ export default function AlarmsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
+    
+    // --- INICIO DE LA SOLUCIÓN: Nuevo estado para filtros de empresa ---
+    const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    // --- FIN DE LA SOLUCIÓN ---
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: subDays(new Date(), 29),
@@ -79,6 +85,7 @@ export default function AlarmsPage() {
     const [isFetchingNextBatch, setIsFetchingNextBatch] = useState(false);
     const [analysisType, setAnalysisType] = useState<'pending' | 'suspicious' | null>(null);
 
+// --- INICIO DE LA SOLUCIÓN: Añadir `companyFilters` a la función y dependencias ---
     const fetchAlarms = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -89,6 +96,7 @@ export default function AlarmsPage() {
                 status: statusFilter, 
                 search: debouncedSearchQuery, 
                 type: typeFilters,
+                company: companyFilters, // <--- Nuevo
                 startDate: dateRange?.from?.toISOString(),
                 endDate: dateRange?.to?.toISOString(),
             };
@@ -105,10 +113,12 @@ export default function AlarmsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
-
+    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]); // <--- Nuevo
+    
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
-    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, dateRange]);
+    // Añadir companyFilters al reseteo de página
+    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
+    // --- FIN DE LA SOLUCIÓN ---
     
     const handleCardClick = (clickedAlarm: Alarm) => {
         const navigableAlarms = alarms;
@@ -315,7 +325,16 @@ export default function AlarmsPage() {
                         <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex gap-2 items-center flex-wrap justify-end">
-                        <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onSelectionChange={setTypeFilters} />
+                       {/* --- INICIO DE LA SOLUCIÓN: Pasar nuevas props al componente de filtros --- */}
+                        <AdvancedFilters 
+                            availableTypes={alarmTypes} 
+                            selectedTypes={typeFilters} 
+                            onTypeSelectionChange={setTypeFilters}
+                            availableCompanies={AVAILABLE_COMPANIES}
+                            selectedCompanies={companyFilters}
+                            onCompanySelectionChange={setCompanyFilters}
+                        />
+                        {/* --- FIN DE LA SOLUCIÓN --- */}
                     </div>
                     <div className="flex gap-2 items-center flex-wrap justify-end">
                        <DateRangePicker date={dateRange} onDateChange={setDateRange} />

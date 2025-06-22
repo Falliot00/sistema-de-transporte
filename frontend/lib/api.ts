@@ -7,18 +7,24 @@ if (!API_URL) {
 }
 
 export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
-  // ... (sin cambios)
   try {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.status) query.append('status', params.status);
     if (params?.search) query.append('search', params.search);
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    
     if (params?.type && params.type.length > 0) {
       params.type.forEach(t => query.append('type', t));
     }
-    if (params?.startDate) query.append('startDate', params.startDate);
-    if (params?.endDate) query.append('endDate', params.endDate);
+    
+    // --- INICIO DE LA SOLUCIÓN: Añadir filtro de empresa a la consulta ---
+    if (params?.company && params.company.length > 0) {
+      params.company.forEach(c => query.append('company', c));
+    }
+    // --- FIN DE LA SOLUCIÓN ---
 
     const response = await fetch(`${API_URL}/alarmas?${query.toString()}`);
     if (!response.ok) {
@@ -36,8 +42,8 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
   }
 }
 
+// ... (El resto del archivo 'api.ts' permanece sin cambios)
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string, choferId?: number): Promise<Alarm> {
-    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -50,12 +56,11 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
     return await response.json();
 }
 
-// --- INICIO DE LA SOLUCIÓN: Nueva función para asignar chofer ---
 export async function assignDriver(alarmId: string, choferId: number | null): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/assign-driver`, {
-        method: 'PATCH', // Usamos PATCH para actualizaciones parciales
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ choferId }), // Enviamos el ID del chofer o null
+        body: JSON.stringify({ choferId }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -63,11 +68,8 @@ export async function assignDriver(alarmId: string, choferId: number | null): Pr
     }
     return await response.json();
 }
-// --- FIN DE LA SOLUCIÓN ---
-
 
 export async function confirmAlarm(alarmId: string, description?: string, choferId?: number): Promise<Alarm> {
-    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -81,7 +83,6 @@ export async function confirmAlarm(alarmId: string, description?: string, chofer
 }
 
 export async function reEvaluateAlarm(alarmId: string, description?: string): Promise<Alarm> {
-    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -95,7 +96,6 @@ export async function reEvaluateAlarm(alarmId: string, description?: string): Pr
 }
 
 export async function retryVideo(alarmId: string): Promise<{ message: string }> {
-    // ... (sin cambios)
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/retry-video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,7 +108,6 @@ export async function retryVideo(alarmId: string): Promise<{ message: string }> 
 }
 
 export async function getDrivers(query?: string): Promise<Driver[]> {
-    // ... (sin cambios)
     try {
         const url = new URL(`${API_URL}/choferes`);
         if (query) {
@@ -126,7 +125,6 @@ export async function getDrivers(query?: string): Promise<Driver[]> {
 }
 
 export async function getDriverDetails(id: string): Promise<Driver> {
-    // ... (sin cambios)
     try {
         const response = await fetch(`${API_URL}/choferes/${id}`);
         if (!response.ok) {

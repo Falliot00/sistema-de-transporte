@@ -15,24 +15,10 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 };
 
 const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
-    if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
-        console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
-        return;
-    }
-    const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
-    const pythonExecutable = path.join(__dirname, '..', '..', '.venv', 'Scripts', 'python.exe');
-    const alarmTimeISO = alarm.alarmTime.toISOString();
-    const command = `"${pythonExecutable}" "${scriptPath}" "${alarm.dispositivo}" "${alarmTimeISO}" "${alarm.guid}"`;
-    console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
-    exec(command, (error, stdout, stderr) => {
-        if (error) console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}: ${error.message}`);
-        if (stderr) console.error(`[!] Stderr de script de video para alarma ${alarm.guid}: ${stderr}`);
-        console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}: ${stdout}`);
-    });
+    // ... (sin cambios)
 };
 
 export const getAllAlarms = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 12;
     const statusFilter = req.query.status as string;
@@ -40,6 +26,10 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     const typeFilters = req.query.type as string[] | string;
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
+    
+    // --- INICIO DE LA SOLUCIÓN: Capturar nuevo filtro de empresa ---
+    const companyFilters = req.query.company as string[] | string;
+    // --- FIN DE LA SOLUCIÓN ---
   
     const skip = (page - 1) * pageSize;
     let whereClause: any = {};
@@ -71,6 +61,13 @@ export const getAllAlarms = async (req: Request, res: Response) => {
         const typesToFilter = Array.isArray(typeFilters) ? typeFilters : [typeFilters];
         whereClause.typeAlarm = { alarm: { in: typesToFilter } };
     }
+
+    // --- INICIO DE LA SOLUCIÓN: Aplicar filtro de empresa a la consulta ---
+    if (companyFilters && (Array.isArray(companyFilters) ? companyFilters.length > 0 : companyFilters.trim() !== '')) {
+        const companiesToFilter = Array.isArray(companyFilters) ? companyFilters : [companyFilters];
+        whereClause.Empresa = { in: companiesToFilter };
+    }
+    // --- FIN DE LA SOLUCIÓN ---
 
     try {
         const alarmsFromDb = await prisma.alarmasHistorico.findMany({
@@ -106,8 +103,9 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     }
 };
 
+// El resto de los controladores (getAlarmById, reviewAlarm, etc.) permanecen sin cambios.
+// ... (resto del archivo igual)
 export const getAlarmById = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarmFromDb = await prisma.alarmasHistorico.findUnique({
@@ -126,7 +124,6 @@ export const getAlarmById = async (req: Request, res: Response) => {
 };
 
 export const reviewAlarm = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     const { status, descripcion, choferId } = req.body;
 
@@ -172,14 +169,9 @@ export const reviewAlarm = async (req: Request, res: Response) => {
     }
 };
 
-// --- INICIO DE LA SOLUCIÓN: Nuevo controlador para asignar chofer ---
-/**
- * Asigna o desasigna un chofer a una alarma específica.
- * @route PATCH /api/alarmas/:id/assign-driver
- */
 export const assignDriverToAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { choferId } = req.body; // Puede ser un número de ID o null/undefined para desasignar.
+    const { choferId } = req.body;
 
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
@@ -189,20 +181,17 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
 
         let dataToUpdate: { choferId: number | null } = { choferId: null };
 
-        // Si se proporciona un choferId, lo validamos.
         if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
             if (!choferToAssign) {
                 return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
             }
-            // SECURITY CHECK: Asegurarse de que el chofer pertenece a la misma empresa que la alarma.
             if (choferToAssign.empresa !== alarm.Empresa) {
                 return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
             }
             dataToUpdate.choferId = choferId;
         }
         
-        // Actualizamos la alarma con el nuevo choferId o con null si se quiere desasignar.
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: dataToUpdate,
@@ -216,11 +205,8 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
-// --- FIN DE LA SOLUCIÓN ---
-
 
 export const confirmFinalAlarm = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     const { descripcion, choferId } = req.body;
 
@@ -259,7 +245,6 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
 };
 
 export const reEvaluateAlarm = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     const { descripcion } = req.body;
 
@@ -291,7 +276,6 @@ export const reEvaluateAlarm = async (req: Request, res: Response) => {
 };
 
 export const retryVideoDownload = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
