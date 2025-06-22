@@ -51,7 +51,6 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
                     <InfoItem icon={<Clock className="h-4 w-4" />} label="Fecha y Hora" value={formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'long', timeStyle: 'medium' })} />
                     <InfoItem icon={<Building className="h-4 w-4" />} label="Empresa" value={alarm.company} />
                     <InfoItem icon={<User className="h-4 w-4" />} label="Chofer Asignado" value={alarm.driver.name} />
-                    <InfoItem icon={<FileText className="h-4 w-4" />} label="DNI" value={alarm.driver.license} />
                     <InfoItem icon={<CarFront className="h-4 w-4" />} label="Vehiculo" value={alarm.vehicle.interno + ' - ' + alarm.vehicle.licensePlate || 'N/A'} />
                     <InfoItem icon={<Gauge className="h-4 w-4" />} label="Velocidad" value={typeof alarm.speed === 'number' ? `${Math.round(alarm.speed)} km/h` : 'No disponible'} />
                 </div>

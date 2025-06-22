@@ -1,5 +1,5 @@
 // frontend/lib/api.ts
-import { Alarm, Driver, GetAlarmsResponse, GetAlarmsParams } from "@/types";
+import { Alarm, Driver, GetAlarmsResponse, GetAlarmsParams, DashboardSummary } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 if (!API_URL) {
@@ -141,3 +141,45 @@ export async function getDriverDetails(id: string): Promise<Driver> {
         throw error;
     }
 }
+
+// --- INICIO DE LA SOLUCIÓN: Nueva función para obtener datos del dashboard ---
+export async function getDashboardSummary(params: { startDate: string, endDate: string }): Promise<DashboardSummary> {
+  try {
+    const query = new URLSearchParams(params);
+    const response = await fetch(`${API_URL}/dashboard/summary?${query.toString()}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+      throw new Error(`Error al obtener los datos del dashboard: ${response.status} - ${errorData.message || response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // El mapeo de colores ya no necesita ser modificado, ya que el backend no devuelve 'fill'.
+    // Se asignan colores en el componente de gráfico directamente o a través de la configuración del mismo.
+    const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+    const alarmsByTypeWithFill = data.alarmsByType.map((item: any, index: number) => ({
+      ...item,
+      fill: colors[index % colors.length]
+    }));
+    
+    return { ...data, alarmsByType: alarmsByTypeWithFill };
+
+  } catch (error) {
+    console.error("Hubo un problema con la operación de fetch en getDashboardSummary:", error);
+    return {
+      kpis: { totalAlarms: 0, confirmationRate: "0.0" },
+      alarmsByDay: [],
+      alarmsByType: [],
+      alarmStatusProgress: [],
+      hourlyDistribution: [],
+      weeklyTrend: [],
+      // --- INICIO DE LA SOLUCIÓN: Devolver valores por defecto para los nuevos campos ---
+      driverRanking: [],
+      deviceSummary: { active: 0, maintenance: 0, offline: 0, total: 0 },
+      topDevices: [],
+      // --- FIN DE LA SOLUCIÓN ---
+    };
+  }
+}
+// --- FIN DE LA SOLUCIÓN ---

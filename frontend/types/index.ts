@@ -105,10 +105,54 @@ export interface GetAlarmsParams {
     type?: string[];
     startDate?: string;
     endDate?: string;
-    // --- INICIO DE LA SOLUCIÓN: Añadir nuevo parámetro ---
     company?: string[];
-    // --- FIN DE LA SOLUCIÓN ---
 }
+
+export interface DashboardKPIs {
+    totalAlarms: number;
+    confirmationRate: string;
+}
+
+export interface AlarmsByDay {
+    name: string;
+    Total: number;
+    Confirmadas: number;
+    Pendientes: number;
+}
+
+export interface AlarmsByType {
+    name: string;
+    value: number;
+    fill: string;
+}
+
+export interface AlarmStatusProgress {
+    title: string;
+    value: number;
+    total: number;
+}
+
+export interface HourlyDistribution {
+    hour: string;
+    alarmas: number;
+}
+
+export interface WeeklyTrend {
+    name: string;
+    EsteSemana: number;
+    SemanaPasada: number;
+}
+
+// --- INICIO DE LA SOLUCIÓN: Asegurarse de que la interfaz principal esté completa. ---
+export interface DashboardSummary {
+    kpis: DashboardKPIs;
+    alarmsByDay: AlarmsByDay[];
+    alarmsByType: AlarmsByType[];
+    alarmStatusProgress: AlarmStatusProgress[];
+    hourlyDistribution: HourlyDistribution[];
+    weeklyTrend: WeeklyTrend[];
+}
+// --- FIN DE LA SOLUCIÓN ---
 
 export interface KPI {
     id: string;
@@ -131,3 +175,33 @@ export interface Device {
     alarmCount?: number;
     location?: string;
 }
+
+// --- INICIO DE LA SOLUCIÓN: Nuevos tipos para las pestañas ---
+export interface DriverRanking {
+    id: number;
+    name: string;
+    avatar: string | null;
+    totalAlarms: number;
+    confirmationRate: number;
+    efficiencyScore: number;
+}
+
+export interface DeviceSummary {
+    active: number;
+    maintenance: number;
+    offline: number;
+    total: number;
+}
+
+export interface DashboardSummary {
+    kpis: DashboardKPIs;
+    alarmsByDay: AlarmsByDay[];
+    alarmsByType: AlarmsByType[];
+    alarmStatusProgress: AlarmStatusProgress[];
+    hourlyDistribution: HourlyDistribution[];
+    weeklyTrend: WeeklyTrend[];
+    driverRanking: DriverRanking[]; // <--- NUEVO
+    deviceSummary: DeviceSummary;   // <--- NUEVO
+    topDevices: Device[];           // <--- NUEVO
+}
+// --- FIN DE LA SOLUCIÓN ---

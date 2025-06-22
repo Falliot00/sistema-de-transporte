@@ -1,16 +1,12 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/device-status-summary.tsx
+// app/dashboard/device-status-summary.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, AlertTriangle, XCircle, Server } from "lucide-react";
+import { DeviceSummary } from "@/types";
 
 interface DeviceStatusSummaryProps {
-  summary: {
-    active: number;
-    maintenance: number;
-    offline: number;
-    total: number;
-  };
+  summary: DeviceSummary;
 }
 
 export function DeviceStatusSummary({ summary }: DeviceStatusSummaryProps) {

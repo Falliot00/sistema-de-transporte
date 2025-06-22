@@ -1,52 +1,61 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/driver-ranking-list.tsx
+// app/dashboard/driver-ranking-list.tsx
 "use client";
 
-import { Driver } from "@/types"; // Ensure Driver type has totalAlarms, confirmationRate, efficiencyScore
+import { DriverRanking } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, ShieldCheck, AlertTriangle } from "lucide-react";
 
 interface DriverRankingListProps {
-  drivers: Driver[];
+  drivers: DriverRanking[];
 }
 
 export function DriverRankingList({ drivers }: DriverRankingListProps) {
   if (!drivers || drivers.length === 0) {
-    return <p className="text-muted-foreground text-center py-4">No hay choferes para mostrar.</p>;
+    return <p className="text-muted-foreground text-center py-4">No hay datos de choferes para mostrar.</p>;
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {drivers.map((driver, index) => (
-        <Card key={driver.id || driver.license}>
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={(driver as any).avatar || `/avatars/${(index % 5) + 1}.png`} alt={driver.name} />
-              <AvatarFallback>{driver.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-lg">{driver.name}</CardTitle>
-              <CardDescription>Licencia: {driver.license}</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span>Eficiencia</span>
-                <span className="font-semibold">{(driver as any).efficiencyScore || 0}%</span>
+      {drivers.map((driver) => (
+        <Card key={driver.id}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4 mb-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={driver.avatar || undefined} alt={driver.name} />
+                <AvatarFallback>{driver.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-md font-bold">{driver.name}</h3>
+                <p className="text-sm text-muted-foreground">ID: {driver.id}</p>
               </div>
-              <Progress value={(driver as any).efficiencyScore || 0} className="h-2" />
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Alarmas Totales:</span>
-              <Badge variant="outline">{(driver as any).totalAlarms || 0}</Badge>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Tasa Confirmación:</span>
-              <Badge variant={( ((driver as any).confirmationRate || 0) > 75 ? "success" : ((driver as any).confirmationRate || 0) > 50 ? "warning" : "destructive" ) as any}>
-                {(driver as any).confirmationRate || 0}%
-              </Badge>
+            
+            <div className="space-y-3 text-sm">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><ShieldCheck className="h-4 w-4 text-green-500"/> Eficiencia</span>
+                    <span className="font-semibold">{driver.efficiencyScore}%</span>
+                  </div>
+                  <Progress value={driver.efficiencyScore} indicatorClassName="bg-green-500" className="h-2"/>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground"><AlertTriangle className="h-4 w-4"/> Alarmas Totales</span>
+                  <Badge variant="outline">{driver.totalAlarms}</Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                    {driver.confirmationRate > 50 ? <TrendingDown className="h-4 w-4 text-red-500"/> : <TrendingUp className="h-4 w-4 text-blue-500" />}
+                    Tasa Confirmación
+                  </span>
+                  <Badge variant={driver.confirmationRate > 75 ? "destructive" : driver.confirmationRate > 50 ? "warning" : "success"}>
+                    {driver.confirmationRate}%
+                  </Badge>
+                </div>
             </div>
           </CardContent>
         </Card>

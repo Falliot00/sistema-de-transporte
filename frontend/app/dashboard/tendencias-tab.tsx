@@ -1,26 +1,24 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/tendencias-tab.tsx
+// app/dashboard/tendencias-tab.tsx
 "use client";
 
-import { Alarm } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HourlyDistributionChart } from "./charts/hourly-distribution-chart";
 import { WeeklyTrendChart } from "./charts/weekly-trend-chart";
-// REMOVIDO: import { getMockHourlyDistribution, getMockWeeklyTrend } from "@/lib/mock-data";
+import { HourlyDistribution, WeeklyTrend } from "@/types";
 
+// --- INICIO DE LA SOLUCIÓN: El componente ahora recibe los datos como props ---
 interface TendenciasTabProps {
-  alarms: Alarm[]; // Placeholder, specific data fetching/processing might be needed
+  hourlyData: HourlyDistribution[];
+  weeklyData: WeeklyTrend[];
 }
 
-export function TendenciasTab({ alarms }: TendenciasTabProps) {
-  // CAMBIO: Datos vacíos para las gráficas.
-  const hourlyData = [];
-  const weeklyData = [];
-
+export function TendenciasTab({ hourlyData, weeklyData }: TendenciasTabProps) {
   return (
     <div className="space-y-6 mt-4">
       <Card>
         <CardHeader>
           <CardTitle>Distribución Horaria de Alarmas</CardTitle>
+          <CardDescription>Picos de actividad de alarmas durante el día en el período seleccionado.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           <HourlyDistributionChart data={hourlyData} />
@@ -29,6 +27,7 @@ export function TendenciasTab({ alarms }: TendenciasTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Tendencia Semanal de Alarmas</CardTitle>
+           <CardDescription>Comparación del volumen de alarmas por día entre la semana actual y la anterior.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           <WeeklyTrendChart data={weeklyData} />
@@ -37,3 +36,4 @@ export function TendenciasTab({ alarms }: TendenciasTabProps) {
     </div>
   );
 }
+// --- FIN DE LA SOLUCIÓN ---

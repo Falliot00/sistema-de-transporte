@@ -6,7 +6,8 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config';
 import alarmasRouter from './routes/alarmas';
-import choferesRouter from './routes/choferes'; // IMPORTANTE: Importar el nuevo router
+import choferesRouter from './routes/choferes';
+import dashboardRouter from './routes/dashboard'; // <-- NUEVA IMPORTACIÓN
 
 console.log("2. Módulos importados correctamente.");
 
@@ -24,7 +25,8 @@ app.get('/api', (req, res) => {
 });
 
 app.use('/api/alarmas', alarmasRouter);
-app.use('/api/choferes', choferesRouter); // IMPORTANTE: Registrar el nuevo router
+app.use('/api/choferes', choferesRouter);
+app.use('/api/dashboard', dashboardRouter); // <-- NUEVA RUTA
 
 console.log("4. Rutas configuradas.");
 

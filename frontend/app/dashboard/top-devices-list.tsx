@@ -1,59 +1,39 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/top-devices-list.tsx
+// app/dashboard/top-devices-list.tsx
 "use client";
 
-import { Device } from "@/types"; // Ensure Device has status, lastActivity, alarmCount, location
+import { Device } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Server, AlertCircle, MapPin, History } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { Server, AlertCircle } from "lucide-react";
 
 interface TopDevicesListProps {
   devices: Device[];
 }
 
-const getStatusVariant = (status?: 'active' | 'maintenance' | 'offline'): "success" | "warning" | "destructive" | "default" => {
-  if (status === 'active') return 'success';
-  if (status === 'maintenance') return 'warning';
-  if (status === 'offline') return 'destructive';
-  return 'default';
-};
-
-
 export function TopDevicesList({ devices }: TopDevicesListProps) {
   if (!devices || devices.length === 0) {
-    return <p className="text-muted-foreground text-center py-4">No hay dispositivos para mostrar.</p>;
+    return <p className="text-muted-foreground text-center py-8">No hay datos de dispositivos para mostrar en este período.</p>;
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {devices.map(device => (
+    <div className="space-y-4">
+      {devices.map((device, index) => (
         <Card key={device.id || device.serialNumber}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-md flex items-center">
-                <Server className="h-5 w-5 mr-2 text-muted-foreground" />
-                {device.name}
-              </CardTitle>
-              <Badge variant={getStatusVariant(device.status as any)} className="capitalize">
-                {device.status || 'Desconocido'}
-              </Badge>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
+            <div className="flex items-center gap-3">
+                <span className="flex items-center justify-center h-8 w-8 rounded-full bg-muted font-bold text-muted-foreground">{index + 1}</span>
+                <div>
+                    <CardTitle className="text-md flex items-center">
+                        {device.name}
+                    </CardTitle>
+                    <CardDescription>SN: {device.serialNumber}</CardDescription>
+                </div>
             </div>
-            <CardDescription>SN: {device.serialNumber}</CardDescription>
+            <div className="flex items-center gap-2 text-lg font-bold">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                {device.alarmCount || 0}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center">
-              <AlertCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Alarmas este mes: <span className="font-semibold">{device.alarmCount || 0}</span></span>
-            </div>
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Ubicación: <span className="font-semibold">{device.location || 'N/A'}</span></span>
-            </div>
-            <div className="flex items-center">
-              <History className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Últ. Actividad: <span className="font-semibold">{device.lastActivity ? formatDate(device.lastActivity) : 'N/A'}</span></span>
-            </div>
-          </CardContent>
         </Card>
       ))}
     </div>
