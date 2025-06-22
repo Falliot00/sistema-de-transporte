@@ -26,7 +26,6 @@ import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { subDays } from "date-fns";
 
-// ... (Hook useDebounce sin cambios)
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
     useEffect(() => {
@@ -134,11 +133,14 @@ export default function AlarmsPage() {
             if (alarmForDetails.status === 'pending') {
                 await reviewAlarm(alarmIdToUpdate, action, description, choferId);
             } else if (alarmForDetails.status === 'suspicious') {
-                if (!choferId) {
+                // --- INICIO DE LA SOLUCIÓN ---
+                // Se corrige la validación para que acepte el ID de chofer 0.
+                if (action === 'confirmed' && typeof choferId !== 'number') {
                     toast({ title: "Error de Validación", description: "Se requiere un chofer para confirmar la alarma.", variant: "destructive" });
                     setIsSubmitting(false);
                     return;
                 }
+                // --- FIN DE LA SOLUCIÓN ---
                 if (action === 'confirmed') {
                     await confirmAlarm(alarmIdToUpdate, description, choferId);
                 } else {
@@ -185,7 +187,6 @@ export default function AlarmsPage() {
         }
     };
     
-    // ... (resto del componente sin cambios)
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? globalAlarmCounts.pending : globalAlarmCounts.suspicious;
         if (count === 0) {
@@ -341,8 +342,6 @@ export default function AlarmsPage() {
             
             {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             
-            {/* --- INICIO DE LA SOLUCIÓN --- */}
-            {/* Se restauran los botones de navegación a su posición original, fuera del componente de detalles */}
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
                  <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                     {alarmForDetails && (
@@ -395,7 +394,6 @@ export default function AlarmsPage() {
                     )}
                 </DialogContent>
             </Dialog>
-            {/* --- FIN DE LA SOLUCIÓN --- */}
             
             <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) fetchAlarms(); setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">

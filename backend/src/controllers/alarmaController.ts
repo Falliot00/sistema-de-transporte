@@ -15,7 +15,6 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 };
 
 const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
-    // ... (sin cambios en esta función)
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
         return;
@@ -33,7 +32,6 @@ const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date
 };
 
 export const getAllAlarms = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 12;
     const statusFilter = req.query.status as string;
@@ -108,7 +106,6 @@ export const getAllAlarms = async (req: Request, res: Response) => {
 };
 
 export const getAlarmById = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarmFromDb = await prisma.alarmasHistorico.findUnique({
@@ -143,21 +140,20 @@ export const reviewAlarm = async (req: Request, res: Response) => {
 
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
-        if (statusToSave === 'Sospechosa') {
-            // FIX: Cambiamos `!choferId` por una validación que no falle con el ID 0.
-            if (typeof choferId !== 'number') {
-                return res.status(400).json({ message: "La asignación de un chofer es obligatoria al marcar como sospechosa." });
-            }
+        // --- INICIO DE LA SOLUCIÓN ---
+        // La validación estricta de 'choferId' se elimina de este paso.
+        // Ahora, la asignación es opcional al marcar como "Sospechosa".
+        if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
             if (!choferToAssign) {
                 return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
             }
-            // CRITICAL SECURITY CHECK: Validar que la empresa del chofer coincide con la de la alarma
             if (choferToAssign.empresa !== alarm.Empresa) {
                 return res.status(400).json({ message: `El chofer ${choferToAssign.nombre} no pertenece a la empresa ${alarm.Empresa}.` });
             }
             dataToUpdate.choferId = choferId;
         }
+        // --- FIN DE LA SOLUCIÓN ---
 
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
@@ -189,16 +185,15 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         const dataToUpdate: { estado: string; descripcion?: string, choferId?: number } = { estado: 'Confirmada' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
-        // FIX: Cambiamos `!choferId` por una validación que no falle con el ID 0.
+        // La validación estricta se mantiene aquí, que es el paso final de confirmación.
         if (typeof choferId !== 'number') {
-            return res.status(400).json({ message: "La selección de un chofer es obligatoria." });
+            return res.status(400).json({ message: "La selección de un chofer es obligatoria para confirmar la alarma." });
         }
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
 
         if (!choferToAssign) {
             return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
         }
-        // CRITICAL SECURITY CHECK
         if (choferToAssign.empresa !== alarm.Empresa) {
             return res.status(400).json({ message: `El chofer ${choferToAssign.nombre} no pertenece a la empresa ${alarm.Empresa}.` });
         }
@@ -218,7 +213,6 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
 };
 
 export const reEvaluateAlarm = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     const { descripcion } = req.body;
 
@@ -250,7 +244,6 @@ export const reEvaluateAlarm = async (req: Request, res: Response) => {
 };
 
 export const retryVideoDownload = async (req: Request, res: Response) => {
-    // ... (sin cambios en esta función)
     const { id } = req.params;
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
