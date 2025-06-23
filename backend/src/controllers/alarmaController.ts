@@ -15,7 +15,20 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 };
 
 const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
-    // ... (sin cambios)
+    if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
+        console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
+        return;
+    }
+    const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
+    const pythonExecutable = path.join(__dirname, '..', '..', '.venv', 'Scripts', 'python.exe');
+    const alarmTimeISO = alarm.alarmTime.toISOString();
+    const command = `"${pythonExecutable}" "${scriptPath}" "${alarm.dispositivo}" "${alarmTimeISO}" "${alarm.guid}"`;
+    console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
+    exec(command, (error, stdout, stderr) => {
+        if (error) console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}: ${error.message}`);
+        if (stderr) console.error(`[!] Stderr de script de video para alarma ${alarm.guid}: ${stderr}`);
+        console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}: ${stdout}`);
+    });
 };
 
 export const getAllAlarms = async (req: Request, res: Response) => {
