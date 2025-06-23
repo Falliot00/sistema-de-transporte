@@ -14,7 +14,9 @@ import {
 import { Briefcase, CalendarDays, Contact, Home } from "lucide-react";
 import { Driver } from "@/types";
 
-export async function generateStaticParams() {
+export const dynamic = 'force-dynamic';
+
+/*export async function generateStaticParams() {
   try {
     const drivers: Driver[] = await getDrivers();
     if (!Array.isArray(drivers)) {
@@ -29,8 +31,7 @@ export async function generateStaticParams() {
     return [];
   }
 }
-
-export const dynamicParams = false;
+export const dynamicParams = false;*/
 
 // Este componente ahora se ejecuta para cada ID durante el `build`.
 export default async function DriverDetailPage({ params }: { params: Promise<{ id: string }> }) {
