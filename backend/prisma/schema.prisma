@@ -1,5 +1,3 @@
-// backend/prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -27,25 +25,12 @@ model AlarmasHistorico {
   descripcion String?   @db.VarChar(512)
   choferId    Int?      @map("chofer")
 
-  // --- RELACIÓN CON CHÓFERES ---
-  // Se establece la relación explícita con el modelo Choferes.
-  // El campo `choferId` de esta tabla referencia a `choferes_id` de la tabla Choferes.
-  // onDelete y onUpdate se establecen en NoAction para respetar la configuración existente de la base de datos.
-  chofer   Choferes?  @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
-  
-  // --- RELACIÓN CON TIPO DE ALARMAS ---
-  // Se añade la relación explícita con el modelo TypeAlarms para consistencia.
-  typeAlarm TypeAlarms? @relation(fields: [alarmTypeId], references: [type], onDelete: NoAction, onUpdate: NoAction)
-
   @@map("alarmasHistorico")
 }
 
 model TypeAlarms {
-  type    Int     @id(map: "PK__typeAlar__E3F852490A79947F")
-  alarm   String? @db.VarChar(200)
-
-  // Relación inversa para poder navegar desde un tipo de alarma a todas las alarmas de ese tipo.
-  alarmas AlarmasHistorico[]
+  type  Int     @id(map: "PK__typeAlar__E3F852490A79947F")
+  alarm String? @db.VarChar(200)
 
   @@map("typeAlarms")
 }
@@ -58,10 +43,6 @@ model Choferes {
   dni         String? @db.VarChar(50)
   anios       Int?
   empresa     String? @db.VarChar(50)
-
-  // --- RELACIÓN INVERSA CON ALARMAS ---
-  // Permite navegar desde un chofer a todas sus alarmas históricas.
-  alarmas     AlarmasHistorico[]
 
   @@map("choferes")
 }

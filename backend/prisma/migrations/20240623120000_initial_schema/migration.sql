@@ -18,7 +18,28 @@ CREATE TABLE [dbo].[alarmasHistorico] (
     [imagen] VARCHAR(512),
     [video] VARCHAR(512),
     [estado] VARCHAR(50),
+    [descripcion] VARCHAR(512),
+    [chofer] INT,
     CONSTRAINT [PK__alarmasH__497F6CB4A51B299D] PRIMARY KEY CLUSTERED ([guid])
+);
+
+-- CreateTable
+CREATE TABLE [dbo].[typeAlarms] (
+    [type] INT NOT NULL,
+    [alarm] VARCHAR(200),
+    CONSTRAINT [PK__typeAlar__E3F852490A79947F] PRIMARY KEY CLUSTERED ([type])
+);
+
+-- CreateTable
+CREATE TABLE [dbo].[choferes] (
+    [choferes_id] INT NOT NULL,
+    [nombre] VARCHAR(50) NOT NULL,
+    [apellido] VARCHAR(50) NOT NULL,
+    [foto] VARCHAR(255),
+    [dni] VARCHAR(50),
+    [anios] INT,
+    [empresa] VARCHAR(50),
+    CONSTRAINT [PK_choferes] PRIMARY KEY CLUSTERED ([choferes_id])
 );
 
 -- CreateTable
