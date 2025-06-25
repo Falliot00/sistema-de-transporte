@@ -1,6 +1,6 @@
 // backend/src/controllers/alarmaController.ts
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { exec } from 'child_process';
 import path from 'path';
 import { transformAlarmData } from '../utils/transformers';
@@ -33,58 +33,68 @@ const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date
     });
 };
 
+
+const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput => {
+    const { status, search, type, company, startDate, endDate } = queryParams;
+
+    let whereClause: Prisma.AlarmasHistoricoWhereInput = {};
+
+    if (status && status !== 'all') {
+        const dbStates = DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP];
+        if (dbStates) {
+            whereClause.estado = { in: dbStates };
+        }
+    }
+
+    if (startDate && endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereClause.alarmTime = { gte: new Date(startDate), lte: endOfDay };
+    }
+
+    if (search) {
+        whereClause.OR = [
+            { patente: { contains: search } },
+            { interno: { contains: search } },
+            { typeAlarm: { alarm: { contains: search } } },
+            { chofer: { nombre: { contains: search } } },
+            { chofer: { apellido: { contains: search } } },
+        ];
+    }
+
+    const typeFilters = Array.isArray(type) ? type : (type ? [type] : []);
+    if (typeFilters.length > 0) {
+        whereClause.typeAlarm = { alarm: { in: typeFilters } };
+    }
+    
+    const companyFilters = Array.isArray(company) ? company : (company ? [company] : []);
+    if (companyFilters.length > 0) {
+        whereClause.Empresa = { in: companyFilters };
+    }
+
+    return whereClause;
+};
+
+export const getAlarmsCount = async (req: Request, res: Response) => {
+    try {
+        const whereClause = buildWhereClause(req.query);
+        const count = await prisma.alarmasHistorico.count({ where: whereClause });
+        res.status(200).json({ count });
+    } catch (error) {
+        console.error("⛔ [ERROR] Falla en getAlarmsCount:", error);
+        res.status(500).json({ message: 'Error interno del servidor al contar las alarmas.' });
+    }
+};
+
 export const getAllAlarms = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 12;
-    const statusFilter = req.query.status as string;
-    const search = req.query.search as string;
-    const typeFilters = req.query.type as string[] | string;
-    const startDate = req.query.startDate as string;
-    const endDate = req.query.endDate as string;
-    
-    // --- INICIO DE LA SOLUCIÓN: Capturar nuevo filtro de empresa ---
-    const companyFilters = req.query.company as string[] | string;
-    // --- FIN DE LA SOLUCIÓN ---
-  
+
     const skip = (page - 1) * pageSize;
-    let whereClause: any = {};
-  
-    if (statusFilter && statusFilter !== 'all') {
-      const dbStates = DB_QUERY_STATUS_MAP[statusFilter as keyof typeof DB_QUERY_STATUS_MAP];
-      if (dbStates) {
-          whereClause.estado = { in: dbStates };
-      }
-    }
-  
-    if (startDate && endDate) {
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
-      whereClause.alarmTime = { gte: new Date(startDate), lte: endOfDay };
-    }
-  
-    if (search) {
-      whereClause.OR = [
-        { patente: { contains: search } },
-        { interno: { contains: search } },
-        { typeAlarm: { alarm: { contains: search } } },
-        { chofer: { nombre: { contains: search }}},
-        { chofer: { apellido: { contains: search }}},
-      ];
-    }
-  
-    if (typeFilters && (Array.isArray(typeFilters) ? typeFilters.length > 0 : typeFilters.trim() !== '')) {
-        const typesToFilter = Array.isArray(typeFilters) ? typeFilters : [typeFilters];
-        whereClause.typeAlarm = { alarm: { in: typesToFilter } };
-    }
-
-    // --- INICIO DE LA SOLUCIÓN: Aplicar filtro de empresa a la consulta ---
-    if (companyFilters && (Array.isArray(companyFilters) ? companyFilters.length > 0 : companyFilters.trim() !== '')) {
-        const companiesToFilter = Array.isArray(companyFilters) ? companyFilters : [companyFilters];
-        whereClause.Empresa = { in: companiesToFilter };
-    }
-    // --- FIN DE LA SOLUCIÓN ---
-
+    
     try {
+        const whereClause = buildWhereClause(req.query);
+
         const alarmsFromDb = await prisma.alarmasHistorico.findMany({
             skip,
             take: pageSize,
@@ -118,8 +128,7 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     }
 };
 
-// El resto de los controladores (getAlarmById, reviewAlarm, etc.) permanecen sin cambios.
-// ... (resto del archivo igual)
+
 export const getAlarmById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {

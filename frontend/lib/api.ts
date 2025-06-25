@@ -10,27 +10,29 @@ if (!API_URL) {
   throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }
 
-export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
-  try {
+// Helper para construir la query string
+const buildQueryString = (params?: GetAlarmsParams): string => {
+    if (!params) return "";
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', params.page.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.status) query.append('status', params.status);
-    if (params?.search) query.append('search', params.search);
-    if (params?.startDate) query.append('startDate', params.startDate);
-    if (params?.endDate) query.append('endDate', params.endDate);
-    
-    if (params?.type && params.type.length > 0) {
+    if (params.page) query.append('page', params.page.toString());
+    if (params.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params.status) query.append('status', params.status);
+    if (params.search) query.append('search', params.search);
+    if (params.startDate) query.append('startDate', params.startDate);
+    if (params.endDate) query.append('endDate', params.endDate);
+    if (params.type && params.type.length > 0) {
       params.type.forEach(t => query.append('type', t));
     }
-    
-    // --- INICIO DE LA SOLUCIÓN: Añadir filtro de empresa a la consulta ---
-    if (params?.company && params.company.length > 0) {
+    if (params.company && params.company.length > 0) {
       params.company.forEach(c => query.append('company', c));
     }
-    // --- FIN DE LA SOLUCIÓN ---
+    return query.toString();
+}
 
-    const response = await fetch(`${API_URL}/alarmas?${query.toString()}`);
+export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResponse> {
+  try {
+    const query = buildQueryString(params);
+    const response = await fetch(`${API_URL}/alarmas?${query}`);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
       throw new Error(`Error al obtener los datos: ${response.status} - ${errorData.message || response.statusText}`);
@@ -46,7 +48,23 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
   }
 }
 
-// ... (El resto del archivo 'api.ts' permanece sin cambios)
+
+export async function getAlarmsCount(params?: GetAlarmsParams): Promise<{ count: number }> {
+    try {
+        const query = buildQueryString(params);
+        const response = await fetch(`${API_URL}/alarmas/count?${query}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+            throw new Error(`Error al obtener el conteo: ${response.status} - ${errorData.message || response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Hubo un problema con la operación de fetch en getAlarmsCount:", error);
+        return { count: 0 };
+    }
+}
+
+
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string, choferId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
@@ -146,7 +164,6 @@ export async function getDriverDetails(id: string): Promise<Driver> {
     }
 }
 
-// --- INICIO DE LA SOLUCIÓN: Nueva función para obtener datos del dashboard ---
 export async function getDashboardSummary(params: { startDate: string, endDate: string }): Promise<DashboardSummary> {
   try {
     const query = new URLSearchParams(params);
@@ -159,8 +176,6 @@ export async function getDashboardSummary(params: { startDate: string, endDate: 
     
     const data = await response.json();
     
-    // El mapeo de colores ya no necesita ser modificado, ya que el backend no devuelve 'fill'.
-    // Se asignan colores en el componente de gráfico directamente o a través de la configuración del mismo.
     const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
     const alarmsByTypeWithFill = data.alarmsByType.map((item: any, index: number) => ({
       ...item,
@@ -178,12 +193,9 @@ export async function getDashboardSummary(params: { startDate: string, endDate: 
       alarmStatusProgress: [],
       hourlyDistribution: [],
       weeklyTrend: [],
-      // --- INICIO DE LA SOLUCIÓN: Devolver valores por defecto para los nuevos campos ---
       driverRanking: [],
       deviceSummary: { active: 0, maintenance: 0, offline: 0, total: 0 },
       topDevices: [],
-      // --- FIN DE LA SOLUCIÓN ---
     };
   }
 }
-// --- FIN DE LA SOLUCIÓN ---
