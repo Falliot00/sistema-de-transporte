@@ -1,7 +1,11 @@
 // frontend/lib/api.ts
 import { Alarm, Driver, GetAlarmsResponse, GetAlarmsParams, DashboardSummary } from "@/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const isServer = typeof window === 'undefined';
+
+const API_URL = isServer
+  ? 'http://localhost:3001/api'
+  : process.env.NEXT_PUBLIC_API_URL!;
 if (!API_URL) {
   throw new Error("La variable de entorno NEXT_PUBLIC_API_URL no está definida.");
 }

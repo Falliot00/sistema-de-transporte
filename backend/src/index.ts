@@ -14,7 +14,11 @@ console.log("2. Módulos importados correctamente.");
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: '*', // <-- En producción podés usar: 'http://190.183.146.107'
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 console.log("3. Middlewares de Express configurados.");

@@ -8,21 +8,23 @@ import os
 load_dotenv()
 
 connection = pyodbc.connect(
-    f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+    f'DRIVER={{ODBC Driver 18 for SQL Server}};'
     f'SERVER={os.getenv("DB_SERVER")};'
     f'DATABASE={os.getenv("DB_NAME")};'
     f'UID={os.getenv("DB_USER")};'
-    f'PWD={os.getenv("DB_PASSWORD")}'
+    f'PWD={os.getenv("DB_PASSWORD")};'
+    f'TrustServerCertificate=yes;'
 )
 
 def conectar_db():
     try:
         connection = pyodbc.connect(
-            f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+            f'DRIVER={{ODBC Driver 18 for SQL Server}};'
             f'SERVER={os.getenv("DB_SERVER")};'
             f'DATABASE={os.getenv("DB_NAME")};'
             f'UID={os.getenv("DB_USER")};'
-            f'PWD={os.getenv("DB_PASSWORD")}'
+            f'PWD={os.getenv("DB_PASSWORD")};'
+	    f'TrustServerCertificate=yes;'
         )
         print("Conexión exitosa a SQL Server")
         return connection
