@@ -1,9 +1,9 @@
 // frontend/components/alarms/alarm-page.tsx
 'use client'
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
-import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm } from "@/lib/api";
+import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, getAlarmsCount } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
@@ -25,6 +25,7 @@ import { alarmTypes } from "@/lib/mock-data";
 import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { subDays } from "date-fns";
+import { AnalysisFilters } from "./analysis-filters"; // <-- NUEVA IMPORTACIÓN
 
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -35,48 +36,45 @@ function useDebounce(value: string, delay: number): string {
     return debouncedValue;
 }
 
-const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera']; // Empresas disponibles para filtrar
+const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera'];
+
+// Define un tipo para los filtros de análisis para mayor claridad
+type AnalysisFilterState = {
+    types: string[];
+    companies: string[];
+    dateRange?: DateRange;
+};
 
 export default function AlarmsPage() {
     const { toast } = useToast();
     
+    // Estados para la lista principal
     const [globalAlarmCounts, setGlobalAlarmCounts] = useState<GlobalAlarmCounts>({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [paginationInfo, setPaginationInfo] = useState<PaginationInfo | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    
     const [currentPage, setCurrentPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
-    
-    // --- INICIO DE LA SOLUCIÓN: Nuevo estado para filtros de empresa ---
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
-    // --- FIN DE LA SOLUCIÓN ---
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 29),
-        to: new Date(),
+    // --- NUEVOS ESTADOS PARA FILTROS Y CONTEOS DE ANÁLISIS ---
+    const [analysisFilters, setAnalysisFilters] = useState<AnalysisFilterState>({
+        types: [],
+        companies: [],
+        dateRange: undefined
     });
-
+    const [analysisCounts, setAnalysisCounts] = useState<{ pending: number, suspicious: number }>({ pending: 0, suspicious: 0 });
+    const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+    
+    // Estados para el modo de análisis
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    
-    const { 
-        currentAlarm: alarmForDetails, 
-        initialize: initializeNavigation, 
-        reset: resetNavigation, 
-        goToNext, 
-        goToPrevious, 
-        hasNext, 
-        hasPrevious,
-        isNavigating,
-        removeAlarm,
-    } = useAlarmNavigation();
-
+    const { currentAlarm: alarmForDetails, initialize: initializeNavigation, reset: resetNavigation, goToNext, goToPrevious, hasNext, hasPrevious, isNavigating, removeAlarm } = useAlarmNavigation();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    
     const [isAnalysisMode, setIsAnalysisMode] = useState(false);
     const [analysisAlarms, setAnalysisAlarms] = useState<Alarm[]>([]);
     const [analysisIndex, setAnalysisIndex] = useState(0);
@@ -85,7 +83,6 @@ export default function AlarmsPage() {
     const [isFetchingNextBatch, setIsFetchingNextBatch] = useState(false);
     const [analysisType, setAnalysisType] = useState<'pending' | 'suspicious' | null>(null);
 
-// --- INICIO DE LA SOLUCIÓN: Añadir `companyFilters` a la función y dependencias ---
     const fetchAlarms = useCallback(async () => {
         setIsLoading(true);
         setError(null);
@@ -96,7 +93,7 @@ export default function AlarmsPage() {
                 status: statusFilter, 
                 search: debouncedSearchQuery, 
                 type: typeFilters,
-                company: companyFilters, // <--- Nuevo
+                company: companyFilters,
                 startDate: dateRange?.from?.toISOString(),
                 endDate: dateRange?.to?.toISOString(),
             };
@@ -106,20 +103,81 @@ export default function AlarmsPage() {
             setGlobalAlarmCounts(data.globalCounts);
         } catch (e) {
             setError("Error de conexión: No se pudieron cargar las alarmas.");
-            console.error(e);
             setAlarms([]);
             setPaginationInfo(null);
             setGlobalAlarmCounts({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
         } finally {
             setIsLoading(false);
         }
-    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]); // <--- Nuevo
+    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
     
+    // --- NUEVA FUNCIÓN Y EFECTO PARA ACTUALIZAR CONTEOS DE ANÁLISIS ---
+    const fetchAnalysisCounts = useCallback(async () => {
+        setIsLoadingCounts(true);
+        try {
+            const commonParams: GetAlarmsParams = {
+                type: analysisFilters.types,
+                company: analysisFilters.companies,
+                startDate: analysisFilters.dateRange?.from?.toISOString(),
+                endDate: analysisFilters.dateRange?.to?.toISOString(),
+            };
+            const [pendingData, suspiciousData] = await Promise.all([
+                getAlarmsCount({ ...commonParams, status: 'pending' }),
+                getAlarmsCount({ ...commonParams, status: 'suspicious' })
+            ]);
+            setAnalysisCounts({ pending: pendingData.count, suspicious: suspiciousData.count });
+        } catch (e) {
+            console.error("Error al obtener conteos de análisis", e);
+            setAnalysisCounts({ pending: 0, suspicious: 0 });
+        } finally {
+            setIsLoadingCounts(false);
+        }
+    }, [analysisFilters]);
+
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
-    // Añadir companyFilters al reseteo de página
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
-    // --- FIN DE LA SOLUCIÓN ---
     
+    // Llama a fetchAnalysisCounts cuando cambian los filtros de análisis
+    useEffect(() => {
+        fetchAnalysisCounts();
+    }, [fetchAnalysisCounts]);
+
+    const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
+        const count = status === 'pending' ? analysisCounts.pending : analysisCounts.suspicious;
+        if (count === 0) {
+            toast({ title: "Sin alarmas para analizar", description: "No hay alarmas que coincidan con los filtros seleccionados." });
+            return;
+        }
+        setIsFetchingNextBatch(true);
+        setAnalysisType(status);
+        try {
+            // Usa los filtros de análisis para la llamada inicial
+            const params: GetAlarmsParams = {
+                status,
+                pageSize: 10,
+                type: analysisFilters.types,
+                company: analysisFilters.companies,
+                startDate: analysisFilters.dateRange?.from?.toISOString(),
+                endDate: analysisFilters.dateRange?.to?.toISOString(),
+            };
+            const data = await getAlarms(params);
+            setAnalysisAlarms(data.alarms);
+            setHasNextPageAnalysis(data.pagination.hasNextPage);
+            setAnalysisPage(1);
+            setAnalysisIndex(0);
+            if (data.alarms.length > 0) {
+                setIsAnalysisMode(true);
+            } else {
+                toast({ title: "Sin alarmas", description: `No se encontraron alarmas para analizar.` })
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "No se pudieron cargar las alarmas para el análisis.", variant: "destructive" });
+        } finally {
+            setIsFetchingNextBatch(false);
+        }
+    };
+    
+
     const handleCardClick = (clickedAlarm: Alarm) => {
         const navigableAlarms = alarms;
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id);
@@ -143,14 +201,11 @@ export default function AlarmsPage() {
             if (alarmForDetails.status === 'pending') {
                 await reviewAlarm(alarmIdToUpdate, action, description, choferId);
             } else if (alarmForDetails.status === 'suspicious') {
-                // --- INICIO DE LA SOLUCIÓN ---
-                // Se corrige la validación para que acepte el ID de chofer 0.
                 if (action === 'confirmed' && typeof choferId !== 'number') {
                     toast({ title: "Error de Validación", description: "Se requiere un chofer para confirmar la alarma.", variant: "destructive" });
                     setIsSubmitting(false);
                     return;
                 }
-                // --- FIN DE LA SOLUCIÓN ---
                 if (action === 'confirmed') {
                     await confirmAlarm(alarmIdToUpdate, description, choferId);
                 } else {
@@ -170,6 +225,7 @@ export default function AlarmsPage() {
             }
 
             fetchAlarms();
+            fetchAnalysisCounts();
     
         } catch (error: any) {
             toast({ title: "Error", variant: "destructive", description: error.message });
@@ -190,36 +246,11 @@ export default function AlarmsPage() {
             toast({ title: "Alarma Re-evaluada", description: "El estado ha sido cambiado a 'Sospechosa'." });
             handleDialogClose(); 
             fetchAlarms(); 
+            fetchAnalysisCounts();
         } catch (error: any) {
             toast({ title: "Error", variant: "destructive", description: error.message });
         } finally {
             setIsSubmitting(false);
-        }
-    };
-    
-    const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
-        const count = status === 'pending' ? globalAlarmCounts.pending : globalAlarmCounts.suspicious;
-        if (count === 0) {
-            toast({ title: `Sin alarmas ${status === 'pending' ? 'pendientes' : 'sospechosas'}`, description: "No hay nada que analizar en esta categoría." });
-            return;
-        }
-        setIsFetchingNextBatch(true);
-        setAnalysisType(status);
-        try {
-            const data = await getAlarms({ status, pageSize: 10 });
-            setAnalysisAlarms(data.alarms);
-            setHasNextPageAnalysis(data.pagination.hasNextPage);
-            setAnalysisPage(1);
-            setAnalysisIndex(0);
-            if (data.alarms.length > 0) {
-                setIsAnalysisMode(true);
-            } else {
-                toast({ title: "Sin alarmas", description: `No se encontraron alarmas para analizar en el estado '${status}'.`})
-            }
-        } catch (e) {
-            toast({ title: "Error", description: "No se pudieron cargar las alarmas para el análisis.", variant: "destructive" });
-        } finally {
-            setIsFetchingNextBatch(false);
         }
     };
     
@@ -228,7 +259,16 @@ export default function AlarmsPage() {
         setIsFetchingNextBatch(true);
         const nextPage = analysisPage + 1;
         try {
-            const data = await getAlarms({ status: analysisType, page: nextPage, pageSize: 10 });
+            const params: GetAlarmsParams = {
+                status: analysisType,
+                page: nextPage,
+                pageSize: 10,
+                type: analysisFilters.types,
+                company: analysisFilters.companies,
+                startDate: analysisFilters.dateRange?.from?.toISOString(),
+                endDate: analysisFilters.dateRange?.to?.toISOString(),
+            };
+            const data = await getAlarms(params);
             setAnalysisAlarms(data.alarms);
             setHasNextPageAnalysis(data.pagination.hasNextPage);
             setAnalysisPage(nextPage);
@@ -241,11 +281,14 @@ export default function AlarmsPage() {
     };
 
     const handleAnalysisAction = async (action: 'confirmed' | 'rejected' | 'skip') => {
+        const currentAlarm = analysisAlarms[analysisIndex];
+        if (!currentAlarm) return;
+
         if (action === 'skip') {
             if (analysisIndex >= analysisAlarms.length - 1) {
                 setAnalysisAlarms([]);
                 if (hasNextPageAnalysis) {
-                    handleLoadNextBatch();
+                    await handleLoadNextBatch();
                 } else {
                     setIsAnalysisMode(false);
                     toast({title: "Análisis Completado", description: "Has revisado todas las alarmas disponibles."})
@@ -256,26 +299,26 @@ export default function AlarmsPage() {
             return;
         }
         
-        const currentAlarm = analysisAlarms[analysisIndex];
-        if (!currentAlarm) return;
-        
         setIsSubmitting(true);
         try {
             if (currentAlarm.status === 'pending') {
                 await reviewAlarm(currentAlarm.id, action);
             } else if (currentAlarm.status === 'suspicious') {
                 if (action === 'confirmed') {
+                    // Para análisis rápido, no exigimos chofer, puede asignarse luego.
                     await confirmAlarm(currentAlarm.id);
                 } else {
                     await reviewAlarm(currentAlarm.id, action);
                 }
             }
             toast({ title: "Alarma Actualizada" });
+            fetchAlarms(); // Actualiza la lista principal y los contadores globales en segundo plano.
+            fetchAnalysisCounts(); // Actualiza el contador del botón.
 
             if (analysisIndex >= analysisAlarms.length - 1) {
                 setAnalysisAlarms([]);
                 if (hasNextPageAnalysis) {
-                    handleLoadNextBatch();
+                    await handleLoadNextBatch();
                 } else {
                     setIsAnalysisMode(false);
                     toast({title: "Análisis Completado", description: "Has revisado todas las alarmas disponibles."})
@@ -287,7 +330,6 @@ export default function AlarmsPage() {
             toast({ title: "Error", description: err.message, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
-            fetchAlarms();
         }
     };
 
@@ -310,14 +352,26 @@ export default function AlarmsPage() {
                 <KPICard title="Confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
                 <KPICard title="Rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
             </div>
-            <div className="flex justify-center gap-4 flex-wrap">
-                <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoading || globalAlarmCounts.pending === 0} variant="warning">
-                    <PlayCircle className="mr-2 h-4 w-4" /> Analizar {globalAlarmCounts.pending} alarmas pendientes
+
+            {/* --- SECCIÓN DE ANÁLISIS MODIFICADA --- */}
+            <div className="flex justify-center gap-4 flex-wrap items-center">
+                <AnalysisFilters 
+                    availableTypes={alarmTypes}
+                    availableCompanies={AVAILABLE_COMPANIES}
+                    filters={analysisFilters}
+                    onFilterChange={setAnalysisFilters}
+                    isLoading={isLoadingCounts}
+                />
+                <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning">
+                    {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                     Analizar {analysisCounts.pending} Pendientes
                 </Button>
-                <Button onClick={() => handleStartAnalysis('suspicious')} disabled={isLoading || globalAlarmCounts.suspicious === 0} variant="info">
-                    <PlayCircle className="mr-2 h-4 w-4" /> Analizar {globalAlarmCounts.suspicious} alarmas sospechosas
-                </Button>
+                {/*<Button onClick={() => handleStartAnalysis('suspicious')} disabled={isLoadingCounts || analysisCounts.suspicious === 0} variant="info">
+                     {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                     Analizar {analysisCounts.suspicious} Sospechosas
+                </Button>*/}
             </div>
+
             <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-1 justify-between items-center">
                     <div className="relative w-full flex-grow">
@@ -325,7 +379,6 @@ export default function AlarmsPage() {
                         <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex gap-2 items-center flex-wrap justify-end">
-                       {/* --- INICIO DE LA SOLUCIÓN: Pasar nuevas props al componente de filtros --- */}
                         <AdvancedFilters 
                             availableTypes={alarmTypes} 
                             selectedTypes={typeFilters} 
@@ -334,7 +387,6 @@ export default function AlarmsPage() {
                             selectedCompanies={companyFilters}
                             onCompanySelectionChange={setCompanyFilters}
                         />
-                        {/* --- FIN DE LA SOLUCIÓN --- */}
                     </div>
                     <div className="flex gap-2 items-center flex-wrap justify-end">
                        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
@@ -414,7 +466,7 @@ export default function AlarmsPage() {
                 </DialogContent>
             </Dialog>
             
-            <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) fetchAlarms(); setIsAnalysisMode(open); }}>
+            <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); fetchAnalysisCounts(); } setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">
                     {currentAnalysisAlarm ? (
                         <AlarmAnalysisView
@@ -431,7 +483,7 @@ export default function AlarmsPage() {
                             <h2 className="text-2xl font-bold mb-2">Lote Completado</h2>
                             <p className="text-muted-foreground mb-6">Has analizado todas las alarmas de este lote.</p>
                             <div className="flex gap-4">
-                                <Button variant="outline" onClick={() => { setIsAnalysisMode(false); fetchAlarms(); }}>Terminar</Button>
+                                <Button variant="outline" onClick={() => { setIsAnalysisMode(false); fetchAlarms(); fetchAnalysisCounts(); }}>Terminar</Button>
                                 {hasNextPageAnalysis && (
                                     <Button onClick={handleLoadNextBatch} disabled={isFetchingNextBatch}>
                                         {isFetchingNextBatch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

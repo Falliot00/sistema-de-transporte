@@ -8,7 +8,7 @@ import os
 load_dotenv()
 
 connection = pyodbc.connect(
-    f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+    f'DRIVER={{ODBC Driver 18 for SQL Server}};'
     f'SERVER={os.getenv("DB_SERVER")};'
     f'DATABASE={os.getenv("DB_NAME")};'
     f'UID={os.getenv("DB_USER")};'
@@ -18,7 +18,7 @@ connection = pyodbc.connect(
 def conectar_db():
     try:
         connection = pyodbc.connect(
-            f'DRIVER={{ODBC Driver 17 for SQL Server}};'
+            f'DRIVER={{ODBC Driver 18 for SQL Server}};'
             f'SERVER={os.getenv("DB_SERVER")};'
             f'DATABASE={os.getenv("DB_NAME")};'
             f'UID={os.getenv("DB_USER")};'

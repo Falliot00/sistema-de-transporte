@@ -1,13 +1,16 @@
 // backend/src/routes/alarmas.ts
 import { Router, Request, Response } from 'express';
-// --- INICIO DE LA SOLUCIÓN: Importar nuevo controlador ---
-import { getAllAlarms, getAlarmById, reviewAlarm, confirmFinalAlarm, reEvaluateAlarm, retryVideoDownload, assignDriverToAlarm } from '../controllers/alarmaController';
-// --- FIN DE LA SOLUCIÓN ---
+import { getAllAlarms, getAlarmById, reviewAlarm, confirmFinalAlarm, reEvaluateAlarm, retryVideoDownload, assignDriverToAlarm, getAlarmsCount } from '../controllers/alarmaController';
 
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
     await getAllAlarms(req, res);
+});
+
+
+router.get('/count', async (req: Request, res: Response) => {
+    await getAlarmsCount(req, res);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
@@ -30,10 +33,8 @@ router.post('/:id/retry-video', async (req: Request, res: Response) => {
     await retryVideoDownload(req, res);
 });
 
-// --- INICIO DE LA SOLUCIÓN: Nueva ruta PATCH para asignar chofer ---
 router.patch('/:id/assign-driver', async (req: Request, res: Response) => {
     await assignDriverToAlarm(req, res);
 });
-// --- FIN DE LA SOLUCIÓN ---
 
 export default router;
