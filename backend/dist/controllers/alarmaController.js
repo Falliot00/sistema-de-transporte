@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.retryVideoDownload = exports.reEvaluateAlarm = exports.confirmFinalAlarm = exports.assignDriverToAlarm = exports.reviewAlarm = exports.getAlarmById = exports.getAllAlarms = void 0;
+exports.retryVideoDownload = exports.reEvaluateAlarm = exports.confirmFinalAlarm = exports.assignDriverToAlarm = exports.reviewAlarm = exports.getAlarmById = exports.getAllAlarms = exports.getAlarmsCount = void 0;
 const client_1 = require("@prisma/client");
 const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
@@ -33,21 +33,11 @@ const triggerVideoScript = (alarm) => {
         console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}: ${stdout}`);
     });
 };
-const getAllAlarms = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 12;
-    const statusFilter = req.query.status;
-    const search = req.query.search;
-    const typeFilters = req.query.type;
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
-    // --- INICIO DE LA SOLUCIÓN: Capturar nuevo filtro de empresa ---
-    const companyFilters = req.query.company;
-    // --- FIN DE LA SOLUCIÓN ---
-    const skip = (page - 1) * pageSize;
+const buildWhereClause = (queryParams) => {
+    const { status, search, type, company, startDate, endDate } = queryParams;
     let whereClause = {};
-    if (statusFilter && statusFilter !== 'all') {
-        const dbStates = DB_QUERY_STATUS_MAP[statusFilter];
+    if (status && status !== 'all') {
+        const dbStates = DB_QUERY_STATUS_MAP[status];
         if (dbStates) {
             whereClause.estado = { in: dbStates };
         }
@@ -66,17 +56,34 @@ const getAllAlarms = async (req, res) => {
             { chofer: { apellido: { contains: search } } },
         ];
     }
-    if (typeFilters && (Array.isArray(typeFilters) ? typeFilters.length > 0 : typeFilters.trim() !== '')) {
-        const typesToFilter = Array.isArray(typeFilters) ? typeFilters : [typeFilters];
-        whereClause.typeAlarm = { alarm: { in: typesToFilter } };
+    const typeFilters = Array.isArray(type) ? type : (type ? [type] : []);
+    if (typeFilters.length > 0) {
+        whereClause.typeAlarm = { alarm: { in: typeFilters } };
     }
-    // --- INICIO DE LA SOLUCIÓN: Aplicar filtro de empresa a la consulta ---
-    if (companyFilters && (Array.isArray(companyFilters) ? companyFilters.length > 0 : companyFilters.trim() !== '')) {
-        const companiesToFilter = Array.isArray(companyFilters) ? companyFilters : [companyFilters];
-        whereClause.Empresa = { in: companiesToFilter };
+    const companyFilters = Array.isArray(company) ? company : (company ? [company] : []);
+    if (companyFilters.length > 0) {
+        whereClause.Empresa = { in: companyFilters };
     }
-    // --- FIN DE LA SOLUCIÓN ---
+    return whereClause;
+};
+const getAlarmsCount = async (req, res) => {
     try {
+        const whereClause = buildWhereClause(req.query);
+        const count = await prisma.alarmasHistorico.count({ where: whereClause });
+        res.status(200).json({ count });
+    }
+    catch (error) {
+        console.error("⛔ [ERROR] Falla en getAlarmsCount:", error);
+        res.status(500).json({ message: 'Error interno del servidor al contar las alarmas.' });
+    }
+};
+exports.getAlarmsCount = getAlarmsCount;
+const getAllAlarms = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 12;
+    const skip = (page - 1) * pageSize;
+    try {
+        const whereClause = buildWhereClause(req.query);
         const alarmsFromDb = await prisma.alarmasHistorico.findMany({
             skip,
             take: pageSize,
@@ -105,8 +112,6 @@ const getAllAlarms = async (req, res) => {
     }
 };
 exports.getAllAlarms = getAllAlarms;
-// El resto de los controladores (getAlarmById, reviewAlarm, etc.) permanecen sin cambios.
-// ... (resto del archivo igual)
 const getAlarmById = async (req, res) => {
     const { id } = req.params;
     try {

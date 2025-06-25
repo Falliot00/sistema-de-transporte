@@ -38,7 +38,6 @@ const getSummary = async (req, res) => {
             prisma.alarmasHistorico.groupBy({ by: ['estado'], where: { alarmTime: { gte: start, lte: end } }, _count: { estado: true } }),
             prisma.$queryRaw `SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count FROM alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC;`,
             prisma.$queryRaw `SELECT DATENAME(weekday, alarmTime) as dayName, DATEPART(weekday, alarmTime) as dayOfWeek, SUM(CASE WHEN alarmTime >= ${startOfWeek} AND alarmTime <= ${endOfWeek} THEN 1 ELSE 0 END) as thisWeek, SUM(CASE WHEN alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfLastWeek} THEN 1 ELSE 0 END) as lastWeek FROM alarmasHistorico WHERE alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfWeek} GROUP BY DATENAME(weekday, alarmTime), DATEPART(weekday, alarmTime) ORDER BY dayOfWeek ASC;`,
-            // --- INICIO DE LA SOLUCIÓN: Corregir el nombre de la columna en el JOIN ---
             // Se cambia a.choferId por a.chofer para que coincida con el nombre de la columna física en la DB.
             prisma.$queryRaw `
                 SELECT
@@ -50,7 +49,6 @@ const getSummary = async (req, res) => {
                 GROUP BY c.choferes_id, c.nombre, c.apellido, c.foto
                 ORDER BY totalAlarms DESC;
             `,
-            // --- FIN DE LA SOLUCIÓN ---
             prisma.alarmasHistorico.groupBy({
                 by: ['dispositivo'],
                 _count: { dispositivo: true },
