@@ -59,7 +59,12 @@ export default function AlarmsPage() {
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
+    
+    // --- MODIFICACIÓN PROFESIONAL: Estado inicial del filtro de fechas ---
+    // Lo inicializamos como 'undefined' para que el placeholder "Seleccionar rango de fechas"
+    // se muestre por defecto, en lugar de un rango preestablecido.
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
     const [analysisFilters, setAnalysisFilters] = useState<AnalysisFilterState>({ types: [], companies: [], dateRange: undefined });
     const [analysisCounts, setAnalysisCounts] = useState<{ pending: number, suspicious: number }>({ pending: 0, suspicious: 0 });
     const [isLoadingCounts, setIsLoadingCounts] = useState(false);
@@ -164,7 +169,6 @@ export default function AlarmsPage() {
         
         const nextIndex = analysisIndex + 1;
         if (nextIndex >= analysisAlarms.length) {
-            // LÓGICA DE FLUJO CONTINUO
             if (hasNextPageAnalysis) {
                 await handleLoadNextBatch();
             } else {
@@ -190,7 +194,6 @@ export default function AlarmsPage() {
             {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col"> {alarmForDetails && ( <> {isNavigating && ( <> <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"> <ChevronLeft className="h-6 w-6" /> <span className="sr-only">Anterior</span> </Button> <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"> <ChevronRight className="h-6 w-6" /> <span className="sr-only">Siguiente</span> </Button> </> )} <div className="p-6 overflow-y-auto flex-grow"> <AlarmDetails alarm={alarmForDetails} /> </div> {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected') && ( <DialogFooter className="p-6 border-t sm:justify-start bg-background"> <div className="w-full"> {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && ( <AlarmActionForm alarm={alarmForDetails} onAction={handleDialogAction} isSubmitting={isSubmitting} confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'} initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={true} /> )} {alarmForDetails.status === 'rejected' && ( <AlarmActionForm alarm={alarmForDetails} onAction={handleReEvaluate} isSubmitting={isSubmitting} confirmText="Marcar como Sospechosa" rejectText="Mantener Rechazada" initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={false} /> )} </div> </DialogFooter> )} </> )} </DialogContent> </Dialog>
             
-            {/* DIÁLOGO DE ANÁLISIS CON FLUJO CONTINUO */}
             <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); fetchAnalysisCounts(); } setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">
                     {currentAnalysisAlarm ? (
@@ -205,7 +208,6 @@ export default function AlarmsPage() {
                             confirmText={confirmButtonText}
                         />
                     ) : (
-                        // Indicador de carga sutil mientras se busca el siguiente lote.
                         <div className="flex flex-col items-center justify-center h-full text-center">
                             <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
                             <p className="text-muted-foreground mt-4">Cargando...</p>
