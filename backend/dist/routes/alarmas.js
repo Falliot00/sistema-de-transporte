@@ -22,6 +22,9 @@ router.put('/:id/confirm', async (req, res) => {
 router.put('/:id/re-evaluate', async (req, res) => {
     await (0, alarmaController_1.reEvaluateAlarm)(req, res);
 });
+router.put('/:id/undo', async (req, res) => {
+    await (0, alarmaController_1.undoAlarmAction)(req, res);
+});
 router.post('/:id/retry-video', async (req, res) => {
     await (0, alarmaController_1.retryVideoDownload)(req, res);
 });

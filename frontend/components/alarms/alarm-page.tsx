@@ -36,7 +36,7 @@ function useDebounce(value: string, delay: number): string {
 }
 
 const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera'];
-const ANALYSIS_PAGE_SIZE = 30;
+const ANALYSIS_PAGE_SIZE = 50;
 
 type AnalysisFilterState = {
     types: string[];
