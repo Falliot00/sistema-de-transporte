@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.retryVideoDownload = exports.reEvaluateAlarm = exports.confirmFinalAlarm = exports.assignDriverToAlarm = exports.reviewAlarm = exports.getAlarmById = exports.getAllAlarms = exports.getAlarmsCount = void 0;
+exports.retryVideoDownload = exports.reEvaluateAlarm = exports.confirmFinalAlarm = exports.assignDriverToAlarm = exports.reviewAlarm = exports.getAlarmById = exports.getAllAlarms = exports.getAlarmsCount = exports.undoAlarmAction = void 0;
 const client_1 = require("@prisma/client");
 const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
@@ -15,6 +15,55 @@ const DB_QUERY_STATUS_MAP = {
     confirmed: ['Confirmada', 'confirmed'],
     rejected: ['Rechazada', 'rejected'],
 };
+/**
+ * @route PUT /api/alarmas/:id/undo
+ * @description Revierte el estado de una alarma a 'Pendiente'.
+ */
+const undoAlarmAction = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) {
+            return res.status(404).json({ message: 'La alarma que intentas revertir no existe.' });
+        }
+        // ---  Lógica de idempotencia ---
+        // Si la alarma ya está 'Pendiente', consideramos la operación un éxito
+        // y devolvemos la alarma tal como está, sin hacer cambios en la BD.
+        // Esto evita errores innecesarios si el frontend llama a esta ruta
+        // para una alarma omitida.
+        if (alarm.estado === 'Pendiente') {
+            const transformedAlarm = (0, transformers_1.transformAlarmData)(alarm);
+            return res.status(200).json(transformedAlarm);
+        }
+        // --- FIN DE LA SOLUCIÓN ---
+        // CRITICAL SECURITY CHECK:
+        // Aseguramos que la alarma no esté ya pendiente para evitar acciones redundantes.
+        // SUPUESTAMENTE NO ES NECESARIO.
+        /*if (alarm.estado === 'Pendiente') {
+            return res.status(400).json({ message: 'La alarma ya está en estado pendiente.' });
+        }*/
+        const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
+            where: { guid: id },
+            // La lógica principal es cambiar el estado a 'Pendiente'.
+            // También limpiamos la descripción para que el analista pueda empezar de cero.
+            data: {
+                estado: 'Pendiente',
+                descripcion: null
+            },
+            include: { chofer: true, typeAlarm: true }
+        });
+        const transformedAlarm = (0, transformers_1.transformAlarmData)(updatedAlarmFromDb);
+        res.status(200).json(transformedAlarm);
+    }
+    catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ message: 'La alarma no existe.' });
+        }
+        console.error(`Error al revertir la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+exports.undoAlarmAction = undoAlarmAction;
 const triggerVideoScript = (alarm) => {
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
