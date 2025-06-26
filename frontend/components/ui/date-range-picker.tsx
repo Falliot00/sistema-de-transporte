@@ -18,9 +18,20 @@ import {
 interface DateRangePickerProps extends React.ComponentProps<"div"> {
   date: DateRange | undefined;
   onDateChange: (date: DateRange | undefined) => void;
+  // --- INICIO DE LA SOLUCIÓN: Añadimos la prop 'disabled' ---
+  // Hacemos que la prop sea opcional para no romper otros usos del componente.
+  disabled?: boolean;
+  // --- FIN DE LA SOLUCIÓN ---
 }
 
-export function DateRangePicker({ className, date, onDateChange }: DateRangePickerProps) {
+export function DateRangePicker({ 
+  className, 
+  date, 
+  onDateChange, 
+  // --- INICIO DE LA SOLUCIÓN: Recibimos la nueva prop ---
+  disabled 
+  // --- FIN DE LA SOLUCIÓN ---
+}: DateRangePickerProps) {
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -28,6 +39,10 @@ export function DateRangePicker({ className, date, onDateChange }: DateRangePick
           <Button
             id="date"
             variant={"outline"}
+            // --- INICIO DE LA SOLUCIÓN: Aplicamos la prop 'disabled' ---
+            // Le pasamos la prop al botón subyacente. Si 'disabled' es true,
+            // el botón se deshabilitará visual y funcionalmente.
+            disabled={disabled}
             className={cn(
               "w-[300px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
@@ -55,9 +70,6 @@ export function DateRangePicker({ className, date, onDateChange }: DateRangePick
             defaultMonth={date?.from}
             selected={date}
             onSelect={onDateChange}
-            // --- MODIFICACIÓN PROFESIONAL: Un solo mes ---
-            // Cambiamos de 2 a 1 para una UI más limpia y enfocada.
-            // Esto simplifica la vista para el usuario.
             numberOfMonths={1}
             locale={es}
           />
