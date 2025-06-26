@@ -2,9 +2,10 @@
 
 import { Alarm } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge"; // Importa Badge
-import { getColorVariantForType } from "@/lib/utils"; // Importa la función para el color del tipo
+// IMPORTANTE: Añade el nuevo icono para el botón de deshacer
+import { Loader2, Play, Undo2 } from "lucide-react"; 
+import { Badge } from "@/components/ui/badge";
+import { getColorVariantForType } from "@/lib/utils";
 
 interface AlarmAnalysisViewProps {
   alarm: Alarm;
@@ -12,16 +13,51 @@ interface AlarmAnalysisViewProps {
   isSubmitting: boolean;
   current: number;
   total: number;
-  confirmText?: string; 
+  confirmText?: string;
+  // --- INICIO DE LA SOLUCIÓN: Nuevas props para la funcionalidad de deshacer ---
+  onUndo: () => void;
+  isUndoDisabled: boolean;
+  // --- FIN DE LA SOLUCIÓN ---
 }
 
-export function AlarmAnalysisView({ alarm, onAction, isSubmitting, current, total, confirmText }: AlarmAnalysisViewProps) {
+export function AlarmAnalysisView({ 
+    alarm, 
+    onAction, 
+    isSubmitting, 
+    current, 
+    total, 
+    confirmText,
+    // --- INICIO DE LA SOLUCIÓN: Recibimos las nuevas props ---
+    onUndo,
+    isUndoDisabled
+    // --- FIN DE LA SOLUCIÓN ---
+}: AlarmAnalysisViewProps) {
   const primaryMedia = alarm.media?.find(m => m.type === 'video') || alarm.media?.[0];
-  const typeColorVariant = getColorVariantForType(alarm.type); // Obtiene la variante de color para el tipo
+  const typeColorVariant = getColorVariantForType(alarm.type);
 
   return (
     <div className="flex flex-col h-full w-full items-center p-4">
-      <h2 className="text-2xl md:text-4xl font-bold text-center mb-1">{alarm.type}</h2>
+      <div className="flex w-full justify-between items-center mb-1 relative">
+        {/* --- INICIO DE LA SOLUCIÓN: Contenedor para el botón de deshacer a la izquierda --- */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onUndo}
+              disabled={isUndoDisabled}
+              aria-label="Deshacer última acción"
+              className="h-10 w-10"
+            >
+              <Undo2 className="h-6 w-6" />
+            </Button>
+        </div>
+        {/* --- FIN DE LA SOLUCIÓN --- */}
+        
+        <div className="flex-grow text-center">
+            <h2 className="text-2xl md:text-4xl font-bold">{alarm.type}</h2>
+        </div>
+      </div>
+
       <p className="text-muted-foreground mb-4">Analizando alarma {current} de {total}</p>
 
       <div className="relative w-full flex-grow bg-muted/30 rounded-lg overflow-hidden flex items-center justify-center mb-6 border">
@@ -51,9 +87,8 @@ export function AlarmAnalysisView({ alarm, onAction, isSubmitting, current, tota
           <p className="text-muted-foreground">No hay evidencia multimedia para esta alarma.</p>
         )}
       </div>
-
-      {/* Tipo de alarma */}
-      <div className="mb-4"> {/* Añade margen inferior para separar de los botones */}
+      
+      <div className="mb-4">
         <Badge variant={typeColorVariant} className="text-lg px-4 py-2">
           {alarm.type}
         </Badge>

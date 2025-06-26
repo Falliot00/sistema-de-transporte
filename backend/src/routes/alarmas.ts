@@ -1,13 +1,23 @@
 // backend/src/routes/alarmas.ts
 import { Router, Request, Response } from 'express';
-import { getAllAlarms, getAlarmById, reviewAlarm, confirmFinalAlarm, reEvaluateAlarm, retryVideoDownload, assignDriverToAlarm, getAlarmsCount } from '../controllers/alarmaController';
+
+import { 
+    getAllAlarms, 
+    getAlarmById, 
+    reviewAlarm, 
+    confirmFinalAlarm, 
+    reEvaluateAlarm, 
+    retryVideoDownload, 
+    assignDriverToAlarm, 
+    getAlarmsCount,
+    undoAlarmAction
+} from '../controllers/alarmaController';
 
 const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
     await getAllAlarms(req, res);
 });
-
 
 router.get('/count', async (req: Request, res: Response) => {
     await getAlarmsCount(req, res);
@@ -28,6 +38,12 @@ router.put('/:id/confirm', async (req: Request, res: Response) => {
 router.put('/:id/re-evaluate', async (req: Request, res: Response) => {
     await reEvaluateAlarm(req, res);
 });
+
+
+router.put('/:id/undo', async (req: Request, res: Response) => {
+    await undoAlarmAction(req, res);
+});
+
 
 router.post('/:id/retry-video', async (req: Request, res: Response) => {
     await retryVideoDownload(req, res);
