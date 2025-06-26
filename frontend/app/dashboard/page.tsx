@@ -50,9 +50,10 @@ const DashboardTabSkeleton = () => (
 
 export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
+    from: subDays(new Date(), 7),
     to: new Date(),
   });
+  
   
   const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
