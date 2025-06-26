@@ -199,3 +199,15 @@ export async function getDashboardSummary(params: { startDate: string, endDate: 
     };
   }
 }
+
+export async function undoAlarm(alarmId: string): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/undo`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al deshacer la acción de la alarma');
+    }
+    return await response.json();
+}
