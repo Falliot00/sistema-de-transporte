@@ -82,10 +82,81 @@ export default function AlarmsPage() {
     const [analysisType, setAnalysisType] = useState<'pending' | 'suspicious' | null>(null);
     const [analysisTotalCount, setAnalysisTotalCount] = useState(0);
     const [lastProcessedAlarm, setLastProcessedAlarm] = useState<{alarm: Alarm, index: number} | null>(null);
-    const [isUndoing, setIsUndoing] = useState<boolean>(false);
+    const [isUndoing, setIsUndoing] = useState<boolean>(false);3
+
+    const [filteredCounts, setFilteredCounts] = useState<GlobalAlarmCounts>({ 
+    total: 0, 
+    pending: 0, 
+    suspicious: 0, 
+    confirmed: 0, 
+    rejected: 0 
+});
 
     // Callbacks de fetch
-    const fetchAlarms = useCallback(async () => { setIsLoading(true); setError(null); try { const params: GetAlarmsParams = { page: currentPage, pageSize: 12, status: statusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate: dateRange?.from?.toISOString(), endDate: dateRange?.to?.toISOString(), }; const data = await getAlarms(params); setAlarms(data.alarms); setPaginationInfo(data.pagination); setGlobalAlarmCounts(data.globalCounts); } catch (e) { setError("Error de conexión: No se pudieron cargar las alarmas."); setAlarms([]); setPaginationInfo(null); setGlobalAlarmCounts({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 }); } finally { setIsLoading(false); } }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
+    const fetchAlarms = useCallback(async () => { 
+    setIsLoading(true); 
+    setError(null); 
+    try { 
+        const params: GetAlarmsParams = { 
+            page: currentPage, 
+            pageSize: 12, 
+            status: statusFilter, 
+            search: debouncedSearchQuery, 
+            type: typeFilters, 
+            company: companyFilters, 
+            startDate: dateRange?.from?.toISOString(), 
+            endDate: dateRange?.to?.toISOString(), 
+        }; 
+        const data = await getAlarms(params); 
+        setAlarms(data.alarms); 
+        setPaginationInfo(data.pagination); 
+        setGlobalAlarmCounts(data.globalCounts);
+        
+        // Obtener conteos filtrados para cada estado
+        if (statusFilter === 'all') {
+            // Si estamos mostrando todos, necesitamos obtener los conteos con los filtros actuales
+            const baseParams = { 
+                search: debouncedSearchQuery, 
+                type: typeFilters, 
+                company: companyFilters, 
+                startDate: dateRange?.from?.toISOString(), 
+                endDate: dateRange?.to?.toISOString() 
+            };
+            
+            const [pendingCount, suspiciousCount, confirmedCount, rejectedCount] = await Promise.all([
+                getAlarmsCount({ ...baseParams, status: 'pending' }),
+                getAlarmsCount({ ...baseParams, status: 'suspicious' }),
+                getAlarmsCount({ ...baseParams, status: 'confirmed' }),
+                getAlarmsCount({ ...baseParams, status: 'rejected' })
+            ]);
+            
+            setFilteredCounts({
+                total: data.pagination.totalAlarms,
+                pending: pendingCount.count,
+                suspicious: suspiciousCount.count,
+                confirmed: confirmedCount.count,
+                rejected: rejectedCount.count
+            });
+        } else {
+            // Si hay un filtro de estado específico, solo ese estado tiene el conteo
+            setFilteredCounts({
+                total: data.pagination.totalAlarms,
+                pending: statusFilter === 'pending' ? data.pagination.totalAlarms : 0,
+                suspicious: statusFilter === 'suspicious' ? data.pagination.totalAlarms : 0,
+                confirmed: statusFilter === 'confirmed' ? data.pagination.totalAlarms : 0,
+                rejected: statusFilter === 'rejected' ? data.pagination.totalAlarms : 0
+            });
+        }
+    } catch (e) { 
+        setError("Error de conexión: No se pudieron cargar las alarmas."); 
+        setAlarms([]); 
+        setPaginationInfo(null); 
+        setGlobalAlarmCounts({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
+        setFilteredCounts({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
+    } finally { 
+        setIsLoading(false); 
+    } 
+}, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
     const fetchAnalysisCounts = useCallback(async () => { setIsLoadingCounts(true); try { const commonParams: GetAlarmsParams = { type: analysisFilters.types, company: analysisFilters.companies, startDate: analysisFilters.dateRange?.from?.toISOString(), endDate: analysisFilters.dateRange?.to?.toISOString(), }; const [pendingData, suspiciousData] = await Promise.all([ getAlarmsCount({ ...commonParams, status: 'pending' }), getAlarmsCount({ ...commonParams, status: 'suspicious' }) ]); setAnalysisCounts({ pending: pendingData.count, suspicious: suspiciousData.count }); } catch (e) { console.error("Error al obtener conteos de análisis", e); setAnalysisCounts({ pending: 0, suspicious: 0 }); } finally { setIsLoadingCounts(false); } }, [analysisFilters]);
 
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
@@ -190,7 +261,66 @@ export default function AlarmsPage() {
 
     return (
         <div className="space-y-6">
-            <div> <h1 className="text-3xl font-bold">Gestión de Alarmas</h1> <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p> </div> <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"> <KPICard title="Total de Alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/> <KPICard title="Pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" /> <KPICard title="Sospechosas" value={isLoading ? '...' : globalAlarmCounts.suspicious.toLocaleString()} icon={<AlertTriangle className="h-4 w-4" />} iconClassName="text-blue-500" /> <KPICard title="Confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" /> <KPICard title="Rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" /> </div> <div className="flex justify-center gap-4 flex-wrap items-center"> <AnalysisFilters availableTypes={alarmTypes} availableCompanies={AVAILABLE_COMPANIES} filters={analysisFilters} onFilterChange={setAnalysisFilters} isLoading={isLoadingCounts} /> <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning"> {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} Analizar {analysisCounts.pending} Pendientes </Button> </div> <div className="space-y-4"> <div className="flex flex-col sm:flex-row gap-1 justify-between items-center"> <div className="relative w-full flex-grow"> <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /> </div> <div className="flex gap-2 items-center flex-wrap justify-end"> <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onTypeSelectionChange={setTypeFilters} availableCompanies={AVAILABLE_COMPANIES} selectedCompanies={companyFilters} onCompanySelectionChange={setCompanyFilters} /> </div> <div className="flex gap-2 items-center flex-wrap justify-end"> <DateRangePicker date={dateRange} onDateChange={setDateRange} /> </div> </div> <div> <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start"> <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{globalAlarmCounts.total}</Badge></ToggleGroupItem> <ToggleGroupItem value="pending" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.pending}</span><Badge variant={ALARM_STATUS_VARIANT.pending}>{globalAlarmCounts.pending}</Badge></ToggleGroupItem> <ToggleGroupItem value="suspicious" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.suspicious}</span><Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{globalAlarmCounts.suspicious}</Badge></ToggleGroupItem> <ToggleGroupItem value="confirmed" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.confirmed}</span><Badge variant={ALARM_STATUS_VARIANT.confirmed}>{globalAlarmCounts.confirmed}</Badge></ToggleGroupItem> <ToggleGroupItem value="rejected" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.rejected}</span><Badge variant={ALARM_STATUS_VARIANT.rejected}>{globalAlarmCounts.rejected}</Badge></ToggleGroupItem> </ToggleGroup> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div> : alarms.length > 0 ? alarms.map((alarm) => ( <AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> )) : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>} </div>
+            <div> <h1 className="text-3xl font-bold">Gestión de Alarmas</h1> <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p> </div> <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <KPICard 
+        title="Total de alarmas" 
+        value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} 
+        icon={<Bell className="h-4 w-4" />} 
+        iconClassName="text-black-500"
+    />
+    <KPICard 
+        title="Total de pendientes" 
+        value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} 
+        icon={<Clock className="h-4 w-4" />} 
+        iconClassName="text-yellow-500" 
+    />
+    <KPICard 
+        title="Total de sospechosas" 
+        value={isLoading ? '...' : globalAlarmCounts.suspicious.toLocaleString()} 
+        icon={<AlertTriangle className="h-4 w-4" />} 
+        iconClassName="text-blue-500" 
+    />
+    <KPICard 
+        title="Total de confirmadas" 
+        value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} 
+        icon={<CheckCircle className="h-4 w-4" />} 
+        iconClassName="text-green-500" 
+    />
+    <KPICard 
+        title="Total de rechazadas" 
+        value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} 
+        icon={<XCircle className="h-4 w-4" />} 
+        iconClassName="text-red-500" 
+    />
+</div>
+ <div className="flex justify-center gap-4 flex-wrap items-center"> <AnalysisFilters availableTypes={alarmTypes} availableCompanies={AVAILABLE_COMPANIES} filters={analysisFilters} onFilterChange={setAnalysisFilters} isLoading={isLoadingCounts} /> <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning"> {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} Analizar {analysisCounts.pending} Pendientes </Button> </div> <div className="space-y-4"> <div className="flex flex-col sm:flex-row gap-1 justify-between items-center"> <div className="relative w-full flex-grow"> <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> <Input type="search" placeholder="Buscar por patente, interno, tipo..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /> </div> <div className="flex gap-2 items-center flex-wrap justify-end"> <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onTypeSelectionChange={setTypeFilters} availableCompanies={AVAILABLE_COMPANIES} selectedCompanies={companyFilters} onCompanySelectionChange={setCompanyFilters} /> </div> <div className="flex gap-2 items-center flex-wrap justify-end"> <DateRangePicker date={dateRange} onDateChange={setDateRange} /> </div> </div> <div> <ToggleGroup 
+    type="single" 
+    variant="outline" 
+    value={statusFilter} 
+    onValueChange={(value) => { if (value) setStatusFilter(value); }} 
+    className="flex flex-wrap justify-start"
+>
+    <ToggleGroupItem value="all" className="flex items-center gap-2">
+        <span>Todos</span>
+        <Badge variant="default">{filteredCounts.total}</Badge>
+    </ToggleGroupItem>
+    <ToggleGroupItem value="pending" className="flex items-center gap-2">
+        <span>{ALARM_STATUS_ES_PLURAL.pending}</span>
+        <Badge variant={ALARM_STATUS_VARIANT.pending}>{filteredCounts.pending}</Badge>
+    </ToggleGroupItem>
+    <ToggleGroupItem value="suspicious" className="flex items-center gap-2">
+        <span>{ALARM_STATUS_ES_PLURAL.suspicious}</span>
+        <Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{filteredCounts.suspicious}</Badge>
+    </ToggleGroupItem>
+    <ToggleGroupItem value="confirmed" className="flex items-center gap-2">
+        <span>{ALARM_STATUS_ES_PLURAL.confirmed}</span>
+        <Badge variant={ALARM_STATUS_VARIANT.confirmed}>{filteredCounts.confirmed}</Badge>
+    </ToggleGroupItem>
+    <ToggleGroupItem value="rejected" className="flex items-center gap-2">
+        <span>{ALARM_STATUS_ES_PLURAL.rejected}</span>
+        <Badge variant={ALARM_STATUS_VARIANT.rejected}>{filteredCounts.rejected}</Badge>
+    </ToggleGroupItem>
+</ToggleGroup> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div> : alarms.length > 0 ? alarms.map((alarm) => ( <AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> )) : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>} </div>
             {paginationInfo && paginationInfo.totalPages > 1 && <PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />}
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col"> {alarmForDetails && ( <> {isNavigating && ( <> <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"> <ChevronLeft className="h-6 w-6" /> <span className="sr-only">Anterior</span> </Button> <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"> <ChevronRight className="h-6 w-6" /> <span className="sr-only">Siguiente</span> </Button> </> )} <div className="p-6 overflow-y-auto flex-grow"> <AlarmDetails alarm={alarmForDetails} /> </div> {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected') && ( <DialogFooter className="p-6 border-t sm:justify-start bg-background"> <div className="w-full"> {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && ( <AlarmActionForm alarm={alarmForDetails} onAction={handleDialogAction} isSubmitting={isSubmitting} confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'} initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={true} /> )} {alarmForDetails.status === 'rejected' && ( <AlarmActionForm alarm={alarmForDetails} onAction={handleReEvaluate} isSubmitting={isSubmitting} confirmText="Marcar como Sospechosa" rejectText="Mantener Rechazada" initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={false} /> )} </div> </DialogFooter> )} </> )} </DialogContent> </Dialog>
             
