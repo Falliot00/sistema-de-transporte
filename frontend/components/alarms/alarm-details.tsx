@@ -7,7 +7,7 @@ import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlarmMedia } from "./alarm-media";
-import { Clock, CarFront, User, FileText, MapPin, Gauge, Building } from "lucide-react";
+import { Clock, CarFront, User, FileText, MapPin, Gauge, Building, Camera } from "lucide-react";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -35,6 +35,15 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
 
   return (
     <div className="flex flex-col gap-6 relative">
+        {/* Navigation Bar */}
+        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm p-4 -mx-6 -mt-4 border-b border-border flex gap-4 overflow-x-auto">
+            <a href="#informacion-evento-section" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">Información del Evento</a>
+            <a href="#multimedia-section" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">Evidencia Multimedia</a>
+            {alarm.descripcion && (
+                <a href="#descripcion-adicional-section" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">Descripción Adicional</a>
+            )}
+        </div>
+
         <div className="flex justify-between items-start gap-4">
             <div className="flex-grow">
                  <CardTitle className="text-xl">
@@ -44,7 +53,7 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
             <Badge variant={statusInfo.variant as any} className="capitalize text-sm px-3 py-1 flex-shrink-0">{statusInfo.label}</Badge>
         </div>
 
-        <Card>
+        <Card id="informacion-evento-section">
             <CardHeader><CardTitle className="text-lg">Información del Evento</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
                 <div className="space-y-4">
@@ -71,7 +80,7 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
         </Card>
 
         {alarm.descripcion && (
-            <Card>
+            <Card id="descripcion-adicional-section">
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                         <FileText className="h-5 w-5"/>
@@ -84,12 +93,17 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
             </Card>
         )}
 
-        <div>
-            <h4 className="font-semibold mb-2 text-lg">Evidencia Multimedia</h4>
-            <div className="rounded-lg overflow-hidden border bg-muted/20 p-4">
+        <Card id="multimedia-section">
+            <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <Camera className="h-5 w-5"/>
+                    Evidencia Multimedia
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
                 <AlarmMedia alarmId={alarm.id} media={alarm.media} videoProcessing={alarm.videoProcessing} />
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     </div>
   );
 }

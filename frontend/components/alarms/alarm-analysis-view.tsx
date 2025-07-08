@@ -42,13 +42,13 @@ export function AlarmAnalysisView({
         <div className="absolute left-0 top-1/2 -translate-y-1/2">
             <Button
               variant="ghost"
-              size="icon"
               onClick={onUndo}
               disabled={isUndoDisabled}
               aria-label="Deshacer última acción"
-              className="h-10 w-10"
+              className="h-10 px-4" // Adjusted class to allow for text
             >
-              <Undo2 className="h-6 w-6" />
+              <Undo2 className="h-5 w-5 mr-2" /> {/* Added mr-2 for spacing */}
+              Deshacer última acción
             </Button>
         </div>
         {/* --- FIN DE LA SOLUCIÓN --- */}
