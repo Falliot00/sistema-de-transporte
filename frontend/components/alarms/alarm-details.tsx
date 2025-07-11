@@ -23,6 +23,8 @@ const AlarmLocationMap = dynamic(() => import('./alarm-location-map'), {
 
 interface AlarmDetailsProps {
   alarm: Alarm;
+  current?: number;
+  total?: number;
 }
 
 interface NavigationItem {
@@ -32,7 +34,7 @@ interface NavigationItem {
   ref: React.RefObject<HTMLDivElement>;
 }
 
-export function AlarmDetails({ alarm }: AlarmDetailsProps) {
+export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
   const statusInfo = getAlarmStatusInfo(alarm.status);
   const [activeSection, setActiveSection] = useState<string>('informacion-evento');
 
@@ -168,9 +170,17 @@ export function AlarmDetails({ alarm }: AlarmDetailsProps) {
               {formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'full', timeStyle: 'medium' })}
             </p>
           </div>
-          <Badge variant={statusInfo.variant as any} className="capitalize text-sm px-3 py-1 flex-shrink-0">
-            {statusInfo.label}
-          </Badge>
+          <div className="flex flex-col items-end gap-1 min-w-[90px]">
+            <Badge variant={statusInfo.variant as any} className="capitalize text-sm px-3 py-1 flex-shrink-0">
+              {statusInfo.label}
+            </Badge>
+            {/* Indicador x/y a la altura de la fecha, lado derecho */}
+            {typeof current === 'number' && typeof total === 'number' && total > 0 && (
+              <div className="text-sm text-muted-foreground font-medium">
+                {current} / {total}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Navegación horizontal mejorada */}
