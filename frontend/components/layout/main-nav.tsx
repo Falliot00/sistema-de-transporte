@@ -1,4 +1,4 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/layout/main-nav.tsx
+// components/layout/main-nav.tsx
 "use client"
 
 import Link from "next/link";
@@ -8,45 +8,68 @@ import { ActivitySquare, Bell, LayoutDashboard, Settings, Users, LineChart } fro
 
 interface MainNavProps {
   className?: string;
+  orientation?: "horizontal" | "vertical";
 }
 
-export function MainNav({ className }: MainNavProps) {
+export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
   const pathname = usePathname();
 
-  // Se usa startsWith para que las subrutas de /drivers (ej. /drivers/1) también activen el enlace.
   const routes = [
     {
       href: "/",
       label: "Alarmas",
-      icon: <Bell className="h-5 w-5 mr-2" />,
+      icon: <Bell className="h-5 w-5" />,
       active: pathname === "/",
     },
     {
       href: "/dashboard",
       label: "Dashboard",
-      icon: <LineChart className="h-5 w-5 mr-2" />,
+      icon: <LineChart className="h-5 w-5" />,
       active: pathname.startsWith("/dashboard"),
     },
     {
       href: "/drivers",
       label: "Choferes",
-      icon: <Users className="h-5 w-5 mr-2" />,
-      active: pathname.startsWith("/drivers"), // MODIFICADO: para subrutas
+      icon: <Users className="h-5 w-5" />,
+      active: pathname.startsWith("/drivers"),
     },
     {
       href: "/devices",
       label: "Dispositivos",
-      icon: <ActivitySquare className="h-5 w-5 mr-2" />,
+      icon: <ActivitySquare className="h-5 w-5" />,
       active: pathname.startsWith("/devices"),
     },
     {
       href: "/settings",
       label: "Configuración",
-      icon: <Settings className="h-5 w-5 mr-2" />,
+      icon: <Settings className="h-5 w-5" />,
       active: pathname.startsWith("/settings"),
     },
   ];
 
+  if (orientation === "horizontal") {
+    return (
+      <nav className={cn("flex items-center space-x-1", className)}>
+        {routes.map((route) => (
+          <Link
+            key={route.href}
+            href={route.href}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors",
+              route.active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-primary hover:bg-muted"
+            )}
+          >
+            {route.icon}
+            <span>{route.label}</span>
+          </Link>
+        ))}
+      </nav>
+    );
+  }
+
+  // Vertical orientation (para móvil)
   return (
     <nav className={cn("flex flex-col space-y-1", className)}>
       {routes.map((route) => (
@@ -54,14 +77,14 @@ export function MainNav({ className }: MainNavProps) {
           key={route.href}
           href={route.href}
           className={cn(
-            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
             route.active
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-primary hover:bg-muted"
           )}
         >
           {route.icon}
-          {route.label}
+          <span>{route.label}</span>
         </Link>
       ))}
     </nav>

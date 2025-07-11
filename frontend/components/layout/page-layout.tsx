@@ -1,8 +1,7 @@
+// components/layout/page-layout.tsx
 "use client";
 
-import { useState } from "react";
 import { Header } from "./header";
-import { Sidebar } from "./sidebar";
 import { Footer } from "./footer";
 
 interface PageLayoutProps {
@@ -10,24 +9,15 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ children }: PageLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   return (
     <div className="flex min-h-screen flex-col">
-      <Header toggleSidebar={toggleSidebar} />
-      <div className="flex flex-1">
-        <Sidebar isOpen={sidebarOpen} />
-        <main className="flex-1 md:ml-64">
-          <div className="container p-4 md:p-6 mx-auto">
-            {children}
-          </div>
-          <Footer />
-        </main>
-      </div>
+      <Header />
+      <main className="flex-1">
+        <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 py-4 md:py-6">
+          {children}
+        </div>
+        <Footer />
+      </main>
     </div>
   );
 }
