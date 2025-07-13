@@ -105,7 +105,7 @@ export default function DashboardPage() {
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbPage>Choferes</BreadcrumbPage>
+                        <BreadcrumbPage>Dashboard</BreadcrumbPage>
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>

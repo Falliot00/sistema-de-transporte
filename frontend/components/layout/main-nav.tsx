@@ -33,7 +33,7 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
       icon: <Users className="h-5 w-5" />,
       active: pathname.startsWith("/drivers"),
     },
-    {
+    /* {
       href: "/devices",
       label: "Dispositivos",
       icon: <ActivitySquare className="h-5 w-5" />,
@@ -44,7 +44,7 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
       label: "Configuración",
       icon: <Settings className="h-5 w-5" />,
       active: pathname.startsWith("/settings"),
-    },
+    }, */
   ];
 
   if (orientation === "horizontal") {

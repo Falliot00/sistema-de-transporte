@@ -77,7 +77,7 @@ export function Header() {
             </Sheet>
             
             {/* Dropdown de usuario */}
-            <DropdownMenu>
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 px-2">
                   <Avatar className="h-8 w-8">
@@ -106,7 +106,7 @@ export function Header() {
                   <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
           </div>
         </div>
       </div>
