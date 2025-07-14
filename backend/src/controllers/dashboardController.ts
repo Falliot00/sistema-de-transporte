@@ -4,17 +4,8 @@ import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'rejected', string[]> = {
-    pending: ['Pendiente'],
-    suspicious: ['Sospechosa'],
-    confirmed: ['Confirmada', 'confirmed'],
-    rejected: ['Rechazada', 'rejected'],
-};
+// Nota: DB_QUERY_STATUS_MAP no se usa aquí, se puede eliminar si no se añade más lógica.
 
-/**
- * @route GET /api/dashboard/summary
- * @description Obtiene datos agregados para todo el dashboard.
- */
 export const getSummary = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
@@ -28,7 +19,7 @@ export const getSummary = async (req: Request, res: Response) => {
         end.setUTCHours(23, 59, 59, 999);
 
         const endOfWeek = new Date(end);
-        const startOfWeek = new Date(endOfWeek);
+        const startOfWeek = new Date(end);
         startOfWeek.setDate(endOfWeek.getDate() - endOfWeek.getDay());
         startOfWeek.setUTCHours(0, 0, 0, 0);
         const startOfLastWeek = new Date(startOfWeek);
@@ -37,6 +28,7 @@ export const getSummary = async (req: Request, res: Response) => {
         endOfLastWeek.setDate(startOfWeek.getDate() - 1);
         endOfLastWeek.setUTCHours(23, 59, 59, 999);
 
+        // --- INICIO DE CORRECCIONES EN QUERIES RAW ---
         const [
             kpiData,
             alarmsByDay,
@@ -47,27 +39,38 @@ export const getSummary = async (req: Request, res: Response) => {
             driverRanking,
             deviceSummary
         ] = await Promise.all([
+            // Esta consulta usa el modelo, por lo que está bien.
             prisma.alarmasHistorico.aggregate({ _count: { guid: true }, where: { alarmTime: { gte: start, lte: end } } }),
-            prisma.$queryRaw`SELECT CAST(alarmTime AS DATE) as date, COUNT(*) as total, SUM(CASE WHEN estado IN ('Confirmada', 'confirmed') THEN 1 ELSE 0 END) as confirmed, SUM(CASE WHEN estado = 'Pendiente' THEN 1 ELSE 0 END) as pending FROM alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY CAST(alarmTime AS DATE) ORDER BY date ASC;`,
+            
+            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
+            prisma.$queryRaw`SELECT CAST(alarmTime AS DATE) as date, COUNT(*) as total, SUM(CASE WHEN estado IN ('Confirmada', 'confirmed') THEN 1 ELSE 0 END) as confirmed, SUM(CASE WHEN estado = 'Pendiente' THEN 1 ELSE 0 END) as pending FROM alarmas.alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY CAST(alarmTime AS DATE) ORDER BY date ASC;`,
+            
+            // Esta consulta usa el modelo, por lo que está bien.
             prisma.alarmasHistorico.groupBy({ by: ['alarmTypeId'], where: { alarmTime: { gte: start, lte: end }, alarmTypeId: { not: null } }, _count: { alarmTypeId: true }, orderBy: { _count: { alarmTypeId: 'desc' } } }),
+            
+            // Esta consulta usa el modelo, por lo que está bien.
             prisma.alarmasHistorico.groupBy({ by: ['estado'], where: { alarmTime: { gte: start, lte: end } }, _count: { estado: true } }),
-            prisma.$queryRaw`SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count FROM alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC;`,
-            prisma.$queryRaw`SELECT DATENAME(weekday, alarmTime) as dayName, DATEPART(weekday, alarmTime) as dayOfWeek, SUM(CASE WHEN alarmTime >= ${startOfWeek} AND alarmTime <= ${endOfWeek} THEN 1 ELSE 0 END) as thisWeek, SUM(CASE WHEN alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfLastWeek} THEN 1 ELSE 0 END) as lastWeek FROM alarmasHistorico WHERE alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfWeek} GROUP BY DATENAME(weekday, alarmTime), DATEPART(weekday, alarmTime) ORDER BY dayOfWeek ASC;`,
+
+            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
+            prisma.$queryRaw`SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count FROM alarmas.alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC;`,
+
+            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
+            prisma.$queryRaw`SELECT DATENAME(weekday, alarmTime) as dayName, DATEPART(weekday, alarmTime) as dayOfWeek, SUM(CASE WHEN alarmTime >= ${startOfWeek} AND alarmTime <= ${endOfWeek} THEN 1 ELSE 0 END) as thisWeek, SUM(CASE WHEN alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfLastWeek} THEN 1 ELSE 0 END) as lastWeek FROM alarmas.alarmasHistorico WHERE alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfWeek} GROUP BY DATENAME(weekday, alarmTime), DATEPART(weekday, alarmTime) ORDER BY dayOfWeek ASC;`,
             
-            
-            // Se cambia a.choferId por a.chofer para que coincida con el nombre de la columna física en la DB.
+            // CORRECCIÓN: Usamos los nombres completos de las tablas y las columnas correctas
             prisma.$queryRaw`
                 SELECT
-                    c.choferes_id, c.nombre, c.apellido, c.foto,
+                    c.idEmpleado, c.apellido_nombre, c.foto,
                     COUNT(a.guid) as totalAlarms,
                     SUM(CASE WHEN a.estado IN ('Confirmada', 'confirmed') THEN 1 ELSE 0 END) as confirmedAlarms
-                FROM Choferes c
-                LEFT JOIN alarmasHistorico a ON c.choferes_id = a.chofer AND a.alarmTime >= ${start} AND a.alarmTime <= ${end}
-                GROUP BY c.choferes_id, c.nombre, c.apellido, c.foto
-                ORDER BY totalAlarms DESC;
+                FROM dimCentral.empleados c
+                LEFT JOIN alarmas.alarmasHistorico a ON c.idEmpleado = a.chofer AND a.alarmTime >= ${start} AND a.alarmTime <= ${end}
+                GROUP BY c.idEmpleado, c.apellido_nombre, c.foto
+                ORDER BY confirmedAlarms DESC, totalAlarms DESC
+                OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
             `,
             
-
+            // Esta usa el modelo, está bien.
             prisma.alarmasHistorico.groupBy({
                 by: ['dispositivo'],
                 _count: { dispositivo: true },
@@ -76,6 +79,7 @@ export const getSummary = async (req: Request, res: Response) => {
                 take: 5
             })
         ]);
+        // --- FIN DE CORRECCIONES EN QUERIES RAW ---
 
         const totalAlarms = kpiData._count.guid;
         const typeAlarms = await prisma.typeAlarms.findMany();
@@ -110,22 +114,28 @@ export const getSummary = async (req: Request, res: Response) => {
         const weeklyData = Array.from(weeklyDataMap.entries()).map(([name, values]) => ({ name: name.substring(0, 3), ...values }));
         
         const driverRankingProcessed = (driverRanking as any[]).map(driver => {
-            const total = driver.totalAlarms || 0;
-            const confirmed = driver.confirmedAlarms || 0;
+            const total = Number(driver.totalAlarms) || 0;
+            const confirmed = Number(driver.confirmedAlarms) || 0;
+            // Parsear nombre y apellido desde 'apellido_nombre'
+            const parts = driver.apellido_nombre.split(' ');
+            const apellido = parts[0] || '';
+            const nombre = parts.slice(1).join(' ');
+
             return {
-                id: driver.choferes_id,
-                name: `${driver.nombre} ${driver.apellido}`,
+                id: driver.idEmpleado,
+                name: `${nombre} ${apellido}`.trim(),
                 avatar: driver.foto,
                 totalAlarms: total,
                 confirmationRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
                 efficiencyScore: total > 0 ? Math.round(100 - ((confirmed / total) * 100)) : 100,
             };
-        }).sort((a, b) => b.efficiencyScore - a.efficiencyScore);
+        });
 
-        const totalUniqueDevices = await prisma.alarmasHistorico.findMany({
+        const totalUniqueDevices = await prisma.alarmasHistorico.aggregate({
+            _count: { _all: true },
             where: { alarmTime: { gte: start, lte: end }, dispositivo: { not: null }},
-            distinct: ['dispositivo']
-        }).then(d => d.length);
+            /*distinct: ['dispositivo']*/
+        }).then(d => d._count._all);
 
         const deviceSummaryProcessed = {
             active: totalUniqueDevices,
@@ -155,9 +165,9 @@ export const getSummary = async (req: Request, res: Response) => {
             })),
             alarmsByType: alarmsByTypeProcessed,
             alarmStatusProgress: [
-                { title: 'Pendientes', value: statusCounts['pendiente'] || 0, total: totalAlarms },
-                { title: 'Sospechosas', value: statusCounts['sospechosa'] || 0, total: totalAlarms },
-                { title: 'Confirmadas', value: confirmedCount, total: totalAlarms },
+                { title: 'Pendientes', value: statusCounts['pendiente'] || 0, total: totalAlarms, color: 'hsl(var(--chart-4))' },
+                { title: 'Sospechosas', value: statusCounts['sospechosa'] || 0, total: totalAlarms, color: 'hsl(var(--chart-1))' },
+                { title: 'Confirmadas', value: confirmedCount, total: totalAlarms, color: 'hsl(var(--chart-2))' },
             ],
             hourlyDistribution: hourlyData,
             weeklyTrend: weeklyData,

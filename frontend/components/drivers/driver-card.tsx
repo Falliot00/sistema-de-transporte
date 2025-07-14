@@ -1,3 +1,4 @@
+// frontend/components/drivers/driver-card.tsx
 "use client";
 
 import { Driver } from "@/types";
@@ -11,17 +12,18 @@ interface DriverCardProps {
 }
 
 export function DriverCard({ driver }: DriverCardProps) {
-    const fullName = `${driver.nombre} ${driver.apellido}`;
+    const fullName = `${driver.nombre} ${driver.apellido}`.trim();
 
     return (
         <Link href={`/drivers/${driver.choferes_id}`} className="block group rounded-lg overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <Card className="h-full transition-all duration-200 group-hover:shadow-xl group-hover:border-primary/50 flex flex-col">
                 <div className="relative">
                     <div className="aspect-w-1 aspect-h-1 w-full">
-                         <Avatar className="h-full w-full rounded">
+                         <Avatar className="h-full w-full rounded-b-none"> {/* Quitamos el redondeo completo */}
                             <AvatarImage src={driver.foto || ""} alt={fullName} className="object-cover" />
-                            <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground rounded-b-none">
-                                {driver.nombre.charAt(0)}{driver.apellido.charAt(0)}
+                            <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground">
+                                {/* Aseguramos que no falle si nombre o apellido no existen */}
+                                {(driver.nombre || ' ')[0]}{(driver.apellido || ' ')[0]}
                             </AvatarFallback>
                         </Avatar>
                     </div>

@@ -1,4 +1,4 @@
-// falliot00/sistema-de-transporte/sistema-de-transporte-68d12784822acbe2b401f2b19fd63835d0745bf6/components/dashboard/charts/weekly-trend-chart.tsx
+// frontend/app/dashboard/charts/weekly-trend-chart.tsx
 "use client";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -24,8 +24,8 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
     return <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>;
   }
   return (
-    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-      <ResponsiveContainer width="100%" height={350}>
+    <ChartContainer config={chartConfig} className="h-[350px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={data}
           margin={{

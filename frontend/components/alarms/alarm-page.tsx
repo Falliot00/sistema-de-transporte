@@ -1,3 +1,4 @@
+// frontend/components/alarms/alarm-page.tsx
 'use client'
 
 import { useEffect, useState, useCallback } from "react";
@@ -7,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
 import { AlarmDetails } from "./alarm-details";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,6 @@ import { PaginationControls } from "../ui/pagination-controls";
 import { alarmTypes } from "@/lib/mock-data";
 import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { subDays } from "date-fns";
 import { AnalysisFilters } from "./analysis-filters";
 
 function useDebounce(value: string, delay: number): string {
@@ -37,7 +37,7 @@ function useDebounce(value: string, delay: number): string {
 
 const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera'];
 const ANALYSIS_PAGE_SIZE = 50;
-const ANALYSIS_PRELOAD_PAGES = 3; // Páginas a precargar en modo análisis
+const ANALYSIS_PRELOAD_PAGES = 3;
 
 type AnalysisFilterState = {
     types: string[];
@@ -48,7 +48,6 @@ type AnalysisFilterState = {
 export default function AlarmsPage() {
     const { toast } = useToast();
     
-    // Estados principales
     const [globalAlarmCounts, setGlobalAlarmCounts] = useState<GlobalAlarmCounts>({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
     const [alarms, setAlarms] = useState<Alarm[]>([]);
     const [paginationInfo, setPaginationInfo] = useState<PaginationInfo | null>(null);
@@ -66,10 +65,8 @@ export default function AlarmsPage() {
     const [analysisCounts, setAnalysisCounts] = useState<{ pending: number, suspicious: number }>({ pending: 0, suspicious: 0 });
     const [isLoadingCounts, setIsLoadingCounts] = useState(false);
     
-    // Estados de diálogo y análisis
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     
-    // Hook de navegación mejorado con manejo de errores
     const { 
         currentAlarm: alarmForDetails, 
         initialize: initializeNavigation, 
@@ -106,7 +103,6 @@ export default function AlarmsPage() {
         rejected: 0 
     });
 
-    // Callbacks de fetch
     const fetchAlarms = useCallback(async () => { 
         setIsLoading(true); 
         setError(null); 
@@ -126,7 +122,6 @@ export default function AlarmsPage() {
             setPaginationInfo(data.pagination); 
             setGlobalAlarmCounts(data.globalCounts);
             
-            // Obtener conteos filtrados para cada estado
             if (statusFilter === 'all') {
                 const baseParams = { 
                     search: debouncedSearchQuery, 
@@ -156,7 +151,7 @@ export default function AlarmsPage() {
                     pending: statusFilter === 'pending' ? data.pagination.totalAlarms : 0,
                     suspicious: statusFilter === 'suspicious' ? data.pagination.totalAlarms : 0,
                     confirmed: statusFilter === 'confirmed' ? data.pagination.totalAlarms : 0,
-                    rejected: statusFilter === 'rejected' ? data.pagination.totalAlarms : 0
+                    rejected: statusFilter === 'rejected' ? data.pagination.totalAlarms : 0,
                 });
             }
         } catch (e) { 
@@ -196,7 +191,6 @@ export default function AlarmsPage() {
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
     useEffect(() => { fetchAnalysisCounts(); }, [fetchAnalysisCounts]);
 
-    // Función mejorada para iniciar análisis con precarga
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? analysisCounts.pending : analysisCounts.suspicious;
         if (count === 0) { 
@@ -218,7 +212,6 @@ export default function AlarmsPage() {
                 endDate: analysisFilters.dateRange?.to?.toISOString(), 
             };
             
-            // Precargar múltiples páginas para evitar interrupciones
             const allAlarms: Alarm[] = [];
             let currentHasNext: boolean = true;
             
@@ -226,8 +219,6 @@ export default function AlarmsPage() {
                 const data = await getAlarms({ ...params, page });
                 allAlarms.push(...data.alarms);
                 currentHasNext = data.pagination.hasNextPage;
-                
-                // Si ya tenemos suficientes alarmas, podemos empezar
                 if (page === 1 && data.alarms.length > 0) {
                     setAnalysisAlarms(allAlarms);
                     setHasNextPageAnalysis(currentHasNext as boolean);
@@ -235,15 +226,12 @@ export default function AlarmsPage() {
                     setAnalysisIndex(0);
                     setLastProcessedAlarm(null);
                     setIsAnalysisMode(true);
-                    
-                    // Continuar cargando en segundo plano si es necesario
                     if (page < ANALYSIS_PRELOAD_PAGES && currentHasNext) {
                         continue;
                     }
                 }
             }
             
-            // Actualizar con todas las alarmas precargadas
             if (allAlarms.length > 0) {
                 setAnalysisAlarms(allAlarms);
                 setHasNextPageAnalysis(currentHasNext as boolean);
@@ -258,12 +246,10 @@ export default function AlarmsPage() {
         }
     };
     
-    // Función mejorada para manejar clicks en las tarjetas
     const handleCardClick = (clickedAlarm: Alarm) => { 
         const navigableAlarms = alarms; 
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id); 
         
-        // Pasar los parámetros directamente
         initializeNavigation(
             navigableAlarms, 
             index > -1 ? index : 0, 
@@ -289,7 +275,6 @@ export default function AlarmsPage() {
         resetNavigation(); 
     };
 
-    // Función mejorada para manejar acciones del diálogo
     const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => { 
         if (!alarmForDetails) return; 
         
@@ -317,9 +302,8 @@ export default function AlarmsPage() {
             toast({ title: "Alarma Actualizada" }); 
             removeAlarm(alarmIdToUpdate); 
             
-            // Navegación mejorada con carga dinámica
             if (hasNext) { 
-                await goToNext(); // Ahora es async y puede cargar más alarmas
+                await goToNext();
             } else if (hasPrevious) { 
                 goToPrevious(); 
             } else { 
@@ -356,12 +340,9 @@ export default function AlarmsPage() {
         } 
     };
 
-    // Función mejorada para cargar el siguiente batch con precarga
     const handleLoadNextBatch = async () => {
         if (!hasNextPageAnalysis || !analysisType) return;
-        
         setIsFetchingNextBatch(true);
-        
         try {
             const params: GetAlarmsParams = { 
                 status: analysisType, 
@@ -371,19 +352,15 @@ export default function AlarmsPage() {
                 startDate: analysisFilters.dateRange?.from?.toISOString(), 
                 endDate: analysisFilters.dateRange?.to?.toISOString(), 
             };
-            
-            // Cargar las siguientes páginas
             const newAlarms: Alarm[] = [];
             let currentHasNext: boolean = hasNextPageAnalysis;
             const startPage = analysisPage + 1;
-            
             for (let page = startPage; page < startPage + ANALYSIS_PRELOAD_PAGES && currentHasNext; page++) {
                 const data = await getAlarms({ ...params, page });
                 newAlarms.push(...data.alarms);
                 currentHasNext = data.pagination.hasNextPage;
                 setAnalysisPage(page);
             }
-            
             if (newAlarms.length > 0) {
                 setAnalysisAlarms(newAlarms);
                 setHasNextPageAnalysis(currentHasNext);
@@ -403,9 +380,7 @@ export default function AlarmsPage() {
     const handleAnalysisAction = async (action: 'confirmed' | 'rejected' | 'skip') => {
         const currentAlarm = analysisAlarms[analysisIndex];
         if (!currentAlarm || isSubmitting) return;
-    
         setLastProcessedAlarm({ alarm: currentAlarm, index: analysisIndex }); 
-    
         if (action !== 'skip') {
             setIsSubmitting(true);
             try {
@@ -419,11 +394,9 @@ export default function AlarmsPage() {
                 } else { 
                     updatedAlarm = currentAlarm; 
                 }
-                
                 const newAlarms = [...analysisAlarms]; 
                 newAlarms[analysisIndex] = updatedAlarm; 
                 setAnalysisAlarms(newAlarms);
-                
                 toast({ title: "Alarma Actualizada" });
                 fetchAlarms(); 
                 fetchAnalysisCounts();
@@ -436,7 +409,6 @@ export default function AlarmsPage() {
                 setIsSubmitting(false);
             }
         }
-        
         const nextIndex = analysisIndex + 1;
         if (nextIndex >= analysisAlarms.length) {
             if (hasNextPageAnalysis) {
@@ -452,18 +424,14 @@ export default function AlarmsPage() {
     
     const handleUndo = async () => { 
         if (!lastProcessedAlarm) return; 
-        
         const { alarm, index } = lastProcessedAlarm; 
-        
         if (alarm.status === 'pending') { 
             setAnalysisIndex(index); 
             setLastProcessedAlarm(null); 
             toast({ title: "Acción deshecha" }); 
             return; 
         } 
-        
         setIsUndoing(true); 
-        
         try { 
             const revertedAlarm = await undoAlarm(alarm.id); 
             const newAlarms = [...analysisAlarms]; 
@@ -471,12 +439,10 @@ export default function AlarmsPage() {
             setAnalysisAlarms(newAlarms); 
             setAnalysisIndex(index); 
             setLastProcessedAlarm(null); 
-            
             toast({ 
                 title: "Acción deshecha", 
                 description: `La alarma "${revertedAlarm.type}" fue restaurada a pendiente.`, 
             }); 
-            
             fetchAnalysisCounts(); 
             fetchAlarms(); 
         } catch (error: any) { 
@@ -500,36 +466,11 @@ export default function AlarmsPage() {
             </div> 
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <KPICard 
-                    title="Total de alarmas" 
-                    value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} 
-                    icon={<Bell className="h-4 w-4" />} 
-                    iconClassName="text-black-500"
-                />
-                <KPICard 
-                    title="Total de pendientes" 
-                    value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} 
-                    icon={<Clock className="h-4 w-4" />} 
-                    iconClassName="text-yellow-500" 
-                />
-                <KPICard 
-                    title="Total de sospechosas" 
-                    value={isLoading ? '...' : globalAlarmCounts.suspicious.toLocaleString()} 
-                    icon={<AlertTriangle className="h-4 w-4" />} 
-                    iconClassName="text-blue-500" 
-                />
-                <KPICard 
-                    title="Total de confirmadas" 
-                    value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} 
-                    icon={<CheckCircle className="h-4 w-4" />} 
-                    iconClassName="text-green-500" 
-                />
-                <KPICard 
-                    title="Total de rechazadas" 
-                    value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} 
-                    icon={<XCircle className="h-4 w-4" />} 
-                    iconClassName="text-red-500" 
-                />
+                <KPICard title="Total de alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
+                <KPICard title="Total de pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />
+                <KPICard title="Total de sospechosas" value={isLoading ? '...' : globalAlarmCounts.suspicious.toLocaleString()} icon={<AlertTriangle className="h-4 w-4" />} iconClassName="text-blue-500" />
+                <KPICard title="Total de confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
+                <KPICard title="Total de rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
             </div>
             
             <div className="flex justify-center gap-4 flex-wrap items-center"> 
@@ -540,11 +481,7 @@ export default function AlarmsPage() {
                     onFilterChange={setAnalysisFilters} 
                     isLoading={isLoadingCounts} 
                 /> 
-                <Button 
-                    onClick={() => handleStartAnalysis('pending')} 
-                    disabled={isLoadingCounts || analysisCounts.pending === 0} 
-                    variant="warning"
-                > 
+                <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning"> 
                     {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} 
                     Analizar {analysisCounts.pending} Pendientes 
                 </Button> 
@@ -554,153 +491,53 @@ export default function AlarmsPage() {
                 <div className="flex flex-col sm:flex-row gap-1 justify-between items-center"> 
                     <div className="relative w-full flex-grow"> 
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> 
-                        <Input 
-                            type="search" 
-                            placeholder="Buscar por patente, interno, tipo..." 
-                            className="pl-10 h-10" 
-                            value={searchQuery} 
-                            onChange={(e) => setSearchQuery(e.target.value)} 
-                        /> 
+                        <Input type="search" placeholder="Buscar por interno, tipo, chofer..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /> 
                     </div> 
                     <div className="flex gap-2 items-center flex-wrap justify-end"> 
-                        <AdvancedFilters 
-                            availableTypes={alarmTypes} 
-                            selectedTypes={typeFilters} 
-                            onTypeSelectionChange={setTypeFilters} 
-                            availableCompanies={AVAILABLE_COMPANIES} 
-                            selectedCompanies={companyFilters} 
-                            onCompanySelectionChange={setCompanyFilters} 
-                        /> 
-                    </div> 
-                    <div className="flex gap-2 items-center flex-wrap justify-end"> 
+                        <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onTypeSelectionChange={setTypeFilters} availableCompanies={AVAILABLE_COMPANIES} selectedCompanies={companyFilters} onCompanySelectionChange={setCompanyFilters} /> 
                         <DateRangePicker date={dateRange} onDateChange={setDateRange} /> 
                     </div> 
                 </div> 
                 
                 <div> 
-                    <ToggleGroup 
-                        type="single" 
-                        variant="outline" 
-                        value={statusFilter} 
-                        onValueChange={(value) => { if (value) setStatusFilter(value); }} 
-                        className="flex flex-wrap justify-start"
-                    >
-                        <ToggleGroupItem value="all" className="flex items-center gap-2">
-                            <span>Todos</span>
-                            <Badge variant="default">{filteredCounts.total}</Badge>
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="pending" className="flex items-center gap-2">
-                            <span>{ALARM_STATUS_ES_PLURAL.pending}</span>
-                            <Badge variant={ALARM_STATUS_VARIANT.pending}>{filteredCounts.pending}</Badge>
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="suspicious" className="flex items-center gap-2">
-                            <span>{ALARM_STATUS_ES_PLURAL.suspicious}</span>
-                            <Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{filteredCounts.suspicious}</Badge>
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="confirmed" className="flex items-center gap-2">
-                            <span>{ALARM_STATUS_ES_PLURAL.confirmed}</span>
-                            <Badge variant={ALARM_STATUS_VARIANT.confirmed}>{filteredCounts.confirmed}</Badge>
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="rejected" className="flex items-center gap-2">
-                            <span>{ALARM_STATUS_ES_PLURAL.rejected}</span>
-                            <Badge variant={ALARM_STATUS_VARIANT.rejected}>{filteredCounts.rejected}</Badge>
-                        </ToggleGroupItem>
+                    <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
+                        <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
+                        <ToggleGroupItem value="pending" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.pending}</span><Badge variant={ALARM_STATUS_VARIANT.pending}>{filteredCounts.pending}</Badge></ToggleGroupItem>
+                        <ToggleGroupItem value="suspicious" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.suspicious}</span><Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{filteredCounts.suspicious}</Badge></ToggleGroupItem>
+                        <ToggleGroupItem value="confirmed" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.confirmed}</span><Badge variant={ALARM_STATUS_VARIANT.confirmed}>{filteredCounts.confirmed}</Badge></ToggleGroupItem>
+                        <ToggleGroupItem value="rejected" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.rejected}</span><Badge variant={ALARM_STATUS_VARIANT.rejected}>{filteredCounts.rejected}</Badge></ToggleGroupItem>
                     </ToggleGroup> 
                 </div> 
             </div> 
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> 
-                {isLoading ? 
-                    Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) 
-                : error ? 
-                    <div className="p-4 text-center text-destructive col-span-full">{error}</div> 
-                : alarms.length > 0 ? 
-                    alarms.map((alarm) => ( 
-                        <AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> 
-                    )) 
-                : 
-                    <div className="text-center text-muted-foreground pt-10 col-span-full">
-                        No se encontraron alarmas para los filtros seleccionados.
-                    </div>
-                } 
+                {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div> : alarms.length > 0 ? alarms.map((alarm) => (<AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> )) : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>} 
             </div>
             
-            {paginationInfo && paginationInfo.totalPages > 1 && (
-                <PaginationControls 
-                    currentPage={currentPage} 
-                    totalPages={paginationInfo.totalPages} 
-                    onPageChange={setCurrentPage} 
-                />
-            )}
+            {paginationInfo && paginationInfo.totalPages > 1 && (<PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />)}
             
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> 
                 <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col"> 
                     {alarmForDetails && ( 
-                        <> 
-                            {/* Eliminado el indicador x/y flotante, ahora solo se muestra en el header de detalles */}
-                            
-                            {/* Botones de navegación mejorados */}
-                            {isNavigating && ( 
+                        <>
+                            <DialogHeader className="p-6 pb-2 sr-only">
+                                <DialogTitle>Detalles de Alarma: {alarmForDetails.type}</DialogTitle>
+                                <DialogDescription>Información detallada y acciones para la alarma ID {alarmForDetails.id}.</DialogDescription>
+                            </DialogHeader>
+                            {isNavigating && (
                                 <> 
-                                    <Button 
-                                        variant="outline" 
-                                        size="icon" 
-                                        onClick={goToPrevious} 
-                                        disabled={!hasPrevious || isLoadingMore || isSubmitting} 
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"
-                                    > 
-                                        <ChevronLeft className="h-6 w-6" /> 
-                                        <span className="sr-only">Anterior</span> 
-                                    </Button> 
-                                    <Button 
-                                        variant="outline" 
-                                        size="icon" 
-                                        onClick={goToNext} 
-                                        disabled={!hasNext || isLoadingMore || isSubmitting} 
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"
-                                    > 
-                                        {isLoadingMore ? (
-                                            <Loader2 className="h-6 w-6 animate-spin" />
-                                        ) : (
-                                            <ChevronRight className="h-6 w-6" />
-                                        )}
-                                        <span className="sr-only">Siguiente</span> 
-                                    </Button> 
-                                </> 
+                                    <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious || isLoadingMore || isSubmitting} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"><ChevronLeft className="h-6 w-6" /><span className="sr-only">Anterior</span></Button> 
+                                    <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext || isLoadingMore || isSubmitting} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">{isLoadingMore ? <Loader2 className="h-6 w-6 animate-spin" /> : <ChevronRight className="h-6 w-6" />}<span className="sr-only">Siguiente</span></Button> 
+                                </>
                             )} 
-                            
-                            <div className="p-6 overflow-y-auto flex-grow"> 
-                                <AlarmDetails 
-                                  alarm={alarmForDetails} 
-                                  current={navigationState?.current} 
-                                  total={navigationState?.total} 
-                                /> 
+                            <div className="p-6 pt-0 overflow-y-auto flex-grow"> 
+                                <AlarmDetails alarm={alarmForDetails} current={navigationState?.current} total={navigationState?.total} /> 
                             </div> 
-                            
                             {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected') && ( 
                                 <DialogFooter className="p-6 border-t sm:justify-start bg-background"> 
                                     <div className="w-full"> 
-                                        {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && ( 
-                                            <AlarmActionForm 
-                                                alarm={alarmForDetails} 
-                                                onAction={handleDialogAction} 
-                                                isSubmitting={isSubmitting} 
-                                                confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'} 
-                                                initialDescription={alarmForDetails.descripcion || ''} 
-                                                showDriverSelector={true} 
-                                            /> 
-                                        )} 
-                                        {alarmForDetails.status === 'rejected' && ( 
-                                            <AlarmActionForm 
-                                                alarm={alarmForDetails} 
-                                                onAction={handleReEvaluate} 
-                                                isSubmitting={isSubmitting} 
-                                                confirmText="Marcar como Sospechosa" 
-                                                rejectText="Mantener Rechazada" 
-                                                initialDescription={alarmForDetails.descripcion || ''} 
-                                                showDriverSelector={false} 
-                                            /> 
-                                        )} 
+                                        {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && (<AlarmActionForm alarm={alarmForDetails} onAction={handleDialogAction} isSubmitting={isSubmitting} confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'} initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={true} /> )} 
+                                        {alarmForDetails.status === 'rejected' && (<AlarmActionForm alarm={alarmForDetails} onAction={handleReEvaluate} isSubmitting={isSubmitting} confirmText="Marcar como Sospechosa" rejectText="Mantener Rechazada" initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={false} /> )} 
                                     </div> 
                                 </DialogFooter> 
                             )} 
@@ -709,17 +546,12 @@ export default function AlarmsPage() {
                 </DialogContent> 
             </Dialog>
             
-            <Dialog 
-                open={isAnalysisMode} 
-                onOpenChange={(open) => { 
-                    if (!open) { 
-                        fetchAlarms(); 
-                        fetchAnalysisCounts(); 
-                    } 
-                    setIsAnalysisMode(open); 
-                }}
-            >
+            <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); fetchAnalysisCounts(); } setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Modo Análisis de Alarmas</DialogTitle>
+                        <DialogDescription>Vista enfocada para revisar alarmas una por una.</DialogDescription>
+                    </DialogHeader>
                     {currentAnalysisAlarm ? (
                         <AlarmAnalysisView
                             alarm={currentAnalysisAlarm}

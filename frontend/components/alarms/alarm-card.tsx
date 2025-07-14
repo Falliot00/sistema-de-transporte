@@ -4,7 +4,7 @@
 import { Alarm } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { cn, getAlarmStatusInfo, getColorVariantForType, ALARM_STATUS_BORDER_COLORS, formatCorrectedTimestamp } from "@/lib/utils";
-import { CarFront, Clock, User } from "lucide-react";
+import { CarFront, Clock, User, ShieldAlert } from "lucide-react"; // Usamos un icono para "sin asignar"
 
 interface AlarmCardProps {
   alarm: Alarm;
@@ -15,6 +15,10 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
   const statusInfo = getAlarmStatusInfo(alarm.status);
   const typeColorVariant = getColorVariantForType(alarm.type);
   const statusBorderClass = ALARM_STATUS_BORDER_COLORS[alarm.status];
+
+  // Lógica defensiva para manejar un chofer nulo
+  const driverName = alarm.driver?.name || "Sin Asignar";
+  const driverIcon = alarm.driver ? <User className="h-4 w-4 text-primary" /> : <ShieldAlert className="h-4 w-4 text-muted-foreground" />;
 
   return (
     <div
@@ -33,11 +37,11 @@ export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
       
       <div className="space-y-1.5 text-sm mb-4">
         <div className="flex items-center gap-2 font-medium">
-          {/* CRÍTICO: Ahora se usa alarm.driver.name que viene del objeto completo */}
-          <User className="h-4 w-4 text-primary" /> <span>{alarm.driver.name}</span>
+          {driverIcon} <span>{driverName}</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <CarFront className="h-4 w-4" /> <span>{alarm.vehicle.interno} - {alarm.vehicle.licensePlate}</span>
+          <CarFront className="h-4 w-4" /> 
+          <span>{alarm.vehicle?.interno || 'N/A'} - {alarm.vehicle?.licensePlate || 'N/A'}</span>
         </div>
       </div>
        

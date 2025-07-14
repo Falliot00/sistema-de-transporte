@@ -1,18 +1,14 @@
 // frontend/components/alarms/alarm-media.tsx
 import { useState } from "react";
 import { MediaItem } from "@/types";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight, Play, Loader2, VideoOff, RefreshCw } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
-// --- INICIO DE LA SOLUCIÓN ---
 import { retryVideo } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-// --- FIN DE LA SOLUCIÓN ---
 
-
-// --- INICIO DE LA SOLUCIÓN: Componente Placeholder con lógica ---
 const VideoProcessingPlaceholder = ({ alarmId }: { alarmId: string }) => {
     const { toast } = useToast();
     const [isRetrying, setIsRetrying] = useState(false);
@@ -52,13 +48,12 @@ const VideoProcessingPlaceholder = ({ alarmId }: { alarmId: string }) => {
         </div>
     );
 };
-// --- FIN DE LA SOLUCIÓN ---
 
 
 interface AlarmMediaProps {
   media: MediaItem[];
   videoProcessing?: boolean;
-  alarmId: string; // ID de la alarma es ahora requerido
+  alarmId: string;
 }
 
 
@@ -95,7 +90,6 @@ export function AlarmMedia({ media, videoProcessing = false, alarmId }: AlarmMed
             {videoProcessing && videos.length === 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     <MediaGrid items={images} onItemClick={openDialogWithItem} />
-                    {/* Usar el nuevo componente con lógica */}
                     <VideoProcessingPlaceholder alarmId={alarmId} />
                 </div>
             ) : (
@@ -123,6 +117,12 @@ export function AlarmMedia({ media, videoProcessing = false, alarmId }: AlarmMed
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Visor de Evidencia Multimedia</DialogTitle>
+            <DialogDescription>
+              Visualizando {activeMedia?.type === 'image' ? 'imagen' : 'video'} de la alarma. Elemento {activeIndex + 1} de {media.length}.
+            </DialogDescription>
+          </DialogHeader>
           <div className="relative">
             {activeMedia ? (
                 activeMedia.type === 'image' ? (
@@ -159,7 +159,7 @@ interface MediaGridProps {
 }
 
 function MediaGrid({ items, onItemClick }: MediaGridProps) {
-  if (items.length === 0) return null;
+  if (!items || items.length === 0) return null;
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
       {items.map((item) => (
@@ -168,7 +168,6 @@ function MediaGrid({ items, onItemClick }: MediaGridProps) {
           className="relative aspect-square rounded-md overflow-hidden cursor-pointer group"
           onClick={() => onItemClick(item.id)}
         >
-          {/* Se usa el thumbnail si está disponible, sino la url principal */}
           <img
             src={item.thumbnailUrl || item.url}
             alt={`Media ${item.id}`}

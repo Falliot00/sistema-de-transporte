@@ -1,78 +1,76 @@
 // backend/prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "sqlserver"
   url      = env("DATABASE_URL")
+  schemas  = ["alarmas", "dimCentral", "dbo"]
 }
 
 model AlarmasHistorico {
-  guid        String    @id(map: "PK__alarmasH__497F6CB4A51B299D") @map("guid") @db.VarChar(50)
+  guid        String    @id @db.VarChar(50)
   dispositivo String?   @db.VarChar(20)
-  interno     String?   @db.VarChar(20)
+  interno     String?   @map("idinterno") @db.VarChar(20)
   alarmTypeId Int?      @map("alarmType")
   velocidad   Float?
   lng         String?   @db.VarChar(20)
   lat         String?   @db.VarChar(20)
   ubi         String?   @db.VarChar(50)
-  patente     String?   @db.VarChar(20)
   alarmTime   DateTime? @db.DateTime
-  Empresa     String?   @db.VarChar(100)
+  Empresa     String?   @map("idEmpresa") @db.VarChar(100)
   imagen      String?   @db.VarChar(512)
   video       String?   @db.VarChar(512)
   estado      String?   @db.VarChar(50)
   descripcion String?   @db.VarChar(512)
   choferId    Int?      @map("chofer")
 
-  // --- RELACIÓN CON CHÓFERES ---
-  // Se establece la relación explícita con el modelo Choferes.
-  // El campo `choferId` de esta tabla referencia a `choferes_id` de la tabla Choferes.
-  // onDelete y onUpdate se establecen en NoAction para respetar la configuración existente de la base de datos.
-  chofer   Choferes?  @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
-  
-  // --- RELACIÓN CON TIPO DE ALARMAS ---
-  // Se añade la relación explícita con el modelo TypeAlarms para consistencia.
+  chofer    Choferes?   @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
   typeAlarm TypeAlarms? @relation(fields: [alarmTypeId], references: [type], onDelete: NoAction, onUpdate: NoAction)
 
+  @@schema("alarmas")
   @@map("alarmasHistorico")
 }
 
 model TypeAlarms {
-  type    Int     @id(map: "PK__typeAlar__E3F852490A79947F")
-  alarm   String? @db.VarChar(200)
+  type  Int     @id
+  alarm String? @db.VarChar(200)
 
-  // Relación inversa para poder navegar desde un tipo de alarma a todas las alarmas de ese tipo.
   alarmas AlarmasHistorico[]
 
+  @@schema("alarmas")
   @@map("typeAlarms")
 }
 
 model Choferes {
-  choferes_id Int     @id(map: "PK_choferes") @map("choferes_id")
-  nombre      String  @db.VarChar(50)
-  apellido    String  @db.VarChar(50)
-  foto        String? @db.VarChar(255)
-  dni         String? @db.VarChar(50)
-  anios       Int?
-  empresa     String? @db.VarChar(50)
+  choferes_id     Int     @id @map("idEmpleado")
+  apellido_nombre String  @map("apellido_nombre") @db.NVarChar(255)
+  foto            String? @db.VarChar(255)
+  dni             String? @map("DNI") @db.NVarChar(50)
+  anios           Int?    @map("legajo") // 'anios' ahora es el legajo
+  idEmpresa       Int?    @map("idEmpresa")
+  sector          String? @db.NVarChar(255)
+  puesto          String? @db.NVarChar(255)
+  estado          String? @map("Estado") @db.NVarChar(50)
 
-  // --- RELACIÓN INVERSA CON ALARMAS ---
-  // Permite navegar desde un chofer a todas sus alarmas históricas.
-  alarmas     AlarmasHistorico[]
+  alarmas AlarmasHistorico[]
 
-  @@map("choferes")
+  @@schema("dimCentral")
+  @@map("empleados")
 }
 
+// Modelo opcional para sysdiagrams, si lo necesitas
 model Sysdiagrams {
   name         String @db.NVarChar(128)
   principal_id Int
-  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61364CBE63") @default(autoincrement())
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B61E0D76274") @default(autoincrement())
   version      Int?
   definition   Bytes?
 
   @@unique([principal_id, name], map: "UK_principal_name")
+  @@schema("dbo")
   @@map("sysdiagrams")
 }

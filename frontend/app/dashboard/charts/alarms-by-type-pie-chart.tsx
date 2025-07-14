@@ -1,4 +1,4 @@
-// components/dashboard/charts/alarms-by-type-pie-chart.tsx
+// frontend/app/dashboard/charts/alarms-by-type-pie-chart.tsx
 "use client";
 
 import { Pie, PieChart, Tooltip, Legend, Cell, ResponsiveContainer } from 'recharts';
@@ -21,9 +21,9 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square max-h-[350px]"
+      className="mx-auto aspect-square h-[350px]"
     >
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Tooltip 
             cursor={{fill: "hsl(var(--muted))"}}
@@ -38,8 +38,7 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
             outerRadius={100}
             innerRadius={60}
             labelLine={false}
-            // label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`} // Can be verbose
-            label={({ percent }) => `${(percent * 100).toFixed(0)}%`} // Simpler label
+            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />

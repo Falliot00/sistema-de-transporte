@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { AlarmMedia } from "./alarm-media";
 import { 
   Clock, CarFront, User, FileText, MapPin, Gauge, Building, Camera, 
-  Hash
+  Hash, ShieldAlert
 } from "lucide-react";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +38,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
   const statusInfo = getAlarmStatusInfo(alarm.status);
   const [activeSection, setActiveSection] = useState<string>('informacion-evento');
 
-  // Referencias para cada sección
   const informacionRef = useRef<HTMLDivElement>(null);
   const multimediaRef = useRef<HTMLDivElement>(null);
   const descripcionRef = useRef<HTMLDivElement>(null);
@@ -79,7 +78,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
     return null;
   }, [alarm?.location]);
 
-  // Función para encontrar el contenedor scrollable
   const getScrollContainer = (): HTMLElement => {
     let element = containerRef.current?.parentElement;
     while (element) {
@@ -92,7 +90,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
     return document.documentElement; // fallback
   };
 
-  // Intersection Observer para detectar qué sección está visible
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
     const scrollContainer = getScrollContainer();
@@ -123,7 +120,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
     };
   }, [navigationItems]);
 
-  // Función para hacer scroll suave a una sección
   const scrollToSection = (sectionId: string) => {
     const item = navigationItems.find(item => item.id === sectionId);
     if (!item?.ref.current) return;
@@ -132,7 +128,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
     const targetElement = item.ref.current;
     
     if (scrollContainer === document.documentElement) {
-      // Scroll en la ventana principal
       const headerOffset = 120;
       const elementPosition = targetElement.offsetTop;
       const offsetPosition = elementPosition - headerOffset;
@@ -142,7 +137,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
         behavior: 'smooth'
       });
     } else {
-      // Scroll dentro del contenedor del Dialog
       const headerOffset = 80;
       const containerRect = scrollContainer.getBoundingClientRect();
       const elementRect = targetElement.getBoundingClientRect();
@@ -155,13 +149,11 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
       });
     }
     
-    // Actualizar activo inmediatamente para feedback visual
     setActiveSection(sectionId);
   };
 
   return (
     <div ref={containerRef} className="flex flex-col gap-6 relative">
-      {/* Header de la alarma con navegación */}
       <div className="space-y-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-grow">
@@ -174,7 +166,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
             <Badge variant={statusInfo.variant as any} className="capitalize text-sm px-3 py-1 flex-shrink-0">
               {statusInfo.label}
             </Badge>
-            {/* Indicador x/y a la altura de la fecha, lado derecho */}
             {typeof current === 'number' && typeof total === 'number' && total > 0 && (
               <div className="text-sm text-muted-foreground font-medium">
                 {current} / {total}
@@ -183,7 +174,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
           </div>
         </div>
 
-        {/* Navegación horizontal mejorada */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex flex-wrap items-center gap-2 border-b pb-4 pt-2 -mx-6 px-6">
           {navigationItems.map((item) => (
             <Button
@@ -204,7 +194,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
         </div>
       </div>
 
-      {/* Información del Evento */}
       <Card ref={informacionRef} id="informacion-evento" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -225,14 +214,14 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
               value={alarm.company} 
             />
             <InfoItem 
-              icon={<User className="h-4 w-4" />} 
+              icon={alarm.driver ? <User className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />} 
               label="Chofer Asignado" 
-              value={alarm.driver.name} 
+              value={alarm.driver ? alarm.driver.name : "Sin Asignar"} 
             />
             <InfoItem 
               icon={<CarFront className="h-4 w-4" />} 
               label="Vehículo" 
-              value={alarm.vehicle.interno + ' - ' + alarm.vehicle.licensePlate || 'N/A'} 
+              value={`${alarm.vehicle?.interno || 'N/A'} - ${alarm.vehicle?.licensePlate || 'N/A'}`} 
             />
             <InfoItem 
               icon={<Gauge className="h-4 w-4" />} 
@@ -256,7 +245,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
         </CardContent>
       </Card>
 
-      {/* Descripción Adicional (si existe) */}
       {alarm.descripcion && (
         <Card ref={descripcionRef} id="descripcion" className="scroll-mt-24">
           <CardHeader>
@@ -271,7 +259,6 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
         </Card>
       )}
 
-      {/* Evidencia Multimedia */}
       <Card ref={multimediaRef} id="multimedia" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -280,7 +267,7 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <AlarmMedia alarmId={alarm.id} media={alarm.media} videoProcessing={alarm.videoProcessing} />
+          <AlarmMedia alarmId={alarm.id} media={alarm.media || []} videoProcessing={alarm.videoProcessing} />
         </CardContent>
       </Card>
     </div>

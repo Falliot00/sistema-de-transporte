@@ -1,13 +1,13 @@
 // frontend/types/index.ts
 
 export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
+export type AlarmType = string; // Hacemos que sea un string genérico
 
 export interface MediaItem {
     id: string;
     type: 'image' | 'video';
     url: string;
     thumbnailUrl?: string; 
-    timestamp?: string; 
 }
 
 export interface DriverStats {
@@ -18,16 +18,29 @@ export interface DriverStats {
     rejected: number;
 }
 
+// Representa un chofer en una lista o como detalle
 export interface Driver {
     choferes_id: number;
     nombre: string;
     apellido: string;
     foto: string | null;
     dni: string | null;
-    anios: number | null;
+    anios: number | null; // Este campo es el legajo
     empresa: string | null;
+    estado?: string;
+    sector?: string;
+    puesto?: string;
+    // Estos campos son opcionales porque solo vienen en la vista de detalle
     stats?: DriverStats;
     alarmas?: Alarm[];
+}
+
+// Representa un chofer dentro de una alarma (versión simplificada)
+export interface AlarmDriver {
+    id: string;
+    name: string;
+    license: string;
+    company?: string;
 }
 
 export interface Vehicle {
@@ -42,7 +55,7 @@ export interface Alarm {
     id: string;
     status: AlarmStatus;
     rawStatus?: string;
-    type: string;
+    type: AlarmType;
     timestamp: string;
     videoProcessing?: boolean;
     speed?: number;
@@ -53,26 +66,16 @@ export interface Alarm {
         longitude: number;
         address: string;
     };
-    driver: {
-        id: string;
-        name: string;
-        license: string;
-        company?: string;
-    };
-    vehicle: Vehicle;
+    // El chofer puede ser nulo si no está asignado
+    driver: AlarmDriver | null; 
+    vehicle: Vehicle | null;
     device: {
         id: string;
         name: string;
         serialNumber: string;
-    };
+    } | null;
     media: MediaItem[];
     comments: string[];
-    reviewer?: {
-        id: string;
-        name: string;
-        email: string;
-    };
-    reviewedAt?: string;
 }
 
 export interface PaginationInfo {
@@ -108,6 +111,7 @@ export interface GetAlarmsParams {
     company?: string[];
 }
 
+// Tipos para el Dashboard
 export interface DashboardKPIs {
     totalAlarms: number;
     confirmationRate: string;
@@ -130,6 +134,7 @@ export interface AlarmStatusProgress {
     title: string;
     value: number;
     total: number;
+    color?: string;
 }
 
 export interface HourlyDistribution {
@@ -143,40 +148,6 @@ export interface WeeklyTrend {
     SemanaPasada: number;
 }
 
-// --- INICIO DE LA SOLUCIÓN: Asegurarse de que la interfaz principal esté completa. ---
-export interface DashboardSummary {
-    kpis: DashboardKPIs;
-    alarmsByDay: AlarmsByDay[];
-    alarmsByType: AlarmsByType[];
-    alarmStatusProgress: AlarmStatusProgress[];
-    hourlyDistribution: HourlyDistribution[];
-    weeklyTrend: WeeklyTrend[];
-}
-// --- FIN DE LA SOLUCIÓN ---
-
-export interface KPI {
-    id: string;
-    title: string;
-    value: string | number;
-    icon: string; 
-    delta?: number;
-    deltaType?: 'increase' | 'decrease' | 'neutral';
-    suffix?: string;
-}
-
-export type AlarmType = 'Distracción del conductor' | 'Sin cinturón' | 'Cabeza baja' | 'Detección de fatiga' | 'Comportamiento anormal';
-
-export interface Device {
-    id: string;
-    name: string;
-    serialNumber: string;
-    status?: 'active' | 'maintenance' | 'offline';
-    lastActivity?: string;
-    alarmCount?: number;
-    location?: string;
-}
-
-// --- INICIO DE LA SOLUCIÓN: Nuevos tipos para las pestañas ---
 export interface DriverRanking {
     id: number;
     name: string;
@@ -184,6 +155,14 @@ export interface DriverRanking {
     totalAlarms: number;
     confirmationRate: number;
     efficiencyScore: number;
+}
+
+export interface Device {
+    id: string;
+    name: string;
+    serialNumber: string;
+    status: 'active' | 'maintenance' | 'offline';
+    alarmCount: number;
 }
 
 export interface DeviceSummary {
@@ -200,8 +179,7 @@ export interface DashboardSummary {
     alarmStatusProgress: AlarmStatusProgress[];
     hourlyDistribution: HourlyDistribution[];
     weeklyTrend: WeeklyTrend[];
-    driverRanking: DriverRanking[]; // <--- NUEVO
-    deviceSummary: DeviceSummary;   // <--- NUEVO
-    topDevices: Device[];           // <--- NUEVO
+    driverRanking: DriverRanking[];
+    deviceSummary: DeviceSummary;
+    topDevices: Device[];
 }
-// --- FIN DE LA SOLUCIÓN ---

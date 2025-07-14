@@ -1,4 +1,4 @@
-// components/dashboard/charts/alarms-by-day-chart.tsx
+// frontend/app/dashboard/charts/alarms-by-day-chart.tsx
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -9,9 +9,9 @@ interface AlarmsByDayChartProps {
 }
 
 const chartConfig = {
-  Total: { label: "Total", color: "hsl(var(--chart-1))" }, // Ensure chart-1 is defined in globals.css
-  Confirmadas: { label: "Confirmadas", color: "hsl(var(--chart-2))" }, // Ensure chart-2 is defined
-  Pendientes: { label: "Pendientes", color: "hsl(var(--chart-4))" }, // Ensure chart-4 is defined
+  Total: { label: "Total", color: "hsl(var(--chart-1))" },
+  Confirmadas: { label: "Confirmadas", color: "hsl(var(--chart-2))" },
+  Pendientes: { label: "Pendientes", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig;
 
 export function AlarmsByDayChart({ data }: AlarmsByDayChartProps) {
@@ -19,8 +19,8 @@ export function AlarmsByDayChart({ data }: AlarmsByDayChartProps) {
     return <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>;
   }
   return (
-    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-      <ResponsiveContainer width="100%" height={350}>
+    <ChartContainer config={chartConfig} className="h-[350px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis 
@@ -44,7 +44,6 @@ export function AlarmsByDayChart({ data }: AlarmsByDayChartProps) {
           <Legend />
           <Bar dataKey="Confirmadas" stackId="a" fill="var(--color-Confirmadas)" radius={[4, 4, 0, 0]} />
           <Bar dataKey="Pendientes" stackId="a" fill="var(--color-Pendientes)" radius={[4, 4, 0, 0]} />
-          {/* Consider if 'Total' bar is needed or if stacked bars are sufficient */}
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>

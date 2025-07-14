@@ -1,3 +1,4 @@
+// frontend/components/drivers/recent-alarms-table.tsx
 "use client";
 
 import { useState } from 'react';
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { History, Eye } from "lucide-react";
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlarmDetails } from '@/components/alarms/alarm-details';
 
 interface RecentAlarmsTableProps {
@@ -16,7 +17,6 @@ interface RecentAlarmsTableProps {
 }
 
 export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
-    // Estado para manejar qué alarma se muestra en el diálogo. Si es null, el diálogo está cerrado.
     const [selectedAlarm, setSelectedAlarm] = useState<Alarm | null>(null);
 
     return (
@@ -54,7 +54,6 @@ export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
                                                     <Badge variant={statusInfo.variant as any} className="capitalize">{statusInfo.label}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {/* El botón ahora establece el estado para abrir el diálogo */}
                                                     <Button variant="ghost" size="icon" onClick={() => setSelectedAlarm(alarm)}>
                                                         <Eye className="h-4 w-4" />
                                                         <span className="sr-only">Ver detalles de la alarma</span>
@@ -74,14 +73,20 @@ export function RecentAlarmsTable({ alarms }: RecentAlarmsTableProps) {
                 </CardContent>
             </Card>
 
-            {/* El componente Dialog que se mostrará cuando `selectedAlarm` no sea null */}
             <Dialog open={!!selectedAlarm} onOpenChange={(isOpen) => !isOpen && setSelectedAlarm(null)}>
                 <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                     {selectedAlarm && (
-                         <div className="p-6 overflow-y-auto flex-grow">
-                            {/* Reutilizamos el componente de detalles de la alarma */}
-                            <AlarmDetails alarm={selectedAlarm} />
-                        </div>
+                         <>
+                            <DialogHeader className="p-6 pb-2 sr-only">
+                               <DialogTitle>Detalles de Alarma de Chofer</DialogTitle>
+                               <DialogDescription>
+                                   Mostrando detalles para la alarma de tipo {selectedAlarm.type} del chofer.
+                               </DialogDescription>
+                           </DialogHeader>
+                           <div className="p-6 pt-0 overflow-y-auto flex-grow">
+                              <AlarmDetails alarm={selectedAlarm} />
+                           </div>
+                        </>
                     )}
                 </DialogContent>
             </Dialog>

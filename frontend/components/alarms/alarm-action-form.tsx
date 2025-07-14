@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Loader2, X, UserSquare } from 'lucide-react';
@@ -37,21 +36,19 @@ export function AlarmActionForm({
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string | undefined>(
-    alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
+    // CORRECCIÓN: Comprueba si 'alarm.driver' existe antes de acceder a 'id'
+    alarm.driver && alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
   );
   const [isAssigningDriver, setIsAssigningDriver] = useState(false);
   const { toast } = useToast();
 
-  // --- INICIO DE LA SOLUCIÓN ---
-  // Este useEffect sincroniza el estado del formulario cuando el usuario navega entre alarmas en el diálogo.
-  // Sin esto, el formulario mostraría los datos de la primera alarma abierta.
   useEffect(() => {
     setDescription(initialDescription || alarm.descripcion || "");
     setSelectedDriverId(
-      alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
+      // CORRECCIÓN: Comprueba si 'alarm.driver' existe antes de acceder a 'id'
+      alarm.driver && alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
     );
   }, [alarm, initialDescription]);
-  // --- FIN DE LA SOLUCIÓN ---
 
   useEffect(() => {
     if (showDriverSelector) {
@@ -59,6 +56,7 @@ export function AlarmActionForm({
         setIsLoadingDrivers(true);
         try {
           const allDrivers = await getDrivers();
+          // CORRECCIÓN: Filtra por 'alarm.company' de forma segura
           const companyDrivers = allDrivers.filter(d => d.empresa === alarm.company);
           setDrivers(companyDrivers);
         } catch (error) {
@@ -98,6 +96,7 @@ export function AlarmActionForm({
   };
 
   const selectedDriverName = useMemo(() => {
+    if (!selectedDriverId) return "Sin Asignar";
     const driver = drivers.find(d => d.choferes_id.toString() === selectedDriverId);
     return driver ? `${driver.nombre} ${driver.apellido}` : "Sin Asignar";
   }, [selectedDriverId, drivers]);
