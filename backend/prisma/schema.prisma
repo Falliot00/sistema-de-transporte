@@ -13,7 +13,7 @@ datasource db {
 
 model AlarmasHistorico {
   guid        String    @id @db.VarChar(50)
-  dispositivo String?   @db.VarChar(20)
+  dispositivo Int?      @db.Int // Cambiado de String? a Int?
   interno     String?   @map("idinterno") @db.VarChar(20)
   alarmTypeId Int?      @map("alarmType")
   velocidad   Float?
@@ -30,9 +30,30 @@ model AlarmasHistorico {
 
   chofer    Choferes?   @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
   typeAlarm TypeAlarms? @relation(fields: [alarmTypeId], references: [type], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Relación con el nuevo modelo de dispositivos
+  deviceInfo  Dispositivos? @relation(fields: [dispositivo], references: [idDispositivo], onDelete: NoAction, onUpdate: NoAction, map: "FK__alarmasHi__dispo__6BE468A3")
 
   @@schema("alarmas")
   @@map("alarmasHistorico")
+}
+
+model Dispositivos {
+  id            Int     @id @map("id")
+  
+  // --- SOLUCIÓN: Cambiar el tipo de String? a Int? ---
+  // La base de datos tiene esta columna como un número.
+  nroInterno    Int?    
+
+  patente       String?
+  idDispositivo Int     @unique @map("idDispositivo") @db.Int
+  did           Int?
+  sim           String? @db.VarChar(20)
+
+  alarmas AlarmasHistorico[]
+
+  @@schema("alarmas")
+  @@map("dispositivos")
 }
 
 model TypeAlarms {
@@ -50,7 +71,7 @@ model Choferes {
   apellido_nombre String  @map("apellido_nombre") @db.NVarChar(255)
   foto            String? @db.VarChar(255)
   dni             String? @map("DNI") @db.NVarChar(50)
-  anios           Int?    @map("legajo") // 'anios' ahora es el legajo
+  anios           Int?    @map("legajo")
   idEmpresa       Int?    @map("idEmpresa")
   sector          String? @db.NVarChar(255)
   puesto          String? @db.NVarChar(255)
@@ -62,7 +83,6 @@ model Choferes {
   @@map("empleados")
 }
 
-// Modelo opcional para sysdiagrams, si lo necesitas
 model Sysdiagrams {
   name         String @db.NVarChar(128)
   principal_id Int

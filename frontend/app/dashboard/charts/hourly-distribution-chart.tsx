@@ -1,7 +1,7 @@
 // frontend/app/dashboard/charts/hourly-distribution-chart.tsx
 "use client";
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 interface HourlyDistributionChartProps {
@@ -21,44 +21,42 @@ export function HourlyDistributionChart({ data }: HourlyDistributionChartProps) 
   }
   return (
     <ChartContainer config={chartConfig} className="h-[350px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{
-            top: 10,
-            right: 30,
-            left: 0,
-            bottom: 0,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis
-            dataKey="hour"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `${value}`}
-          />
-          <Tooltip
-            cursor={{ fill: "hsl(var(--muted))", radius: 4 }}
-            content={<ChartTooltipContent indicator="line" />}
-          />
-          <Area
-            dataKey="alarmas"
-            type="monotone"
-            fill="var(--color-alarmas)"
-            fillOpacity={0.4}
-            stroke="var(--color-alarmas)"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <AreaChart
+        data={data}
+        margin={{
+          top: 10,
+          right: 30,
+          left: 0,
+          bottom: 0,
+        }}
+      >
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis
+          dataKey="hour"
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `${value}`}
+        />
+        <Tooltip
+          cursor={{ fill: "hsl(var(--muted))", radius: 4 }}
+          content={<ChartTooltipContent indicator="line" />}
+        />
+        <Area
+          dataKey="alarmas"
+          type="monotone"
+          fill="var(--color-alarmas)"
+          fillOpacity={0.4}
+          stroke="var(--color-alarmas)"
+        />
+      </AreaChart>
     </ChartContainer>
   );
 }

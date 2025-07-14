@@ -14,7 +14,9 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
     rejected: ['Rechazada', 'rejected'],
 };
 
-const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date | null, guid: string }) => {
+// --- SOLUCIÓN: Actualizar la firma de la función ---
+// La propiedad 'dispositivo' ahora es de tipo 'number | null'
+const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date | null, guid: string }) => {
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
         return;
@@ -22,7 +24,12 @@ const triggerVideoScript = (alarm: { dispositivo: string | null, alarmTime: Date
     const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
     const pythonExecutable = path.join(__dirname, '..', '..', '.venv', 'bin', 'python3');
     const alarmTimeISO = alarm.alarmTime.toISOString();
-    const command = `"${pythonExecutable}" "${scriptPath}" "${alarm.dispositivo}" "${alarmTimeISO}" "${alarm.guid}"`;
+    
+    // Convertimos el 'dispositivo' (número) a string para el comando
+    const dispositivoStr = alarm.dispositivo.toString();
+
+    const command = `"${pythonExecutable}" "${scriptPath}" "${dispositivoStr}" "${alarmTimeISO}" "${alarm.guid}"`;
+    
     console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
     exec(command, (error, stdout, stderr) => {
         if (error) console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}: ${error.message}`);
@@ -45,6 +52,7 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
     }
     if (search) {
         whereClause.OR = [
+            { deviceInfo: { patente: { contains: search } } },
             { interno: { contains: search } },
             { typeAlarm: { alarm: { contains: search } } },
             { chofer: { apellido_nombre: { contains: search } } },
@@ -61,10 +69,15 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
     return whereClause;
 };
 
+// ... (El resto de las funciones se mantienen igual que en la respuesta anterior,
+// ya que las llamadas a triggerVideoScript ahora son compatibles con el nuevo tipo)
+
+// --- A CONTINUACIÓN, EL RESTO DEL ARCHIVO SIN CAMBIOS ADICIONALES ---
+
 export const undoAlarmAction = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id }, include: { chofer: true, typeAlarm: true } });
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id }, include: { chofer: true, typeAlarm: true, deviceInfo: true } });
         if (!alarm) {
             return res.status(404).json({ message: 'La alarma que intentas revertir no existe.' });
         }
@@ -74,7 +87,7 @@ export const undoAlarmAction = async (req: Request, res: Response) => {
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: { estado: 'Pendiente', descripcion: null },
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         res.status(200).json(transformAlarmData(updatedAlarmFromDb));
     } catch (error: any) {
@@ -105,7 +118,7 @@ export const getAllAlarms = async (req: Request, res: Response) => {
             take: pageSize,
             orderBy: { alarmTime: 'desc' },
             where: whereClause,
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         const totalAlarmsFiltered = await prisma.alarmasHistorico.count({ where: whereClause });
         const [totalConfirmedGlobal, totalRejectedGlobal, totalSuspiciousGlobal, totalPendingGlobal, totalAllAlarmsGlobal] = await Promise.all([
@@ -132,7 +145,7 @@ export const getAlarmById = async (req: Request, res: Response) => {
     try {
         const alarmFromDb = await prisma.alarmasHistorico.findUnique({
             where: { guid: id },
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         if (!alarmFromDb) {
             return res.status(404).json({ message: 'Alarma no encontrada.' });
@@ -175,7 +188,7 @@ export const reviewAlarm = async (req: Request, res: Response) => {
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: dataToUpdate,
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
 
         if (statusToSave === 'Sospechosa') {
@@ -195,25 +208,19 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
-
         let dataToUpdate: { choferId: number | null } = { choferId: null };
         if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
             if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
-
             const nombreEmpresaChofer = getEmpresaNameFromId(choferToAssign.idEmpresa).replace(/\s/g, '').toLowerCase();
             const nombreEmpresaAlarma = alarm.Empresa?.replace(/\s/g, '').toLowerCase();
-
-            if (nombreEmpresaChofer !== nombreEmpresaAlarma) {
-                return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
-            }
+            if (nombreEmpresaChofer !== nombreEmpresaAlarma) return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
             dataToUpdate.choferId = choferId;
         }
-        
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: dataToUpdate,
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         res.status(200).json(transformAlarmData(updatedAlarm));
     } catch (error: any) {
@@ -229,26 +236,19 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
         if (alarm.estado !== 'Sospechosa') return res.status(400).json({ message: `Solo se puede confirmar una alarma en estado "Sospechosa".` });
-        
         const dataToUpdate: { estado: string; descripcion?: string, choferId?: number } = { estado: 'Confirmada' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
         if (typeof choferId !== 'number') return res.status(400).json({ message: "La selección de un chofer es obligatoria para confirmar la alarma." });
-        
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
         if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
-
         const nombreEmpresaChofer = getEmpresaNameFromId(choferToAssign.idEmpresa).replace(/\s/g, '').toLowerCase();
         const nombreEmpresaAlarma = alarm.Empresa?.replace(/\s/g, '').toLowerCase();
-
-        if (nombreEmpresaChofer !== nombreEmpresaAlarma) {
-            return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa ${alarm.Empresa}.` });
-        }
+        if (nombreEmpresaChofer !== nombreEmpresaAlarma) return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa ${alarm.Empresa}.` });
         dataToUpdate.choferId = choferId;
-
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: dataToUpdate,
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         res.status(200).json(transformAlarmData(updatedAlarm));
     } catch (error: any) {
@@ -266,14 +266,12 @@ export const reEvaluateAlarm = async (req: Request, res: Response) => {
         if (!DB_QUERY_STATUS_MAP.rejected.map(s => s.toLowerCase()).includes(alarm.estado?.toLowerCase() || '')) {
             return res.status(400).json({ message: `Solo se puede re-evaluar una alarma en estado "Rechazada".` });
         }
-        
         const dataToUpdate: { estado: string; descripcion?: string } = { estado: 'Sospechosa' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
-
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },
             data: dataToUpdate,
-            include: { chofer: true, typeAlarm: true },
+            include: { chofer: true, typeAlarm: true, deviceInfo: true },
         });
         triggerVideoScript(updatedAlarm);
         res.status(200).json(transformAlarmData(updatedAlarm));

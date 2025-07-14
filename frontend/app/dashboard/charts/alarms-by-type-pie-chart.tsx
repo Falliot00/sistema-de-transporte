@@ -1,7 +1,7 @@
 // frontend/app/dashboard/charts/alarms-by-type-pie-chart.tsx
 "use client";
 
-import { Pie, PieChart, Tooltip, Legend, Cell, ResponsiveContainer } from 'recharts';
+import { Pie, PieChart, Tooltip, Legend, Cell } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 
 interface AlarmsByTypePieChartProps {
@@ -23,30 +23,28 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
       config={chartConfig}
       className="mx-auto aspect-square h-[350px]"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Tooltip 
-            cursor={{fill: "hsl(var(--muted))"}}
-            content={<ChartTooltipContent hideLabel />} 
-          />
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            innerRadius={60}
-            labelLine={false}
-            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
-          </Pie>
-          <Legend content={<ChartLegendContent nameKey="name" />} />
-        </PieChart>
-      </ResponsiveContainer>
+      <PieChart>
+        <Tooltip 
+          cursor={{fill: "hsl(var(--muted))"}}
+          content={<ChartTooltipContent hideLabel />} 
+        />
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={100}
+          innerRadius={60}
+          labelLine={false}
+          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Pie>
+        <Legend content={<ChartLegendContent nameKey="name" />} />
+      </PieChart>
     </ChartContainer>
   );
 }
