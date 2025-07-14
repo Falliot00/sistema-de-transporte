@@ -275,7 +275,8 @@ export default function AlarmsPage() {
         resetNavigation(); 
     };
 
-    const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => { 
+    // SOLUCIÓN: La firma de la función ahora acepta 'null' para choferId
+    const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => { 
         if (!alarmForDetails) return; 
         
         const { action, description, choferId } = payload; 
@@ -285,17 +286,17 @@ export default function AlarmsPage() {
         
         try { 
             if (alarmForDetails.status === 'pending') { 
-                await reviewAlarm(alarmIdToUpdate, action, description, choferId); 
+                await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
             } else if (alarmForDetails.status === 'suspicious') { 
-                if (action === 'confirmed' && typeof choferId !== 'number') { 
+                if (action === 'confirmed' && (choferId === null || choferId === undefined)) { 
                     toast({ title: "Error de Validación", description: "Se requiere un chofer para confirmar la alarma.", variant: "destructive" }); 
                     setIsSubmitting(false); 
                     return; 
                 } 
                 if (action === 'confirmed') { 
-                    await confirmAlarm(alarmIdToUpdate, description, choferId); 
+                    await confirmAlarm(alarmIdToUpdate, description, choferId as number); 
                 } else { 
-                    await reviewAlarm(alarmIdToUpdate, action, description, choferId); 
+                    await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
                 } 
             } 
             
@@ -319,7 +320,7 @@ export default function AlarmsPage() {
         } 
     };
 
-    const handleReEvaluate = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => { 
+    const handleReEvaluate = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => { 
         if (!alarmForDetails || payload.action === 'rejected') { 
             handleDialogClose(); 
             return; 
@@ -464,7 +465,6 @@ export default function AlarmsPage() {
                 <h1 className="text-3xl font-bold">Gestión de Alarmas</h1> 
                 <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p> 
             </div> 
-            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <KPICard title="Total de alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
                 <KPICard title="Total de pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />
@@ -472,21 +472,13 @@ export default function AlarmsPage() {
                 <KPICard title="Total de confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
                 <KPICard title="Total de rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
             </div>
-            
             <div className="flex justify-center gap-4 flex-wrap items-center"> 
-                <AnalysisFilters 
-                    availableTypes={alarmTypes} 
-                    availableCompanies={AVAILABLE_COMPANIES} 
-                    filters={analysisFilters} 
-                    onFilterChange={setAnalysisFilters} 
-                    isLoading={isLoadingCounts} 
-                /> 
+                <AnalysisFilters availableTypes={alarmTypes} availableCompanies={AVAILABLE_COMPANIES} filters={analysisFilters} onFilterChange={setAnalysisFilters} isLoading={isLoadingCounts} /> 
                 <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning"> 
                     {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} 
                     Analizar {analysisCounts.pending} Pendientes 
                 </Button> 
             </div> 
-            
             <div className="space-y-4"> 
                 <div className="flex flex-col sm:flex-row gap-1 justify-between items-center"> 
                     <div className="relative w-full flex-grow"> 
@@ -498,7 +490,6 @@ export default function AlarmsPage() {
                         <DateRangePicker date={dateRange} onDateChange={setDateRange} /> 
                     </div> 
                 </div> 
-                
                 <div> 
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
                         <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
@@ -509,11 +500,9 @@ export default function AlarmsPage() {
                     </ToggleGroup> 
                 </div> 
             </div> 
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> 
                 {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div> : alarms.length > 0 ? alarms.map((alarm) => (<AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> )) : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>} 
             </div>
-            
             {paginationInfo && paginationInfo.totalPages > 1 && (<PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />)}
             
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> 
@@ -524,7 +513,7 @@ export default function AlarmsPage() {
                                 <DialogTitle>Detalles de Alarma: {alarmForDetails.type}</DialogTitle>
                                 <DialogDescription>Información detallada y acciones para la alarma ID {alarmForDetails.id}.</DialogDescription>
                             </DialogHeader>
-                            {isNavigating && (
+                            {isNavigating && ( 
                                 <> 
                                     <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious || isLoadingMore || isSubmitting} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"><ChevronLeft className="h-6 w-6" /><span className="sr-only">Anterior</span></Button> 
                                     <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext || isLoadingMore || isSubmitting} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">{isLoadingMore ? <Loader2 className="h-6 w-6 animate-spin" /> : <ChevronRight className="h-6 w-6" />}<span className="sr-only">Siguiente</span></Button> 

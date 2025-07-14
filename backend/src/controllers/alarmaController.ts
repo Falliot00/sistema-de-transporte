@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { exec } from 'child_process';
 import path from 'path';
-import { transformAlarmData } from '../utils/transformers';
+import { transformAlarmData, getEmpresaNameFromId } from '../utils/transformers';
 
 const prisma = new PrismaClient();
 
@@ -45,11 +45,8 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
     }
     if (search) {
         whereClause.OR = [
-            // 'patente' no existe en el schema actual, lo comentamos.
-            // { patente: { contains: search } }, 
             { interno: { contains: search } },
             { typeAlarm: { alarm: { contains: search } } },
-            // La relación se llama 'chofer' y el campo es 'apellido_nombre'
             { chofer: { apellido_nombre: { contains: search } } },
         ];
     }
@@ -67,13 +64,12 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
 export const undoAlarmAction = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id }, include: { chofer: true, typeAlarm: true } });
         if (!alarm) {
             return res.status(404).json({ message: 'La alarma que intentas revertir no existe.' });
         }
         if (alarm.estado === 'Pendiente') {
-            const alarmWithRelations = await prisma.alarmasHistorico.findUnique({ where: { guid: id }, include: { chofer: true, typeAlarm: true } });
-            return res.status(200).json(transformAlarmData(alarmWithRelations));
+            return res.status(200).json(transformAlarmData(alarm));
         }
         const updatedAlarmFromDb = await prisma.alarmasHistorico.update({
             where: { guid: id },
@@ -165,10 +161,12 @@ export const reviewAlarm = async (req: Request, res: Response) => {
         
         if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
-            if (!choferToAssign) {
-                return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
-            }
-            if (choferToAssign.idEmpresa?.toString() !== alarm.Empresa) {
+            if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
+            
+            const nombreEmpresaChofer = getEmpresaNameFromId(choferToAssign.idEmpresa).replace(/\s/g, '').toLowerCase();
+            const nombreEmpresaAlarma = alarm.Empresa?.replace(/\s/g, '').toLowerCase();
+
+            if (nombreEmpresaChofer !== nombreEmpresaAlarma) {
                 return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa ${alarm.Empresa}.` });
             }
             dataToUpdate.choferId = choferId;
@@ -202,7 +200,13 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
         if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
             if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
-            if (choferToAssign.idEmpresa?.toString() !== alarm.Empresa) return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
+
+            const nombreEmpresaChofer = getEmpresaNameFromId(choferToAssign.idEmpresa).replace(/\s/g, '').toLowerCase();
+            const nombreEmpresaAlarma = alarm.Empresa?.replace(/\s/g, '').toLowerCase();
+
+            if (nombreEmpresaChofer !== nombreEmpresaAlarma) {
+                return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
+            }
             dataToUpdate.choferId = choferId;
         }
         
@@ -232,7 +236,13 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
         if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
-        if (choferToAssign.idEmpresa?.toString() !== alarm.Empresa) return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa ${alarm.Empresa}.` });
+
+        const nombreEmpresaChofer = getEmpresaNameFromId(choferToAssign.idEmpresa).replace(/\s/g, '').toLowerCase();
+        const nombreEmpresaAlarma = alarm.Empresa?.replace(/\s/g, '').toLowerCase();
+
+        if (nombreEmpresaChofer !== nombreEmpresaAlarma) {
+            return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa ${alarm.Empresa}.` });
+        }
         dataToUpdate.choferId = choferId;
 
         const updatedAlarm = await prisma.alarmasHistorico.update({

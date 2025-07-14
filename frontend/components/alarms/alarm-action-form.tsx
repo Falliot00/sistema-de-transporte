@@ -5,15 +5,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Loader2, X, UserSquare } from 'lucide-react';
-import { Alarm, Driver } from '@/types';
-import { getDrivers, assignDriver } from '@/lib/api';
+import { PlusCircle, Loader2 } from 'lucide-react';
+import { Alarm } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { DriverSelector } from './driver-selector';
 
 interface AlarmActionFormProps {
   alarm: Alarm;
-  onAction: (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number }) => void;
+  // SOLUCIÓN: La prop onAction ahora acepta que choferId pueda ser null.
+  onAction: (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => void;
   isSubmitting: boolean;
   confirmText?: string;
   rejectText?: string;
@@ -32,110 +32,38 @@ export function AlarmActionForm({
 }: AlarmActionFormProps) {
   const [description, setDescription] = useState(initialDescription || alarm.descripcion || "");
   const [isDescOpen, setIsDescOpen] = useState(false);
-  const [isDriverOpen, setIsDriverOpen] = useState(false);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | undefined>(
-    // CORRECCIÓN: Comprueba si 'alarm.driver' existe antes de acceder a 'id'
-    alarm.driver && alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
+  const [selectedDriverId, setSelectedDriverId] = useState<number | null | undefined>(
+    alarm.driver ? Number(alarm.driver.id) : null
   );
-  const [isAssigningDriver, setIsAssigningDriver] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     setDescription(initialDescription || alarm.descripcion || "");
-    setSelectedDriverId(
-      // CORRECCIÓN: Comprueba si 'alarm.driver' existe antes de acceder a 'id'
-      alarm.driver && alarm.driver.id !== 'chofer-no-asignado' ? alarm.driver.id : undefined
-    );
+    setSelectedDriverId(alarm.driver ? Number(alarm.driver.id) : null);
   }, [alarm, initialDescription]);
 
-  useEffect(() => {
-    if (showDriverSelector) {
-      const fetchDrivers = async () => {
-        setIsLoadingDrivers(true);
-        try {
-          const allDrivers = await getDrivers();
-          // CORRECCIÓN: Filtra por 'alarm.company' de forma segura
-          const companyDrivers = allDrivers.filter(d => d.empresa === alarm.company);
-          setDrivers(companyDrivers);
-        } catch (error) {
-          toast({ title: "Error", description: "No se pudieron cargar los choferes.", variant: "destructive" });
-        } finally {
-          setIsLoadingDrivers(false);
-        }
-      };
-      fetchDrivers();
-    }
-  }, [showDriverSelector, alarm.company, toast]);
-
   const handleAction = (action: 'confirmed' | 'rejected') => {
-    if (action === 'confirmed' && alarm.status === 'suspicious' && !selectedDriverId) {
+    if (action === 'confirmed' && alarm.status === 'suspicious' && selectedDriverId === null) {
         toast({ title: "Asignación Requerida", description: "Debes asignar un chofer para confirmar una alarma sospechosa.", variant: "destructive" });
         return;
     }
-    onAction({ action, description, choferId: selectedDriverId ? parseInt(selectedDriverId, 10) : undefined });
+    onAction({ action, description, choferId: selectedDriverId });
   };
-
-  const handleDriverChange = async (driverId: string) => {
-    const newDriverId = driverId === "none" ? null : parseInt(driverId, 10);
-    const previousDriverId = selectedDriverId;
-    setSelectedDriverId(newDriverId?.toString());
-    setIsDriverOpen(false);
-    setIsAssigningDriver(true);
-
-    try {
-        await assignDriver(alarm.id, newDriverId);
-        toast({ title: "Éxito", description: newDriverId !== null ? "Chofer asignado correctamente." : "Se ha quitado la asignación del chofer." });
-    } catch (error: any) {
-        setSelectedDriverId(previousDriverId);
-        toast({ title: "Error", description: error.message || "No se pudo asignar el chofer.", variant: "destructive" });
-    } finally {
-        setIsAssigningDriver(false);
-    }
-  };
-
-  const selectedDriverName = useMemo(() => {
-    if (!selectedDriverId) return "Sin Asignar";
-    const driver = drivers.find(d => d.choferes_id.toString() === selectedDriverId);
-    return driver ? `${driver.nombre} ${driver.apellido}` : "Sin Asignar";
-  }, [selectedDriverId, drivers]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {showDriverSelector && (
-        <Collapsible open={isDriverOpen} onOpenChange={setIsDriverOpen} className="space-y-2">
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="p-0 h-auto font-normal text-sm text-muted-foreground hover:text-foreground justify-start w-full">
-              <UserSquare className="mr-2 h-4 w-4" />
-              <span className="font-semibold text-foreground mr-1">Asignar Chofer:</span>
-              {isAssigningDriver ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : selectedDriverName}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pt-2 animate-in fade-in-0 zoom-in-95">
-            <Select onValueChange={handleDriverChange} disabled={isLoadingDrivers || isAssigningDriver}>
-                <SelectTrigger id="driver-selector">
-                    <SelectValue placeholder={isLoadingDrivers ? "Cargando..." : "Cambiar chofer"} />
-                </SelectTrigger>
-                <SelectContent>
-                {isLoadingDrivers ? (
-                    <div className="flex items-center justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
-                ) : (
-                    <>
-                        <SelectItem value="none" className="text-destructive">
-                            <div className="flex items-center"><X className="h-4 w-4 mr-2" />Quitar asignación</div>
-                        </SelectItem>
-                        {drivers.map(driver => (
-                            <SelectItem key={driver.choferes_id} value={driver.choferes_id.toString()}>
-                                {driver.nombre} {driver.apellido}
-                            </SelectItem>
-                        ))}
-                    </>
-                )}
-                </SelectContent>
-            </Select>
-          </CollapsibleContent>
-        </Collapsible>
+        <div>
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">
+                Asignar Chofer
+            </label>
+            <DriverSelector
+                selectedDriverId={selectedDriverId}
+                onSelectDriver={(driverId) => setSelectedDriverId(driverId)}
+                alarmCompany={alarm.company}
+                disabled={isSubmitting}
+            />
+        </div>
       )}
 
       <Collapsible open={isDescOpen} onOpenChange={setIsDescOpen} className="space-y-2">

@@ -19,10 +19,11 @@ export function DriverCard({ driver }: DriverCardProps) {
             <Card className="h-full transition-all duration-200 group-hover:shadow-xl group-hover:border-primary/50 flex flex-col">
                 <div className="relative">
                     <div className="aspect-w-1 aspect-h-1 w-full">
-                         <Avatar className="h-full w-full rounded-b-none"> {/* Quitamos el redondeo completo */}
+                         {/* SOLUCIÓN: Cambiamos las clases del Avatar */}
+                         <Avatar className="h-full w-full rounded-none"> {/* El contenedor del Avatar ya no necesita ser redondo */}
                             <AvatarImage src={driver.foto || ""} alt={fullName} className="object-cover" />
-                            <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground">
-                                {/* Aseguramos que no falle si nombre o apellido no existen */}
+                            {/* La imagen de fallback también debe ser cuadrada */}
+                            <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground rounded-none">
                                 {(driver.nombre || ' ')[0]}{(driver.apellido || ' ')[0]}
                             </AvatarFallback>
                         </Avatar>
