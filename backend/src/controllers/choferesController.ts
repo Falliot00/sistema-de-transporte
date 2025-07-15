@@ -1,10 +1,20 @@
 // backend/src/controllers/choferesController.ts
 import { Request, Response } from 'express';
 import { PrismaClient, Choferes } from '@prisma/client';
-// SOLUCIÓN: Importamos las funciones desde el archivo central de transformers
-import { transformAlarmData, getEmpresaNameFromId } from '../utils/transformers';
+import { transformAlarmData } from '../utils/transformers';
 
 const prisma = new PrismaClient();
+
+const getEmpresaNameById = (idEmpresa: number | null): string => {
+    if (idEmpresa === null) {
+        return 'Empresa Desconocida';
+    }
+    const empresaMap: Record<number, string> = {
+        1: 'Laguna Paiva',
+        2: 'Monte Vera',
+    };
+    return empresaMap[idEmpresa] || `Empresa ID: ${idEmpresa}`;
+};
 
 const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'rejected', string[]> = {
     pending: ['Pendiente'],
@@ -15,7 +25,7 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 
 /**
  * @route GET /api/choferes
- * @description Obtiene una lista de todos los choferes, filtrando por el sector "CHOFERES".
+ * @description Obtiene una lista de todos los choferes activos.
  */
 export const getAllChoferes = async (req: Request, res: Response) => {
     const { search } = req.query;
@@ -33,7 +43,11 @@ export const getAllChoferes = async (req: Request, res: Response) => {
     try {
         const choferesFromDb = await prisma.choferes.findMany({
             where: {
+                // --- SOLUCIÓN: AÑADIR FILTROS DE ESTADO ---
                 sector: 'CHOFERES',
+                estado: 'A',
+                liquidacionEstado: 'A',
+                // Y combinamos con el filtro de búsqueda si existe
                 ...searchFilter,
             },
             orderBy: [{ apellido_nombre: 'asc' }],
@@ -55,7 +69,7 @@ export const getAllChoferes = async (req: Request, res: Response) => {
                 foto: chofer.foto,
                 dni: chofer.dni,
                 anios: chofer.anios,
-                empresa: getEmpresaNameFromId(chofer.idEmpresa),
+                empresa: getEmpresaNameById(chofer.idEmpresa),
                 estado: chofer.estado,
                 sector: chofer.sector,
                 puesto: chofer.puesto,
@@ -71,7 +85,7 @@ export const getAllChoferes = async (req: Request, res: Response) => {
 
 /**
  * @route GET /api/choferes/:id
- * @description Obtiene detalles y estadísticas de un chofer.
+ * @description Obtiene detalles y estadísticas de un chofer, solo si está activo.
  */
 export const getDriverByIdWithStats = async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -83,7 +97,13 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
 
     try {
         const driver = await prisma.choferes.findUnique({
-            where: { choferes_id: driverId }, 
+            where: { 
+                choferes_id: driverId,
+                // --- SOLUCIÓN: AÑADIR FILTROS DE ESTADO AQUÍ TAMBIÉN ---
+                sector: 'CHOFERES',
+                estado: 'A',
+                liquidacionEstado: 'A',
+            }, 
             include: {
                 alarmas: { 
                     take: 10,
@@ -94,11 +114,7 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
         });
 
         if (!driver) {
-            return res.status(404).json({ message: 'Chofer no encontrado.' });
-        }
-        
-        if (driver.sector !== 'CHOFERES') {
-            return res.status(404).json({ message: 'El empleado solicitado no es un chofer.' });
+            return res.status(404).json({ message: 'Chofer no encontrado o inactivo.' });
         }
 
         const [totalAlarms, pendingAlarms, suspiciousAlarms, confirmedAlarms, rejectedAlarms] = await Promise.all([
@@ -126,7 +142,7 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
             foto: driver.foto,
             dni: driver.dni,
             anios: driver.anios,
-            empresa: getEmpresaNameFromId(driver.idEmpresa),
+            empresa: getEmpresaNameById(driver.idEmpresa),
             stats: {
                 total: totalAlarms,
                 pending: pendingAlarms,

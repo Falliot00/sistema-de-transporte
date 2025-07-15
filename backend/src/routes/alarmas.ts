@@ -10,7 +10,8 @@ import {
     retryVideoDownload, 
     assignDriverToAlarm, 
     getAlarmsCount,
-    undoAlarmAction
+    undoAlarmAction,
+    getAlarmReport
 } from '../controllers/alarmaController';
 
 const router = Router();
@@ -21,6 +22,12 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/count', async (req: Request, res: Response) => {
     await getAlarmsCount(req, res);
+});
+
+// Es importante que esta ruta con '/reporte' esté ANTES de la ruta genérica '/:id'
+// para que no sea interpretada como un ID.
+router.get('/:id/reporte', async (req: Request, res: Response) => {
+    await getAlarmReport(req, res);
 });
 
 router.get('/:id', async (req: Request, res: Response) => {

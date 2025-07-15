@@ -4,6 +4,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { exec } from 'child_process';
 import path from 'path';
 import { transformAlarmData, getEmpresaNameFromId } from '../utils/transformers';
+import { generateAlarmReportPDF } from '../utils/pdfGenerator';
 
 const prisma = new PrismaClient();
 
@@ -295,5 +296,39 @@ export const retryVideoDownload = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error(`Error al reintentar el video para la alarma ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * @route GET /api/alarmas/:id/reporte
+ * @description Genera y descarga un informe en PDF para una alarma específica.
+ */
+export const getAlarmReport = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({
+            where: { guid: id },
+            include: {
+                chofer: true,
+                typeAlarm: true,
+                deviceInfo: true,
+            },
+        });
+
+        if (!alarm) {
+            return res.status(404).json({ message: 'Alarma no encontrada para generar el reporte.' });
+        }
+
+        const filename = `informe-alarma-${alarm.guid}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        // Llamamos a la función que genera el PDF y lo envía a la respuesta
+        generateAlarmReportPDF(alarm, res);
+
+    } catch (error) {
+        console.error(`Error al generar el reporte para la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno al generar el reporte.' });
     }
 };

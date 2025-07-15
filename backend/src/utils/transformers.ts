@@ -10,8 +10,8 @@ const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'reje
 export const getEmpresaNameFromId = (idEmpresa: number | null): string => {
     if (idEmpresa === null) return 'Empresa Desconocida';
     const empresaMap: Record<number, string> = {
-        1: 'Monte Vera',
-        2: 'Laguna Paiva',
+        1: 'Laguna Paiva',
+        2: 'Monte Vera',
     };
     return empresaMap[idEmpresa] || `Empresa ID: ${idEmpresa}`;
 };
@@ -25,7 +25,7 @@ const getAlarmStatusForFrontend = (dbStatus: string | null | undefined): 'pendin
   return 'pending';
 };
 
-function parseApellidoNombre(apellidoNombre: string | null | undefined): { nombre: string; apellido: string } {
+export function parseApellidoNombre(apellidoNombre: string | null | undefined): { nombre: string; apellido: string } {
   if (!apellidoNombre) {
     return { nombre: '', apellido: '' };
   }

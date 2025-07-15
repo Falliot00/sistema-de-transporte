@@ -480,16 +480,29 @@ export default function AlarmsPage() {
                 </Button> 
             </div> 
             <div className="space-y-4"> 
-                <div className="flex flex-col sm:flex-row gap-1 justify-between items-center"> 
+                <div className="flex flex-col sm:flex-row gap-2 items-center"> 
                     <div className="relative w-full flex-grow"> 
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> 
-                        <Input type="search" placeholder="Buscar por interno, tipo, chofer..." className="pl-10 h-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /> 
+                        <Input 
+                            type="search" 
+                            placeholder="Buscar por interno, tipo, chofer..." 
+                            className="pl-10 h-10" 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)} 
+                        /> 
                     </div> 
-                    <div className="flex gap-2 items-center flex-wrap justify-end"> 
-                        <AdvancedFilters availableTypes={alarmTypes} selectedTypes={typeFilters} onTypeSelectionChange={setTypeFilters} availableCompanies={AVAILABLE_COMPANIES} selectedCompanies={companyFilters} onCompanySelectionChange={setCompanyFilters} /> 
+                    <div className="flex gap-2 items-center w-full sm:w-auto"> 
+                        <AdvancedFilters 
+                            availableTypes={alarmTypes} 
+                            selectedTypes={typeFilters} 
+                            onTypeSelectionChange={setTypeFilters} 
+                            availableCompanies={AVAILABLE_COMPANIES} 
+                            selectedCompanies={companyFilters} 
+                            onCompanySelectionChange={setCompanyFilters} 
+                        /> 
                         <DateRangePicker date={dateRange} onDateChange={setDateRange} /> 
                     </div> 
-                </div> 
+                </div>  
                 <div> 
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
                         <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>

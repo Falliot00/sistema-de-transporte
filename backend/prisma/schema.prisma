@@ -76,6 +76,7 @@ model Choferes {
   sector          String? @db.NVarChar(255)
   puesto          String? @db.NVarChar(255)
   estado          String? @map("Estado") @db.NVarChar(50)
+  liquidacionEstado String? @map("LiquidacionEstado") @db.NVarChar(50)
 
   alarmas AlarmasHistorico[]
 
