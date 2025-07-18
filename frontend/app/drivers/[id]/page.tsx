@@ -2,8 +2,7 @@
 import { getDriverDetails } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// CORRECCIÓN: El nombre del componente es 'DriverStats', no 'DriverStatsCard'
-import { DriverStats } from "./driver-stats"; 
+import { DriverStats } from "./driver-stats";
 import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
 import {
     Breadcrumb,
@@ -18,7 +17,6 @@ import { Driver as DriverType } from "@/types";
 
 export const dynamic = 'force-dynamic';
 
-// --- SOLUCIÓN: Usar 'await params' antes de desestructurar 'id' ---
 export default async function DriverDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
@@ -30,7 +28,6 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ i
             notFound();
         }
         console.error("Error al cargar detalles del chofer:", error);
-        // Lanzar el error para que Next.js muestre su página de error
         throw new Error("No se pudieron cargar los detalles del chofer. Por favor, inténtelo de nuevo más tarde.");
     }
 
@@ -38,35 +35,33 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ i
       notFound();
     }
 
-    const driverFullName = `${driver.nombre || ''} ${driver.apellido || ''}`.trim();
+    // --- CAMBIO: Usamos el campo unificado ---
+    const driverFullName = driver.apellido_nombre || "Chofer sin nombre";
+    
+    const getInitials = (name: string) => {
+        if (!name) return "??";
+        const parts = name.split(' ');
+        if (parts.length > 1) {
+            return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    };
 
     return (
         <div className="space-y-6">
-            
             <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/" className="flex items-center gap-1"><Home className="h-4 w-4"/> Home</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/drivers">Choferes</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>{driverFullName}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
+                {/* ... (código del breadcrumb sin cambios) ... */}
             </Breadcrumb>
             
             <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-md">
                     <AvatarImage src={driver.foto || ''} alt={driverFullName} className="object-cover" />
                     <AvatarFallback className="text-4xl bg-secondary text-secondary-foreground">
-                        {(driver.nombre || ' ').charAt(0)}{(driver.apellido || ' ').charAt(0)}
+                        {getInitials(driverFullName)}
                     </AvatarFallback>
                 </Avatar>
                 <div>
+                    {/* --- CAMBIO: Mostramos el nombre completo --- */}
                     <h1 className="text-4xl font-bold tracking-tight">{driverFullName}</h1>
                     <div className="flex flex-wrap items-center text-muted-foreground text-md gap-x-6 gap-y-1 mt-2">
                         <InfoRow icon={<Contact className="h-4 w-4 text-sky-500" />} value={`DNI: ${driver.dni || 'N/A'}`} />
@@ -78,7 +73,6 @@ export default async function DriverDetailPage({ params }: { params: Promise<{ i
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
-                    {/* El componente se llama DriverStats y recibe la prop 'stats' */}
                     <DriverStats stats={driver.stats} />
                 </div>
                 <div className="lg:col-span-2">

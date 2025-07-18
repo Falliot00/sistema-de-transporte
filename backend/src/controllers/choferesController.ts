@@ -1,35 +1,21 @@
 // backend/src/controllers/choferesController.ts
 import { Request, Response } from 'express';
-import { PrismaClient, Choferes } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { transformAlarmData } from '../utils/transformers';
+import { DB_QUERY_STATUS_MAP } from '../utils/statusHelpers';
 
 const prisma = new PrismaClient();
 
-const getEmpresaNameById = (idEmpresa: number | null): string => {
-    if (idEmpresa === null) {
-        return 'Empresa Desconocida';
-    }
-    const empresaMap: Record<number, string> = {
-        1: 'Laguna Paiva',
-        2: 'Monte Vera',
-    };
-    return empresaMap[idEmpresa] || `Empresa ID: ${idEmpresa}`;
+const alarmIncludesForDriverDetails = {
+    typeAlarm: true,
+    deviceInfo: true,
+    anomaliaInfo: true,
+    empresaInfo: true
 };
 
-const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' | 'rejected', string[]> = {
-    pending: ['Pendiente'],
-    suspicious: ['Sospechosa'],
-    confirmed: ['Confirmada', 'confirmed'],
-    rejected: ['Rechazada', 'rejected'],
-};
-
-/**
- * @route GET /api/choferes
- * @description Obtiene una lista de todos los choferes activos.
- */
 export const getAllChoferes = async (req: Request, res: Response) => {
     const { search } = req.query;
-    let searchFilter: any = {};
+    let searchFilter = {};
 
     if (search && typeof search === 'string') {
         searchFilter = {
@@ -43,38 +29,28 @@ export const getAllChoferes = async (req: Request, res: Response) => {
     try {
         const choferesFromDb = await prisma.choferes.findMany({
             where: {
-                // --- SOLUCIÓN: AÑADIR FILTROS DE ESTADO ---
                 sector: 'CHOFERES',
                 estado: 'A',
                 liquidacionEstado: 'A',
-                // Y combinamos con el filtro de búsqueda si existe
                 ...searchFilter,
             },
             orderBy: [{ apellido_nombre: 'asc' }],
+            include: {
+                empresaInfo: true, // Incluir la relación con la empresa
+            }
         });
         
-        const choferes = choferesFromDb.map((chofer: Choferes) => {
-            const apellidoNombre = chofer.apellido_nombre || '';
-            const parts = apellidoNombre.includes(',') 
-                ? apellidoNombre.split(',').map((s: string) => s.trim())
-                : apellidoNombre.split(' ');
-            
-            const apellido = parts[0] || '';
-            const nombre = parts.slice(1).join(' ') || '';
-            
-            return {
-                choferes_id: chofer.choferes_id,
-                nombre: nombre || apellidoNombre,
-                apellido: apellido,
-                foto: chofer.foto,
-                dni: chofer.dni,
-                anios: chofer.anios,
-                empresa: getEmpresaNameById(chofer.idEmpresa),
-                estado: chofer.estado,
-                sector: chofer.sector,
-                puesto: chofer.puesto,
-            };
-        });
+        const choferes = choferesFromDb.map((chofer: any) => ({
+            choferes_id: chofer.choferes_id,
+            apellido_nombre: chofer.apellido_nombre,
+            foto: chofer.foto,
+            dni: chofer.dni,
+            anios: chofer.anios,
+            empresa: chofer.empresaInfo?.nombreMin || 'Empresa Desconocida',
+            estado: chofer.estado,
+            sector: chofer.sector,
+            puesto: chofer.puesto,
+        }));
         
         res.status(200).json(choferes);
     } catch (error) {
@@ -83,10 +59,6 @@ export const getAllChoferes = async (req: Request, res: Response) => {
     }
 };
 
-/**
- * @route GET /api/choferes/:id
- * @description Obtiene detalles y estadísticas de un chofer, solo si está activo.
- */
 export const getDriverByIdWithStats = async (req: Request, res: Response) => {
     const { id } = req.params;
     const driverId = parseInt(id, 10);
@@ -99,16 +71,16 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
         const driver = await prisma.choferes.findUnique({
             where: { 
                 choferes_id: driverId,
-                // --- SOLUCIÓN: AÑADIR FILTROS DE ESTADO AQUÍ TAMBIÉN ---
                 sector: 'CHOFERES',
                 estado: 'A',
                 liquidacionEstado: 'A',
             }, 
             include: {
+                empresaInfo: true, // Incluir info de la empresa del chofer
                 alarmas: { 
                     take: 10,
                     orderBy: { alarmTime: 'desc' },
-                    include: { typeAlarm: true, chofer: true } 
+                    include: alarmIncludesForDriverDetails
                 }
             }
         });
@@ -125,24 +97,15 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
             prisma.alarmasHistorico.count({ where: { choferId: driverId, estado: { in: DB_QUERY_STATUS_MAP.rejected } } }),
         ]);
 
-        const recentAlarmsTransformed = driver.alarmas.map(transformAlarmData);
-        
-        const apellidoNombre = driver.apellido_nombre || '';
-        const parts = apellidoNombre.includes(',') 
-            ? apellidoNombre.split(',').map((s: string) => s.trim())
-            : apellidoNombre.split(' ');
-        
-        const apellido = parts[0] || '';
-        const nombre = parts.slice(1).join(' ') || '';
+        const recentAlarmsTransformed = driver.alarmas.map(alarm => transformAlarmData({ ...alarm, chofer: driver }));
         
         const responsePayload = {
             choferes_id: driver.choferes_id,
-            nombre: nombre,
-            apellido: apellido,
+            apellido_nombre: driver.apellido_nombre,
             foto: driver.foto,
             dni: driver.dni,
             anios: driver.anios,
-            empresa: getEmpresaNameById(driver.idEmpresa),
+            empresa: (driver as any).empresaInfo?.nombreMin || 'Empresa Desconocida',
             stats: {
                 total: totalAlarms,
                 pending: pendingAlarms,

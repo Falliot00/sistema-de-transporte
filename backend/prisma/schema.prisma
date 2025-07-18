@@ -11,9 +11,39 @@ datasource db {
   schemas  = ["alarmas", "dimCentral", "dbo"]
 }
 
+// --- NUEVO MODELO: Tabla de Anomalías ---
+model Anomalia {
+  idAnomalia   Int     @id @map("idAnomalia")
+  nomAnomalia  String? @db.VarChar(255)
+  descAnomalia String? @db.VarChar(512)
+
+  // Relación inversa
+  alarmasHistorico AlarmasHistorico[]
+
+  @@schema("alarmas")
+  @@map("anomalia")
+}
+
+// --- NUEVO MODELO: Tabla de Empresas ---
+model Empresa {
+  idEmp        Int     @id @map("idEmp")
+  nombre       String? @map("Empresa") @db.NVarChar(255)
+  abreviatura  String? @map("EmpresaAbr") @db.VarChar(10)
+  nombreMin    String? @map("EmpresaMin") @db.VarChar(100)
+  nssa         Int?    @map("EmpresaNSSA")
+
+  // Relaciones inversas
+  alarmasHistorico AlarmasHistorico[]
+  choferes         Choferes[]
+
+  @@schema("dimCentral")
+  @@map("empresa")
+}
+
+// --- MODELO PRINCIPAL ACTUALIZADO ---
 model AlarmasHistorico {
   guid        String    @id @db.VarChar(50)
-  dispositivo Int?      @db.Int // Cambiado de String? a Int?
+  dispositivo Int?      @db.Int
   interno     String?   @map("idinterno") @db.VarChar(20)
   alarmTypeId Int?      @map("alarmType")
   velocidad   Float?
@@ -21,30 +51,36 @@ model AlarmasHistorico {
   lat         String?   @db.VarChar(20)
   ubi         String?   @db.VarChar(50)
   alarmTime   DateTime? @db.DateTime
-  Empresa     String?   @map("idEmpresa") @db.VarChar(100)
   imagen      String?   @db.VarChar(512)
   video       String?   @db.VarChar(512)
   estado      String?   @db.VarChar(50)
   descripcion String?   @db.VarChar(512)
   choferId    Int?      @map("chofer")
+  
+  // --- CAMBIO 1: La columna idAnomalia ha sido añadida ---
+  idAnomalia  Int?
 
+  // --- CAMBIO 2: La columna idEmpresa ahora es un INT y se usa para la relación ---
+  idEmpresa   Int?      @map("idEmpresa") @db.Int
+
+  // --- RELACIONES ACTUALIZADAS Y NUEVAS ---
   chofer    Choferes?   @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
   typeAlarm TypeAlarms? @relation(fields: [alarmTypeId], references: [type], onDelete: NoAction, onUpdate: NoAction)
-  
-  // Relación con el nuevo modelo de dispositivos
   deviceInfo  Dispositivos? @relation(fields: [dispositivo], references: [idDispositivo], onDelete: NoAction, onUpdate: NoAction, map: "FK__alarmasHi__dispo__6BE468A3")
+  
+  // --- NUEVA RELACIÓN con Anomalia ---
+  anomaliaInfo Anomalia? @relation(fields: [idAnomalia], references: [idAnomalia], onDelete: NoAction, onUpdate: NoAction)
 
+  // --- NUEVA RELACIÓN con Empresa ---
+  empresaInfo  Empresa?  @relation(fields: [idEmpresa], references: [idEmp], onDelete: NoAction, onUpdate: NoAction)
+  
   @@schema("alarmas")
   @@map("alarmasHistorico")
 }
 
 model Dispositivos {
   id            Int     @id @map("id")
-  
-  // --- SOLUCIÓN: Cambiar el tipo de String? a Int? ---
-  // La base de datos tiene esta columna como un número.
-  nroInterno    Int?    
-
+  nroInterno    Int?
   patente       String?
   idDispositivo Int     @unique @map("idDispositivo") @db.Int
   did           Int?
@@ -66,17 +102,21 @@ model TypeAlarms {
   @@map("typeAlarms")
 }
 
+// --- MODELO CHOFERES ACTUALIZADO CON RELACIÓN ---
 model Choferes {
   choferes_id     Int     @id @map("idEmpleado")
   apellido_nombre String  @map("apellido_nombre") @db.NVarChar(255)
   foto            String? @db.VarChar(255)
   dni             String? @map("DNI") @db.NVarChar(50)
   anios           Int?    @map("legajo")
-  idEmpresa       Int?    @map("idEmpresa")
+  idEmpresa       Int?    @map("idEmpresa") // Este campo también es un INT
   sector          String? @db.NVarChar(255)
   puesto          String? @db.NVarChar(255)
   estado          String? @map("Estado") @db.NVarChar(50)
   liquidacionEstado String? @map("LiquidacionEstado") @db.NVarChar(50)
+
+  // --- MEJORA: Relación añadida para Choferes -> Empresa ---
+  empresaInfo     Empresa?  @relation(fields: [idEmpresa], references: [idEmp], onDelete: NoAction, onUpdate: NoAction)
 
   alarmas AlarmasHistorico[]
 

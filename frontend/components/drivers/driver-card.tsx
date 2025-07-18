@@ -12,25 +12,35 @@ interface DriverCardProps {
 }
 
 export function DriverCard({ driver }: DriverCardProps) {
-    const fullName = `${driver.nombre} ${driver.apellido}`.trim();
+    // --- CAMBIO: Usamos el campo unificado ---
+    const fullName = driver.apellido_nombre || "Nombre no disponible";
+
+    // Función para obtener las iniciales del nombre completo
+    const getInitials = (name: string) => {
+        if (!name) return "??";
+        const parts = name.split(' ');
+        if (parts.length > 1) {
+            return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    };
 
     return (
         <Link href={`/drivers/${driver.choferes_id}`} className="block group rounded-lg overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <Card className="h-full transition-all duration-200 group-hover:shadow-xl group-hover:border-primary/50 flex flex-col">
                 <div className="relative">
                     <div className="aspect-w-1 aspect-h-1 w-full">
-                         {/* SOLUCIÓN: Cambiamos las clases del Avatar */}
-                         <Avatar className="h-full w-full rounded-none"> {/* El contenedor del Avatar ya no necesita ser redondo */}
+                         <Avatar className="h-full w-full rounded-none">
                             <AvatarImage src={driver.foto || ""} alt={fullName} className="object-cover" />
-                            {/* La imagen de fallback también debe ser cuadrada */}
                             <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground rounded-none">
-                                {(driver.nombre || ' ')[0]}{(driver.apellido || ' ')[0]}
+                                {getInitials(fullName)}
                             </AvatarFallback>
                         </Avatar>
                     </div>
                 </div>
                 <CardContent className="p-4 flex-grow flex flex-col justify-between">
                     <div>
+                      {/* --- CAMBIO: Mostramos el nombre completo --- */}
                       <h3 className="font-bold text-md leading-tight truncate">{fullName}</h3>
                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                           <Briefcase className="h-3 w-3 text-amber-500" />

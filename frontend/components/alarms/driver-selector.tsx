@@ -13,14 +13,8 @@ import { getDrivers } from '@/lib/api';
 interface DriverSelectorProps {
   selectedDriverId?: number | null;
   onSelectDriver: (driverId: number | null) => void;
-  alarmCompany?: string | null; // Empresa de la alarma para pre-filtrar
+  alarmCompany?: string | null;
   disabled?: boolean;
-}
-
-const getEmpresaNameFromIdString = (idString: string | undefined): string => {
-    if (idString === '1') return 'Monte Vera';
-    if (idString === '2') return 'Laguna Paiva';
-    return idString || 'Desconocida';
 }
 
 export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany, disabled }: DriverSelectorProps) {
@@ -45,16 +39,15 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
   }, []);
 
   useEffect(() => {
-    // Pre-seleccionar el filtro de empresa si la alarma tiene una
     if(alarmCompany) {
-        if (alarmCompany.toLowerCase().includes('monte')) setCompanyFilter('1');
-        else if (alarmCompany.toLowerCase().includes('laguna')) setCompanyFilter('2');
+        if (alarmCompany.toLowerCase().includes('monte')) setCompanyFilter('Monte Vera');
+        else if (alarmCompany.toLowerCase().includes('laguna')) setCompanyFilter('Laguna Paiva');
     }
   }, [alarmCompany]);
 
   const filteredDrivers = useMemo(() => {
     if (companyFilter === 'all') return allDrivers;
-    return allDrivers.filter(driver => driver.empresa?.includes(getEmpresaNameFromIdString(companyFilter)));
+    return allDrivers.filter(driver => driver.empresa?.includes(companyFilter));
   }, [allDrivers, companyFilter]);
   
   const selectedDriver = useMemo(() => {
@@ -78,7 +71,8 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
         >
           <div className="flex items-center gap-2 truncate">
             <User className="h-4 w-4" />
-            {selectedDriver ? `${selectedDriver.nombre} ${selectedDriver.apellido}` : "Asignar un chofer..."}
+            {/* --- CAMBIO: Usamos el campo unificado --- */}
+            {selectedDriver ? selectedDriver.apellido_nombre : "Asignar un chofer..."}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -88,8 +82,8 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
           <CommandInput placeholder="Buscar chofer por nombre o DNI..." />
           <div className="p-2 border-b flex gap-2">
               <Button size="sm" variant={companyFilter === 'all' ? 'default' : 'outline'} onClick={() => setCompanyFilter('all')}>Todos</Button>
-              <Button size="sm" variant={companyFilter === '1' ? 'default' : 'outline'} onClick={() => setCompanyFilter('1')}>Monte Vera</Button>
-              <Button size="sm" variant={companyFilter === '2' ? 'default' : 'outline'} onClick={() => setCompanyFilter('2')}>Laguna Paiva</Button>
+              <Button size="sm" variant={companyFilter === 'Monte Vera' ? 'default' : 'outline'} onClick={() => setCompanyFilter('Monte Vera')}>Monte Vera</Button>
+              <Button size="sm" variant={companyFilter === 'Laguna Paiva' ? 'default' : 'outline'} onClick={() => setCompanyFilter('Laguna Paiva')}>Laguna Paiva</Button>
           </div>
           <CommandList>
             <CommandEmpty>{isLoading ? "Cargando..." : "No se encontró ningún chofer."}</CommandEmpty>
@@ -101,12 +95,14 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
               {filteredDrivers.map((driver) => (
                 <CommandItem
                   key={driver.choferes_id}
-                  value={`${driver.nombre} ${driver.apellido} ${driver.dni}`}
+                  // --- CAMBIO: Actualizamos el valor de búsqueda ---
+                  value={`${driver.apellido_nombre} ${driver.dni}`}
                   onSelect={() => handleSelect(driver.choferes_id)}
                 >
                   <Check className={cn("mr-2 h-4 w-4", selectedDriverId === driver.choferes_id ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
-                    <span>{driver.nombre} {driver.apellido}</span>
+                    {/* --- CAMBIO: Usamos el campo unificado --- */}
+                    <span>{driver.apellido_nombre}</span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Building className="h-3 w-3"/>
                         {driver.empresa}

@@ -21,8 +21,8 @@ export interface DriverStats {
 // Representa un chofer en una lista o como detalle
 export interface Driver {
     choferes_id: number;
-    nombre: string;
-    apellido: string;
+    // --- CAMBIO: Unificamos a un solo campo ---
+    apellido_nombre: string;
     foto: string | null;
     dni: string | null;
     anios: number | null; // Este campo es el legajo
@@ -30,7 +30,6 @@ export interface Driver {
     estado?: string;
     sector?: string;
     puesto?: string;
-    // Estos campos son opcionales porque solo vienen en la vista de detalle
     stats?: DriverStats;
     alarmas?: Alarm[];
 }
@@ -38,7 +37,8 @@ export interface Driver {
 // Representa un chofer dentro de una alarma (versión simplificada)
 export interface AlarmDriver {
     id: string;
-    name: string;
+    // --- CAMBIO: 'name' se convierte en 'apellido_nombre' por consistencia ---
+    apellido_nombre: string;
     license: string;
     company?: string;
 }
@@ -51,6 +51,12 @@ export interface Vehicle {
     company?: string;
 }
 
+// --- NUEVO: Tipo para la anomalía ---
+export interface Anomalia {
+    id: number;
+    nombre: string;
+    descripcion: string;
+}
 export interface Alarm {
     id: string;
     status: AlarmStatus;
@@ -66,8 +72,7 @@ export interface Alarm {
         longitude: number;
         address: string;
     };
-    // El chofer puede ser nulo si no está asignado
-    driver: AlarmDriver | null; 
+    driver: AlarmDriver | null;
     vehicle: Vehicle | null;
     device: {
         id: string;
@@ -75,6 +80,8 @@ export interface Alarm {
         serialNumber: string;
     } | null;
     media: MediaItem[];
+    // --- NUEVO: Añadimos el campo de anomalía, que puede ser nulo ---
+    anomalia: Anomalia | null;
     comments: string[];
 }
 
