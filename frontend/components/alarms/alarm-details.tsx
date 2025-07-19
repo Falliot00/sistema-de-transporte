@@ -216,7 +216,7 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
             <InfoItem 
               icon={alarm.driver ? <User className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />} 
               label="Chofer Asignado" 
-              value={alarm.driver ? alarm.driver.name : "Sin Asignar"} 
+              value={alarm.driver ? alarm.driver.apellido_nombre : "Sin Asignar"} 
             />
             <InfoItem 
               icon={<CarFront className="h-4 w-4" />} 

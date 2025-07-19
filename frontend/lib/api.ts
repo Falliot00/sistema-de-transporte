@@ -6,7 +6,8 @@ import {
     GetAlarmsParams, 
     DashboardSummary,
     DeviceListItem,
-    DeviceDetails 
+    DeviceDetails,
+    Anomaly 
 } from "@/types";
 
 const isServer = typeof window === 'undefined';
@@ -111,12 +112,13 @@ export async function assignDriver(alarmId: string, choferId: number | null): Pr
 
 /**
  * Confirma finalmente una alarma (Sospechosa -> Confirmada).
+ * ACTUALIZADO: Ahora incluye anomalyId como parámetro obligatorio
  */
-export async function confirmAlarm(alarmId: string, description?: string, choferId?: number): Promise<Alarm> {
+export async function confirmAlarm(alarmId: string, description?: string, choferId?: number, anomalyId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ descripcion: description, choferId }),
+        body: JSON.stringify({ descripcion: description, choferId, anomalyId }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -285,5 +287,23 @@ export async function getDispositivoDetails(id: string): Promise<DeviceDetails> 
     } catch (error) {
         console.error(`Hubo un problema con la operación de fetch en getDispositivoDetails para el id ${id}:`, error);
         throw error;
+    }
+}
+
+/**
+ * Obtiene todas las anomalías disponibles desde la base de datos
+ */
+export async function getAnomalias(): Promise<Anomaly[]> {
+    try {
+        const response = await fetch(`${API_URL}/anomalias`);
+        if (!response.ok) {
+            console.error('Response status:', response.status);
+            throw new Error(`Error al obtener las anomalías: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Error en getAnomalias:", error);
+        return [];
     }
 }

@@ -9,11 +9,12 @@ import { PlusCircle, Loader2 } from 'lucide-react';
 import { Alarm } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { DriverSelector } from './driver-selector';
+import { AnomalySelector } from './anomaly-selector';
 
 interface AlarmActionFormProps {
   alarm: Alarm;
-  // SOLUCIÓN: La prop onAction ahora acepta que choferId pueda ser null.
-  onAction: (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => void;
+  // ACTUALIZACIÓN: La prop onAction ahora también acepta anomalyId
+  onAction: (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null, anomalyId?: number | null }) => void;
   isSubmitting: boolean;
   confirmText?: string;
   rejectText?: string;
@@ -35,19 +36,30 @@ export function AlarmActionForm({
   const [selectedDriverId, setSelectedDriverId] = useState<number | null | undefined>(
     alarm.driver ? Number(alarm.driver.id) : null
   );
+  const [selectedAnomalyId, setSelectedAnomalyId] = useState<number | null>(
+    alarm.anomalia ? alarm.anomalia.idAnomalia : null
+  );
   const { toast } = useToast();
 
   useEffect(() => {
     setDescription(initialDescription || alarm.descripcion || "");
     setSelectedDriverId(alarm.driver ? Number(alarm.driver.id) : null);
+    setSelectedAnomalyId(alarm.anomalia ? alarm.anomalia.idAnomalia : null);
   }, [alarm, initialDescription]);
 
   const handleAction = (action: 'confirmed' | 'rejected') => {
-    if (action === 'confirmed' && alarm.status === 'suspicious' && selectedDriverId === null) {
+    
+    if (action === 'confirmed' && alarm.status === 'suspicious') {
+      if (selectedDriverId === null) {
         toast({ title: "Asignación Requerida", description: "Debes asignar un chofer para confirmar una alarma sospechosa.", variant: "destructive" });
         return;
+      }
+      if (selectedAnomalyId === null || selectedAnomalyId === undefined) {
+        toast({ title: "Anomalía Requerida", description: "Debes seleccionar una anomalía para confirmar la alarma.", variant: "destructive" });
+        return;
+      }
     }
-    onAction({ action, description, choferId: selectedDriverId });
+    onAction({ action, description, choferId: selectedDriverId, anomalyId: selectedAnomalyId });
   };
 
   return (
@@ -61,6 +73,22 @@ export function AlarmActionForm({
                 selectedDriverId={selectedDriverId}
                 onSelectDriver={(driverId) => setSelectedDriverId(driverId)}
                 alarmCompany={alarm.company}
+                disabled={isSubmitting}
+            />
+        </div>
+      )}
+
+      {/* NUEVO: Selector de anomalías - solo se muestra cuando se está confirmando una alarma sospechosa */}
+      {alarm.status === 'suspicious' && (
+        <div>
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block">
+                Tipificar Anomalía
+            </label>
+            <AnomalySelector
+                selectedAnomalyId={selectedAnomalyId}
+                onSelectAnomaly={(anomalyId) => {
+                    setSelectedAnomalyId(anomalyId);
+                }}
                 disabled={isSubmitting}
             />
         </div>

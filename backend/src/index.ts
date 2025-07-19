@@ -5,8 +5,8 @@ import { config } from './config';
 import alarmasRouter from './routes/alarmas';
 import choferesRouter from './routes/choferes';
 import dashboardRouter from './routes/dashboard';
-// --- NUEVA IMPORTACIÓN ---
 import dispositivosRouter from './routes/dispositivos';
+import anomaliasRouter from './routes/anomalias';
 
 const app = express();
 
@@ -26,8 +26,8 @@ app.get('/api', (req, res) => {
 app.use('/api/alarmas', alarmasRouter);
 app.use('/api/choferes', choferesRouter);
 app.use('/api/dashboard', dashboardRouter);
-// --- NUEVA RUTA REGISTRADA ---
 app.use('/api/dispositivos', dispositivosRouter);
+app.use('/api/anomalias', anomaliasRouter);
 
 // Iniciar el servidor (sin cambios)
 app.listen(config.port, () => {

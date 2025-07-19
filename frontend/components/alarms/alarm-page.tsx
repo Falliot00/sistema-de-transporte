@@ -208,36 +208,52 @@ export default function AlarmsPage() {
         resetNavigation(); 
     };
 
-    const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => { 
-        if (!alarmForDetails) return; 
-        const { action, description, choferId } = payload; 
-        const alarmIdToUpdate = alarmForDetails.id; 
-        setIsSubmitting(true); 
-        try { 
-            if (alarmForDetails.status === 'pending') { 
-                await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
-            } else if (alarmForDetails.status === 'suspicious') { 
-                if (action === 'confirmed' && (choferId === null || choferId === undefined)) { 
-                    toast({ title: "Error de Validación", description: "Se requiere un chofer para confirmar la alarma.", variant: "destructive" }); 
-                    setIsSubmitting(false); 
-                    return; 
-                } 
-                if (action === 'confirmed') { 
-                    await confirmAlarm(alarmIdToUpdate, description, choferId as number); 
-                } else { 
-                    await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
-                } 
-            } 
-            toast({ title: "Alarma Actualizada" }); 
-            removeAlarm(alarmIdToUpdate); 
-            if (hasNext) { await goToNext(); } else if (hasPrevious) { goToPrevious(); } else { handleDialogClose(); } 
-            fetchAlarms(); 
-        } catch (error: any) { 
-            toast({ title: "Error", variant: "destructive", description: error.message }); 
-        } finally { 
-            setIsSubmitting(false); 
-        } 
-    };
+    const handleDialogAction = async (payload: {
+  action: 'confirmed' | 'rejected',
+  description: string,
+  choferId?: number | null,
+  anomalyId?: number | null
+}) => {
+  if (!alarmForDetails) return;
+
+  const { action, description, choferId, anomalyId } = payload;
+  const alarmIdToUpdate = alarmForDetails.id;
+  setIsSubmitting(true);
+
+  try {
+    if (alarmForDetails.status === 'pending') {
+      await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined);
+    } else if (alarmForDetails.status === 'suspicious') {
+      if (action === 'confirmed') {
+        // VALIDACIÓN
+        if (choferId == null) {
+          toast({ title: "Falta chofer", variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+        if (anomalyId == null) {
+          toast({ title: "Falta anomalía", variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+        // ✅ LLAMADA CORRECTA
+        await confirmAlarm(alarmIdToUpdate, description, choferId, anomalyId);
+      } else {
+        await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined);
+      }
+    }
+    toast({ title: "Alarma actualizada" });
+    removeAlarm(alarmIdToUpdate);
+    if (hasNext) await goToNext();
+    else if (hasPrevious) goToPrevious();
+    else handleDialogClose();
+    fetchAlarms();
+  } catch (error: any) {
+    toast({ title: "Error", variant: "destructive", description: error.message });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
     const handleReEvaluate = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => { 
         if (!alarmForDetails || payload.action === 'rejected') { 

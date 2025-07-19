@@ -37,16 +37,6 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
 
     return (
         <div className="space-y-6">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem><BreadcrumbLink href="/" className="flex items-center gap-1"><Home className="h-4 w-4"/> Home</BreadcrumbLink></BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem><BreadcrumbLink href="/devices">Dispositivos</BreadcrumbLink></BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem><BreadcrumbPage>{deviceName}</BreadcrumbPage></BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-            
             <div className="flex items-center gap-6">
                 <div className="p-4 rounded-full bg-primary/10 border">
                     <Server className="h-10 w-10 text-primary" />

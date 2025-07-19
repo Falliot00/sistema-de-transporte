@@ -236,7 +236,7 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
 
 export const confirmFinalAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { descripcion, choferId } = req.body;
+    const { descripcion, choferId, anomalyId } = req.body; // NUEVO: Añadimos anomalyId
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
@@ -244,6 +244,7 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         
         const dataToUpdate: Prisma.AlarmasHistoricoUpdateInput = { estado: 'Confirmada' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
+        
         if (typeof choferId !== 'number') return res.status(400).json({ message: "La selección de un chofer es obligatoria para confirmar la alarma." });
         
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
@@ -252,8 +253,21 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         if (choferToAssign.idEmpresa !== alarm.idEmpresa) {
             return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa de la alarma.` });
         }
-        // --- CORRECCIÓN DEL ERROR 3 ---
+        
         dataToUpdate.chofer = { connect: { choferes_id: choferId } };
+        
+        // NUEVO: Validación y asignación de anomalía
+        if (typeof anomalyId !== 'number') {
+            return res.status(400).json({ message: "La selección de una anomalía es obligatoria para confirmar la alarma." });
+        }
+        
+        const anomaliaToAssign = await prisma.anomalia.findUnique({ where: { idAnomalia: anomalyId } });
+        if (!anomaliaToAssign) {
+            return res.status(404).json({ message: `La anomalía con ID ${anomalyId} no existe.` });
+        }
+        
+        // Conectamos la anomalía usando la relación anomaliaInfo
+        dataToUpdate.anomaliaInfo = { connect: { idAnomalia: anomalyId } };
 
         const updatedAlarm = await prisma.alarmasHistorico.update({
             where: { guid: id },

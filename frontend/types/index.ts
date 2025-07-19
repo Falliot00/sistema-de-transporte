@@ -27,12 +27,6 @@ export interface Vehicle {
     company?: string;
 }
 
-export interface Anomalia {
-    id: number;
-    nombre: string;
-    descripcion: string;
-}
-
 export interface Alarm {
     id: string;
     status: AlarmStatus;
@@ -56,7 +50,7 @@ export interface Alarm {
         serialNumber: string;
     } | null;
     media: MediaItem[];
-    anomalia: Anomalia | null;
+    anomalia: Anomaly | null; 
     comments: string[];
 }
 
@@ -217,4 +211,17 @@ export interface DashboardSummary {
     hourlyDistribution: HourlyDistribution[];
     driverRanking: DriverRanking[];
     topDevices: Device[];
+}
+
+export interface Anomaly {
+    idAnomalia: number;
+    nomAnomalia: string | null;
+    descAnomalia: string | null;
+}
+
+export interface DeviceSummary {
+  active: number;
+  maintenance: number;
+  offline: number;
+  total: number;
 }
