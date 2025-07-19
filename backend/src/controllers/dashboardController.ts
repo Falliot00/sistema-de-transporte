@@ -4,175 +4,179 @@ import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Nota: DB_QUERY_STATUS_MAP no se usa aquí, se puede eliminar si no se añade más lógica.
+const CONFIRMED_STATUSES = ['Confirmada', 'confirmed'];
+const REJECTED_STATUSES = ['Rechazada', 'rejected'];
+
+const buildDashboardWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput => {
+    const { startDate, endDate, type, company } = queryParams;
+    
+    let whereClause: Prisma.AlarmasHistoricoWhereInput = {};
+
+    if (startDate && endDate && startDate !== 'undefined' && endDate !== 'undefined') {
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+        end.setUTCHours(23, 59, 59, 999);
+        whereClause.alarmTime = { gte: start, lte: end };
+    }
+
+    const typeFilters = Array.isArray(type) ? type : (type ? [type] : []);
+    if (typeFilters.length > 0) {
+        whereClause.typeAlarm = { alarm: { in: typeFilters } };
+    }
+    
+    const companyFilters = Array.isArray(company) ? company : (company ? [company] : []);
+    if (companyFilters.length > 0) {
+        const lowerCaseCompanies = companyFilters.map(c => c.toLowerCase());
+        whereClause.empresaInfo = { 
+            nombreMin: { 
+                in: lowerCaseCompanies 
+            } 
+        };
+    }
+    
+    return whereClause;
+};
+
 
 export const getSummary = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
-    if (!startDate || !endDate || typeof startDate !== 'string' || typeof endDate !== 'string') {
-        return res.status(400).json({ message: 'Los parámetros startDate y endDate son requeridos.' });
-    }
-
     try {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setUTCHours(23, 59, 59, 999);
+        const whereClause = buildDashboardWhereClause(req.query);
 
-        const endOfWeek = new Date(end);
-        const startOfWeek = new Date(end);
-        startOfWeek.setDate(endOfWeek.getDate() - endOfWeek.getDay());
-        startOfWeek.setUTCHours(0, 0, 0, 0);
-        const startOfLastWeek = new Date(startOfWeek);
-        startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-        const endOfLastWeek = new Date(startOfWeek);
-        endOfLastWeek.setDate(startOfWeek.getDate() - 1);
-        endOfLastWeek.setUTCHours(23, 59, 59, 999);
+        // Lógica para construir la cláusula WHERE en queries RAW
+        const rawWhereConditions: Prisma.Sql[] = [];
+        if (startDate && endDate && startDate !== 'undefined' && endDate !== 'undefined') {
+            rawWhereConditions.push(Prisma.sql`a.alarmTime >= ${new Date(startDate as string)} AND a.alarmTime <= ${new Date(endDate as string)}`);
+        }
+        const rawWhereStatement = rawWhereConditions.length > 0 
+            ? Prisma.sql`WHERE ${Prisma.join(rawWhereConditions, ' AND ')}` 
+            : Prisma.empty;
+        
+        // Versión para queries que no usan el alias 'a'
+        const rawWhereStatementNoAlias = rawWhereConditions.length > 0 
+            ? Prisma.sql`WHERE alarmTime >= ${new Date(startDate as string)} AND alarmTime <= ${new Date(endDate as string)}` 
+            : Prisma.empty;
 
-        // --- INICIO DE CORRECCIONES EN QUERIES RAW ---
         const [
             kpiData,
             alarmsByDay,
             alarmsByType,
             alarmsByStatus,
             hourlyDistribution,
-            weeklyTrend,
             driverRanking,
-            deviceSummary
+            topDevices,
+            avgAlarmsPerDriverData,
+            avgAlarmsPerDeviceData
         ] = await Promise.all([
-            // Esta consulta usa el modelo, por lo que está bien.
-            prisma.alarmasHistorico.aggregate({ _count: { guid: true }, where: { alarmTime: { gte: start, lte: end } } }),
-            
-            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
-            prisma.$queryRaw`SELECT CAST(alarmTime AS DATE) as date, COUNT(*) as total, SUM(CASE WHEN estado IN ('Confirmada', 'confirmed') THEN 1 ELSE 0 END) as confirmed, SUM(CASE WHEN estado = 'Pendiente' THEN 1 ELSE 0 END) as pending FROM alarmas.alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY CAST(alarmTime AS DATE) ORDER BY date ASC;`,
-            
-            // Esta consulta usa el modelo, por lo que está bien.
-            prisma.alarmasHistorico.groupBy({ by: ['alarmTypeId'], where: { alarmTime: { gte: start, lte: end }, alarmTypeId: { not: null } }, _count: { alarmTypeId: true }, orderBy: { _count: { alarmTypeId: 'desc' } } }),
-            
-            // Esta consulta usa el modelo, por lo que está bien.
-            prisma.alarmasHistorico.groupBy({ by: ['estado'], where: { alarmTime: { gte: start, lte: end } }, _count: { estado: true } }),
-
-            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
-            prisma.$queryRaw`SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count FROM alarmas.alarmasHistorico WHERE alarmTime >= ${start} AND alarmTime <= ${end} GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC;`,
-
-            // CORRECCIÓN: Usamos el nombre completo de la tabla [schema].[tabla]
-            prisma.$queryRaw`SELECT DATENAME(weekday, alarmTime) as dayName, DATEPART(weekday, alarmTime) as dayOfWeek, SUM(CASE WHEN alarmTime >= ${startOfWeek} AND alarmTime <= ${endOfWeek} THEN 1 ELSE 0 END) as thisWeek, SUM(CASE WHEN alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfLastWeek} THEN 1 ELSE 0 END) as lastWeek FROM alarmas.alarmasHistorico WHERE alarmTime >= ${startOfLastWeek} AND alarmTime <= ${endOfWeek} GROUP BY DATENAME(weekday, alarmTime), DATEPART(weekday, alarmTime) ORDER BY dayOfWeek ASC;`,
-            
-            // CORRECCIÓN: Usamos los nombres completos de las tablas y las columnas correctas
+            prisma.alarmasHistorico.groupBy({ by: ['estado'], where: whereClause, _count: { guid: true } }),
             prisma.$queryRaw`
-                SELECT
-                    c.idEmpleado, c.apellido_nombre, c.foto,
-                    COUNT(a.guid) as totalAlarms,
-                    SUM(CASE WHEN a.estado IN ('Confirmada', 'confirmed') THEN 1 ELSE 0 END) as confirmedAlarms
-                FROM dimCentral.empleados c
-                LEFT JOIN alarmas.alarmasHistorico a ON c.idEmpleado = a.chofer AND a.alarmTime >= ${start} AND a.alarmTime <= ${end}
-                GROUP BY c.idEmpleado, c.apellido_nombre, c.foto
-                ORDER BY confirmedAlarms DESC, totalAlarms DESC
-                OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
+                SELECT CAST(alarmTime AS DATE) as date, COUNT(*) as total, 
+                       SUM(CASE WHEN estado IN (${Prisma.join(CONFIRMED_STATUSES)}) THEN 1 ELSE 0 END) as confirmed, 
+                       SUM(CASE WHEN estado = 'Pendiente' THEN 1 ELSE 0 END) as pending 
+                FROM alarmas.alarmasHistorico
+                ${rawWhereStatementNoAlias}
+                GROUP BY CAST(alarmTime AS DATE) ORDER BY date ASC;
             `,
-            
-            // Esta usa el modelo, está bien.
-            prisma.alarmasHistorico.groupBy({
-                by: ['dispositivo'],
-                _count: { dispositivo: true },
-                where: { alarmTime: { gte: start, lte: end } },
-                orderBy: { _count: { dispositivo: 'desc' } },
-                take: 5
-            })
+            prisma.alarmasHistorico.groupBy({ by: ['alarmTypeId'], where: whereClause, _count: { alarmTypeId: true }, orderBy: { _count: { alarmTypeId: 'desc' } } }),
+            prisma.alarmasHistorico.groupBy({ by: ['estado'], where: whereClause, _count: { estado: true } }),
+            prisma.$queryRaw`
+                SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count 
+                FROM alarmas.alarmasHistorico
+                ${rawWhereStatementNoAlias}
+                GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC;
+            `,
+            prisma.$queryRaw`
+                SELECT c.idEmpleado, c.apellido_nombre, c.foto, COUNT(a.guid) as totalAlarms, SUM(CASE WHEN a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) THEN 1 ELSE 0 END) as confirmedAlarms
+                FROM dimCentral.empleados c 
+                JOIN alarmas.alarmasHistorico a ON c.idEmpleado = a.chofer
+                ${rawWhereStatement}
+                GROUP BY c.idEmpleado, c.apellido_nombre, c.foto HAVING COUNT(a.guid) > 0 ORDER BY confirmedAlarms DESC, totalAlarms DESC;`,
+            prisma.$queryRaw`
+                SELECT TOP 10 d.nroInterno, d.patente, d.idDispositivo, COUNT(a.guid) as alarmCount
+                FROM alarmas.dispositivos d 
+                JOIN alarmas.alarmasHistorico a ON d.idDispositivo = a.dispositivo
+                ${rawWhereStatement}
+                GROUP BY d.nroInterno, d.patente, d.idDispositivo HAVING COUNT(a.guid) > 0 ORDER BY alarmCount DESC;`,
+            prisma.$queryRaw`
+                SELECT 
+                    CAST(COUNT(*) AS FLOAT) AS total_confirmed_alarms, 
+                    CAST(COUNT(DISTINCT chofer) AS FLOAT) AS total_drivers_with_alarms
+                FROM alarmas.alarmasHistorico a
+                ${rawWhereStatement.text ? Prisma.sql`${rawWhereStatement} AND a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND a.chofer IS NOT NULL` : Prisma.sql`WHERE a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND a.chofer IS NOT NULL`};`,
+            prisma.$queryRaw`
+                SELECT 
+                    CAST(COUNT(*) AS FLOAT) AS total_confirmed_alarms, 
+                    CAST(COUNT(DISTINCT dispositivo) AS FLOAT) AS total_devices_with_alarms
+                FROM alarmas.alarmasHistorico a
+                ${rawWhereStatement.text ? Prisma.sql`${rawWhereStatement} AND a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND a.dispositivo IS NOT NULL` : Prisma.sql`WHERE a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND a.dispositivo IS NOT NULL`};`
         ]);
-        // --- FIN DE CORRECCIONES EN QUERIES RAW ---
 
-        const totalAlarms = kpiData._count.guid;
+        // --- PROCESAMIENTO DE DATOS ---
+        const totalAlarms = kpiData.reduce((acc, item) => acc + (item._count.guid || 0), 0);
+        const confirmedCount = kpiData.find(item => CONFIRMED_STATUSES.includes(item.estado || ''))?._count.guid || 0;
+        const rejectedCount = kpiData.find(item => REJECTED_STATUSES.includes(item.estado || ''))?._count.guid || 0;
+        const totalProcessed = confirmedCount + rejectedCount;
+        const confirmationRate = totalProcessed > 0 ? (confirmedCount / totalProcessed) * 100 : 0;
+
+        const avgDriverData = (avgAlarmsPerDriverData as any[])?.[0] || { total_confirmed_alarms: 0, total_drivers_with_alarms: 0 };
+        const avgAlarmsPerDriver = avgDriverData.total_drivers_with_alarms > 0 ? (avgDriverData.total_confirmed_alarms / avgDriverData.total_drivers_with_alarms).toFixed(1) : "0.0";
+
+        const avgDeviceData = (avgAlarmsPerDeviceData as any[])?.[0] || { total_confirmed_alarms: 0, total_devices_with_alarms: 0 };
+        const avgAlarmsPerDevice = avgDeviceData.total_devices_with_alarms > 0 ? (avgDeviceData.total_confirmed_alarms / avgDeviceData.total_devices_with_alarms).toFixed(1) : "0.0";
+
         const typeAlarms = await prisma.typeAlarms.findMany();
         const typeMap = new Map(typeAlarms.map(t => [t.type, t.alarm]));
-        const alarmsByTypeProcessed = (alarmsByType as any[]).map(item => ({
+        const alarmsByTypeProcessed = (alarmsByType as any[] || []).map(item => ({
             name: typeMap.get(item.alarmTypeId) || 'Desconocido',
             value: item._count.alarmTypeId,
         }));
         
         const statusCounts: { [key: string]: number } = {};
-        (alarmsByStatus as any[]).forEach(item => {
-            if(item.estado) { statusCounts[item.estado.toLowerCase()] = item._count.estado; }
+        (alarmsByStatus as any[] || []).forEach(item => {
+            if(item.estado) { statusCounts[item.estado.toLowerCase()] = item._count.estado || 0; }
         });
-        const confirmedCount = (statusCounts['confirmada'] || 0) + (statusCounts['confirmed'] || 0);
-        const rejectedCount = (statusCounts['rechazada'] || 0) + (statusCounts['rejected'] || 0);
-        const totalProcessed = confirmedCount + rejectedCount;
-        const confirmationRate = totalProcessed > 0 ? (confirmedCount / totalProcessed) * 100 : 0;
+        
+        const alarmsByDayData = (alarmsByDay as any[] || []).map(d => ({
+            name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+            Total: d.total || 0,
+            Confirmadas: d.confirmed || 0,
+            Pendientes: d.pending || 0,
+        }));
 
         const hourlyData = Array(24).fill(0).map((_, i) => ({ hour: `${i}:00`, alarmas: 0 }));
-        (hourlyDistribution as any[]).forEach(item => {
-            hourlyData[item.hour].alarmas = item.count;
-        });
-
-        const weekDays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const weeklyDataMap = new Map(weekDays.map(day => [day, { EsteSemana: 0, SemanaPasada: 0 }]));
-        (weeklyTrend as any[]).forEach(item => {
-            const day = item.dayName.charAt(0).toUpperCase() + item.dayName.slice(1);
-            if(weeklyDataMap.has(day)) {
-                weeklyDataMap.set(day, { EsteSemana: item.thisWeek, SemanaPasada: item.lastWeek });
+        (hourlyDistribution as any[] || []).forEach(item => {
+            if (item.hour !== null && item.hour >= 0 && item.hour < 24) {
+                hourlyData[item.hour].alarmas = Number(item.count);
             }
         });
-        const weeklyData = Array.from(weeklyDataMap.entries()).map(([name, values]) => ({ name: name.substring(0, 3), ...values }));
-        
-        const driverRankingProcessed = (driverRanking as any[]).map(driver => {
+
+        const driverRankingProcessed = (driverRanking as any[] || []).map(driver => {
             const total = Number(driver.totalAlarms) || 0;
             const confirmed = Number(driver.confirmedAlarms) || 0;
-            // Parsear nombre y apellido desde 'apellido_nombre'
-            const parts = driver.apellido_nombre.split(' ');
-            const apellido = parts[0] || '';
-            const nombre = parts.slice(1).join(' ');
-
-            return {
-                id: driver.idEmpleado,
-                name: `${nombre} ${apellido}`.trim(),
-                avatar: driver.foto,
-                totalAlarms: total,
-                confirmationRate: total > 0 ? Math.round((confirmed / total) * 100) : 0,
-                efficiencyScore: total > 0 ? Math.round(100 - ((confirmed / total) * 100)) : 100,
-            };
+            const confirmationRate = total > 0 ? Math.round((confirmed / total) * 100) : 0;
+            return { id: driver.idEmpleado, name: driver.apellido_nombre, avatar: driver.foto, totalAlarms: total, confirmedAlarms: confirmed, confirmationRate, efficiencyScore: 100 - confirmationRate };
         });
-
-        const totalUniqueDevices = await prisma.alarmasHistorico.aggregate({
-            _count: { _all: true },
-            where: { alarmTime: { gte: start, lte: end }, dispositivo: { not: null }},
-            /*distinct: ['dispositivo']*/
-        }).then(d => d._count._all);
-
-        const deviceSummaryProcessed = {
-            active: totalUniqueDevices,
-            maintenance: 0,
-            offline: 0,
-            total: totalUniqueDevices,
-        };
-
-        const topDevicesProcessed = (deviceSummary as any[]).map(device => ({
-            id: device.dispositivo,
-            name: `Dispositivo ${device.dispositivo}`,
-            serialNumber: device.dispositivo,
-            alarmCount: device._count.dispositivo,
+        
+        const topDevicesProcessed = (topDevices as any[] || []).map(device => ({
+            id: device.idDispositivo,
+            name: `Interno ${device.nroInterno || 'N/A'}`,
+            serialNumber: device.patente || 'Sin Patente',
+            alarmCount: Number(device.alarmCount) || 0,
             status: 'active'
         }));
         
         const summaryPayload = {
-            kpis: {
-                totalAlarms,
-                confirmationRate: confirmationRate.toFixed(1),
-            },
-            alarmsByDay: (alarmsByDay as any[]).map(d => ({
-                name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
-                Total: d.total,
-                Confirmadas: d.confirmed,
-                Pendientes: d.pending,
-            })),
+            kpis: { totalAlarms, confirmationRate: confirmationRate.toFixed(1), avgAlarmsPerDriver, avgAlarmsPerDevice },
+            alarmsByDay: alarmsByDayData,
             alarmsByType: alarmsByTypeProcessed,
             alarmStatusProgress: [
                 { title: 'Pendientes', value: statusCounts['pendiente'] || 0, total: totalAlarms, color: 'hsl(var(--chart-4))' },
                 { title: 'Sospechosas', value: statusCounts['sospechosa'] || 0, total: totalAlarms, color: 'hsl(var(--chart-1))' },
-                { title: 'Confirmadas', value: confirmedCount, total: totalAlarms, color: 'hsl(var(--chart-2))' },
+                { title: 'Confirmadas', value: (statusCounts['confirmada'] || 0) + (statusCounts['confirmed'] || 0), total: totalAlarms, color: 'hsl(var(--chart-2))' },
             ],
             hourlyDistribution: hourlyData,
-            weeklyTrend: weeklyData,
             driverRanking: driverRankingProcessed,
-            deviceSummary: deviceSummaryProcessed,
             topDevices: topDevicesProcessed
         };
 

@@ -1,10 +1,10 @@
-// components/layout/main-nav.tsx
+// frontend/components/layout/main-nav.tsx
 "use client"
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ActivitySquare, Bell, LayoutDashboard, Settings, Users, LineChart } from "lucide-react";
+import { Bell, LineChart, Users, Server } from "lucide-react";
 
 interface MainNavProps {
   className?: string;
@@ -14,38 +14,48 @@ interface MainNavProps {
 export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
   const pathname = usePathname();
 
+  // --- CAMBIO: Añadimos una propiedad `colorClass` a cada ruta ---
   const routes = [
     {
       href: "/",
       label: "Alarmas",
-      icon: <Bell className="h-5 w-5" />,
+      // El icono ahora está envuelto en un span para aplicar el color
+      icon: <Bell className="h-5 w-5 text-black-800 dark:text-neutral-200" />,
       active: pathname === "/",
     },
     {
       href: "/dashboard",
       label: "Dashboard",
-      icon: <LineChart className="h-5 w-5" />,
+      icon: <LineChart className="h-5 w-5 text-green-600 dark:text-green-500" />,
       active: pathname.startsWith("/dashboard"),
     },
     {
       href: "/drivers",
       label: "Choferes",
-      icon: <Users className="h-5 w-5" />,
+      icon: <Users className="h-5 w-5 text-blue-600 dark:text-blue-500" />,
       active: pathname.startsWith("/drivers"),
     },
-    /* {
+    {
       href: "/devices",
       label: "Dispositivos",
-      icon: <ActivitySquare className="h-5 w-5" />,
+      icon: <Server className="h-5 w-5 text-amber-600 dark:text-amber-500" />,
       active: pathname.startsWith("/devices"),
     },
-    {
-      href: "/settings",
-      label: "Configuración",
-      icon: <Settings className="h-5 w-5" />,
-      active: pathname.startsWith("/settings"),
-    }, */
   ];
+
+  const linkClasses = (isActive: boolean) => cn(
+    "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors",
+    isActive
+      ? "bg-primary text-primary-foreground"
+      : "text-muted-foreground hover:text-primary hover:bg-muted"
+  );
+
+  const mobileLinkClasses = (isActive: boolean) => cn(
+    "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+    isActive
+      ? "bg-primary text-primary-foreground"
+      : "text-muted-foreground hover:text-primary hover:bg-muted"
+  );
 
   if (orientation === "horizontal") {
     return (
@@ -54,13 +64,9 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
           <Link
             key={route.href}
             href={route.href}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors",
-              route.active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-primary hover:bg-muted"
-            )}
+            className={linkClasses(route.active)}
           >
+            {/* El icono ya tiene su color asignado desde el array `routes` */}
             {route.icon}
             <span>{route.label}</span>
           </Link>
@@ -76,13 +82,9 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
         <Link
           key={route.href}
           href={route.href}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
-            route.active
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-primary hover:bg-muted"
-          )}
+          className={mobileLinkClasses(route.active)}
         >
+          {/* El icono ya tiene su color asignado desde el array `routes` */}
           {route.icon}
           <span>{route.label}</span>
         </Link>

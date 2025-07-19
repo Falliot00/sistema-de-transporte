@@ -1,43 +1,19 @@
 // frontend/types/index.ts
 
+// --- TIPOS BÁSICOS Y DE ALARMAS ---
+
 export type AlarmStatus = 'pending' | 'suspicious' | 'confirmed' | 'rejected';
-export type AlarmType = string; // Hacemos que sea un string genérico
+export type AlarmType = string;
 
 export interface MediaItem {
     id: string;
     type: 'image' | 'video';
     url: string;
-    thumbnailUrl?: string; 
+    thumbnailUrl?: string;
 }
 
-export interface DriverStats {
-    total: number;
-    pending: number;
-    suspicious: number;
-    confirmed: number;
-    rejected: number;
-}
-
-// Representa un chofer en una lista o como detalle
-export interface Driver {
-    choferes_id: number;
-    // --- CAMBIO: Unificamos a un solo campo ---
-    apellido_nombre: string;
-    foto: string | null;
-    dni: string | null;
-    anios: number | null; // Este campo es el legajo
-    empresa: string | null;
-    estado?: string;
-    sector?: string;
-    puesto?: string;
-    stats?: DriverStats;
-    alarmas?: Alarm[];
-}
-
-// Representa un chofer dentro de una alarma (versión simplificada)
 export interface AlarmDriver {
     id: string;
-    // --- CAMBIO: 'name' se convierte en 'apellido_nombre' por consistencia ---
     apellido_nombre: string;
     license: string;
     company?: string;
@@ -51,12 +27,12 @@ export interface Vehicle {
     company?: string;
 }
 
-// --- NUEVO: Tipo para la anomalía ---
 export interface Anomalia {
     id: number;
     nombre: string;
     descripcion: string;
 }
+
 export interface Alarm {
     id: string;
     status: AlarmStatus;
@@ -80,10 +56,11 @@ export interface Alarm {
         serialNumber: string;
     } | null;
     media: MediaItem[];
-    // --- NUEVO: Añadimos el campo de anomalía, que puede ser nulo ---
     anomalia: Anomalia | null;
     comments: string[];
 }
+
+// --- TIPOS PARA RESPUESTAS DE API Y PARÁMETROS ---
 
 export interface PaginationInfo {
     totalAlarms: number;
@@ -118,10 +95,83 @@ export interface GetAlarmsParams {
     company?: string[];
 }
 
-// Tipos para el Dashboard
+// --- TIPOS DE CHOFERES ---
+
+export interface DriverStats {
+    total: number;
+    pending: number;
+    suspicious: number;
+    confirmed: number;
+    rejected: number;
+}
+
+export interface Driver {
+    choferes_id: number;
+    apellido_nombre: string;
+    foto: string | null;
+    dni: string | null;
+    anios: number | null;
+    empresa: string | null;
+    estado?: string;
+    sector?: string;
+    puesto?: string;
+    stats?: DriverStats;
+    alarmas?: Alarm[];
+}
+
+// --- TIPOS DE DISPOSITIVOS (NUEVOS Y ACTUALIZADOS) ---
+
+// Tipo que se usa en el Dashboard (lo mantenemos por consistencia)
+export interface Device {
+    id: number;
+    name: string; // "Interno XXX"
+    serialNumber: string; // Patente
+    status: 'active' | 'maintenance' | 'offline';
+    alarmCount: number;
+}
+
+// Tipo para un dispositivo en la nueva lista general /devices
+export interface DeviceListItem {
+    id: number;
+    idDispositivo: number;
+    nroInterno: number | null;
+    patente: string | null;
+    sim: string | null;
+    totalAlarmas: number;
+}
+
+// Tipo para las estadísticas de un dispositivo específico
+export interface DeviceStats {
+    totalAlarms: number;
+    totalAlarmsConfirmed: number;
+    alarmsByWeekday: {
+        dayName: string;
+        dayOfWeek: number;
+        total: number;
+    }[];
+}
+
+// Tipo para los tipos de alarmas más frecuentes de un dispositivo
+export interface TopAlarmType {
+    name: string;
+    count: number;
+}
+
+// Tipo para el detalle completo de un dispositivo
+export interface DeviceDetails extends DeviceListItem {
+    did: number | null;
+    stats: DeviceStats;
+    topAlarmTypes: TopAlarmType[];
+}
+
+
+// --- TIPOS PARA EL DASHBOARD ---
+
 export interface DashboardKPIs {
     totalAlarms: number;
     confirmationRate: string;
+    avgAlarmsPerDriver: string;
+    avgAlarmsPerDevice: string;
 }
 
 export interface AlarmsByDay {
@@ -149,34 +199,14 @@ export interface HourlyDistribution {
     alarmas: number;
 }
 
-export interface WeeklyTrend {
-    name: string;
-    EsteSemana: number;
-    SemanaPasada: number;
-}
-
 export interface DriverRanking {
     id: number;
     name: string;
     avatar: string | null;
     totalAlarms: number;
+    confirmedAlarms: number;
     confirmationRate: number;
     efficiencyScore: number;
-}
-
-export interface Device {
-    id: string;
-    name: string;
-    serialNumber: string;
-    status: 'active' | 'maintenance' | 'offline';
-    alarmCount: number;
-}
-
-export interface DeviceSummary {
-    active: number;
-    maintenance: number;
-    offline: number;
-    total: number;
 }
 
 export interface DashboardSummary {
@@ -185,8 +215,6 @@ export interface DashboardSummary {
     alarmsByType: AlarmsByType[];
     alarmStatusProgress: AlarmStatusProgress[];
     hourlyDistribution: HourlyDistribution[];
-    weeklyTrend: WeeklyTrend[];
     driverRanking: DriverRanking[];
-    deviceSummary: DeviceSummary;
     topDevices: Device[];
 }

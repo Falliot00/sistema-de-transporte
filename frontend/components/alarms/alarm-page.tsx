@@ -17,14 +17,15 @@ import { AlarmAnalysisView } from "./alarm-analysis-view";
 import { AlarmActionForm } from "./alarm-action-form";
 import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { AdvancedFilters } from "./advanced-filters";
-import { KPICard } from "./kpi-card";
+import { AdvancedFilters } from "@/components/shared/advanced-filters";
+import { KPICard } from "@/components/shared/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "../ui/pagination-controls";
 import { alarmTypes } from "@/lib/mock-data";
-import { DateRangePicker } from "../ui/date-range-picker";
+//import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { AnalysisFilters } from "./analysis-filters";
+// --- ELIMINADO: Ya no usaremos este componente aquí ---
+// import { AnalysisFilters } from "./analysis-filters";
 
 function useDebounce(value: string, delay: number): string {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -35,15 +36,9 @@ function useDebounce(value: string, delay: number): string {
     return debouncedValue;
 }
 
-const AVAILABLE_COMPANIES = ['LagunaPaiva', 'MonteVera'];
+const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 const ANALYSIS_PAGE_SIZE = 50;
 const ANALYSIS_PRELOAD_PAGES = 3;
-
-type AnalysisFilterState = {
-    types: string[];
-    companies: string[];
-    dateRange?: DateRange;
-};
 
 export default function AlarmsPage() {
     const { toast } = useToast();
@@ -61,9 +56,10 @@ export default function AlarmsPage() {
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-    const [analysisFilters, setAnalysisFilters] = useState<AnalysisFilterState>({ types: [], companies: [], dateRange: undefined });
-    const [analysisCounts, setAnalysisCounts] = useState<{ pending: number, suspicious: number }>({ pending: 0, suspicious: 0 });
-    const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+    // --- ELIMINADOS: Estados de filtros de análisis redundantes ---
+    // const [analysisFilters, setAnalysisFilters] = ...
+    // const [analysisCounts, setAnalysisCounts] = ...
+    // const [isLoadingCounts, setIsLoadingCounts] = ...
     
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     
@@ -79,9 +75,7 @@ export default function AlarmsPage() {
         removeAlarm,
         isLoadingMore,
         navigationState 
-    } = useAlarmNavigation((error) => {
-        toast({ title: "Error", description: error, variant: "destructive" });
-    });
+    } = useAlarmNavigation((error) => { toast({ title: "Error", description: error, variant: "destructive" }); });
     
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isAnalysisMode, setIsAnalysisMode] = useState(false);
@@ -95,13 +89,7 @@ export default function AlarmsPage() {
     const [lastProcessedAlarm, setLastProcessedAlarm] = useState<{alarm: Alarm, index: number} | null>(null);
     const [isUndoing, setIsUndoing] = useState<boolean>(false);
 
-    const [filteredCounts, setFilteredCounts] = useState<GlobalAlarmCounts>({ 
-        total: 0, 
-        pending: 0, 
-        suspicious: 0, 
-        confirmed: 0, 
-        rejected: 0 
-    });
+    const [filteredCounts, setFilteredCounts] = useState<GlobalAlarmCounts>({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
 
     const fetchAlarms = useCallback(async () => { 
         setIsLoading(true); 
@@ -122,38 +110,28 @@ export default function AlarmsPage() {
             setPaginationInfo(data.pagination); 
             setGlobalAlarmCounts(data.globalCounts);
             
-            if (statusFilter === 'all') {
-                const baseParams = { 
-                    search: debouncedSearchQuery, 
-                    type: typeFilters, 
-                    company: companyFilters, 
-                    startDate: dateRange?.from?.toISOString(), 
-                    endDate: dateRange?.to?.toISOString() 
-                };
-                
-                const [pendingCount, suspiciousCount, confirmedCount, rejectedCount] = await Promise.all([
-                    getAlarmsCount({ ...baseParams, status: 'pending' }),
-                    getAlarmsCount({ ...baseParams, status: 'suspicious' }),
-                    getAlarmsCount({ ...baseParams, status: 'confirmed' }),
-                    getAlarmsCount({ ...baseParams, status: 'rejected' })
-                ]);
-                
-                setFilteredCounts({
-                    total: data.pagination.totalAlarms,
-                    pending: pendingCount.count,
-                    suspicious: suspiciousCount.count,
-                    confirmed: confirmedCount.count,
-                    rejected: rejectedCount.count
-                });
-            } else {
-                setFilteredCounts({
-                    total: data.pagination.totalAlarms,
-                    pending: statusFilter === 'pending' ? data.pagination.totalAlarms : 0,
-                    suspicious: statusFilter === 'suspicious' ? data.pagination.totalAlarms : 0,
-                    confirmed: statusFilter === 'confirmed' ? data.pagination.totalAlarms : 0,
-                    rejected: statusFilter === 'rejected' ? data.pagination.totalAlarms : 0,
-                });
-            }
+            const baseParams = { 
+                search: debouncedSearchQuery, 
+                type: typeFilters, 
+                company: companyFilters, 
+                startDate: dateRange?.from?.toISOString(), 
+                endDate: dateRange?.to?.toISOString() 
+            };
+            
+            const [pendingCount, suspiciousCount, confirmedCount, rejectedCount] = await Promise.all([
+                getAlarmsCount({ ...baseParams, status: 'pending' }),
+                getAlarmsCount({ ...baseParams, status: 'suspicious' }),
+                getAlarmsCount({ ...baseParams, status: 'confirmed' }),
+                getAlarmsCount({ ...baseParams, status: 'rejected' })
+            ]);
+            
+            setFilteredCounts({
+                total: data.pagination.totalAlarms,
+                pending: pendingCount.count,
+                suspicious: suspiciousCount.count,
+                confirmed: confirmedCount.count,
+                rejected: rejectedCount.count
+            });
         } catch (e) { 
             setError("Error de conexión: No se pudieron cargar las alarmas."); 
             setAlarms([]); 
@@ -165,36 +143,15 @@ export default function AlarmsPage() {
         } 
     }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
 
-    const fetchAnalysisCounts = useCallback(async () => { 
-        setIsLoadingCounts(true); 
-        try { 
-            const commonParams: GetAlarmsParams = { 
-                type: analysisFilters.types, 
-                company: analysisFilters.companies, 
-                startDate: analysisFilters.dateRange?.from?.toISOString(), 
-                endDate: analysisFilters.dateRange?.to?.toISOString(), 
-            }; 
-            const [pendingData, suspiciousData] = await Promise.all([ 
-                getAlarmsCount({ ...commonParams, status: 'pending' }), 
-                getAlarmsCount({ ...commonParams, status: 'suspicious' }) 
-            ]); 
-            setAnalysisCounts({ pending: pendingData.count, suspicious: suspiciousData.count }); 
-        } catch (e) { 
-            console.error("Error al obtener conteos de análisis", e); 
-            setAnalysisCounts({ pending: 0, suspicious: 0 }); 
-        } finally { 
-            setIsLoadingCounts(false); 
-        } 
-    }, [analysisFilters]);
+    // --- ELIMINADO: useEffect y useCallback para fetchAnalysisCounts ---
 
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
     useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
-    useEffect(() => { fetchAnalysisCounts(); }, [fetchAnalysisCounts]);
 
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
-        const count = status === 'pending' ? analysisCounts.pending : analysisCounts.suspicious;
+        const count = status === 'pending' ? filteredCounts.pending : filteredCounts.suspicious;
         if (count === 0) { 
-            toast({ title: "Sin alarmas para analizar", description: "No hay alarmas que coincidan con los filtros seleccionados." }); 
+            toast({ title: "Sin alarmas para analizar", description: "No hay alarmas que coincidan con los filtros actuales." }); 
             return; 
         }
         
@@ -206,36 +163,29 @@ export default function AlarmsPage() {
             const params: GetAlarmsParams = { 
                 status, 
                 pageSize: ANALYSIS_PAGE_SIZE, 
-                type: analysisFilters.types, 
-                company: analysisFilters.companies, 
-                startDate: analysisFilters.dateRange?.from?.toISOString(), 
-                endDate: analysisFilters.dateRange?.to?.toISOString(), 
+                search: debouncedSearchQuery,
+                type: typeFilters, 
+                company: companyFilters, 
+                startDate: dateRange?.from?.toISOString(), 
+                endDate: dateRange?.to?.toISOString(), 
             };
             
-            const allAlarms: Alarm[] = [];
+            let allAlarms: Alarm[] = [];
             let currentHasNext: boolean = true;
             
             for (let page = 1; page <= ANALYSIS_PRELOAD_PAGES && currentHasNext; page++) {
                 const data = await getAlarms({ ...params, page });
                 allAlarms.push(...data.alarms);
                 currentHasNext = data.pagination.hasNextPage;
-                if (page === 1 && data.alarms.length > 0) {
-                    setAnalysisAlarms(allAlarms);
-                    setHasNextPageAnalysis(currentHasNext as boolean);
-                    setAnalysisPage(page);
-                    setAnalysisIndex(0);
-                    setLastProcessedAlarm(null);
-                    setIsAnalysisMode(true);
-                    if (page < ANALYSIS_PRELOAD_PAGES && currentHasNext) {
-                        continue;
-                    }
-                }
             }
             
             if (allAlarms.length > 0) {
                 setAnalysisAlarms(allAlarms);
-                setHasNextPageAnalysis(currentHasNext as boolean);
+                setHasNextPageAnalysis(currentHasNext);
                 setAnalysisPage(Math.min(ANALYSIS_PRELOAD_PAGES, Math.ceil(allAlarms.length / ANALYSIS_PAGE_SIZE)));
+                setAnalysisIndex(0);
+                setLastProcessedAlarm(null);
+                setIsAnalysisMode(true);
             } else {
                 toast({ title: "Sin alarmas", description: `No se encontraron alarmas para analizar.` });
             }
@@ -249,24 +199,7 @@ export default function AlarmsPage() {
     const handleCardClick = (clickedAlarm: Alarm) => { 
         const navigableAlarms = alarms; 
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id); 
-        
-        initializeNavigation(
-            navigableAlarms, 
-            index > -1 ? index : 0, 
-            {
-                status: statusFilter,
-                search: debouncedSearchQuery,
-                type: typeFilters,
-                company: companyFilters,
-                startDate: dateRange?.from?.toISOString(),
-                endDate: dateRange?.to?.toISOString(),
-                pageSize: 12,
-                hasMorePages: !!paginationInfo?.hasNextPage,
-                currentPage: currentPage,
-                totalAlarms: paginationInfo?.totalAlarms || alarms.length
-            }
-        );
-        
+        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: statusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate: dateRange?.from?.toISOString(), endDate: dateRange?.to?.toISOString(), pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
         setIsDialogOpen(true); 
     };
 
@@ -275,15 +208,11 @@ export default function AlarmsPage() {
         resetNavigation(); 
     };
 
-    // SOLUCIÓN: La firma de la función ahora acepta 'null' para choferId
     const handleDialogAction = async (payload: { action: 'confirmed' | 'rejected', description: string, choferId?: number | null }) => { 
         if (!alarmForDetails) return; 
-        
         const { action, description, choferId } = payload; 
         const alarmIdToUpdate = alarmForDetails.id; 
-        
         setIsSubmitting(true); 
-        
         try { 
             if (alarmForDetails.status === 'pending') { 
                 await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
@@ -299,20 +228,10 @@ export default function AlarmsPage() {
                     await reviewAlarm(alarmIdToUpdate, action, description, choferId ?? undefined); 
                 } 
             } 
-            
             toast({ title: "Alarma Actualizada" }); 
             removeAlarm(alarmIdToUpdate); 
-            
-            if (hasNext) { 
-                await goToNext();
-            } else if (hasPrevious) { 
-                goToPrevious(); 
-            } else { 
-                handleDialogClose(); 
-            } 
-            
+            if (hasNext) { await goToNext(); } else if (hasPrevious) { goToPrevious(); } else { handleDialogClose(); } 
             fetchAlarms(); 
-            fetchAnalysisCounts(); 
         } catch (error: any) { 
             toast({ title: "Error", variant: "destructive", description: error.message }); 
         } finally { 
@@ -325,15 +244,12 @@ export default function AlarmsPage() {
             handleDialogClose(); 
             return; 
         }; 
-        
         setIsSubmitting(true); 
-        
         try { 
             await reEvaluateAlarm(alarmForDetails.id, payload.description); 
             toast({ title: "Alarma Re-evaluada", description: "El estado ha sido cambiado a 'Sospechosa'." }); 
             handleDialogClose(); 
             fetchAlarms(); 
-            fetchAnalysisCounts(); 
         } catch (error: any) { 
             toast({ title: "Error", variant: "destructive", description: error.message }); 
         } finally { 
@@ -348,10 +264,11 @@ export default function AlarmsPage() {
             const params: GetAlarmsParams = { 
                 status: analysisType, 
                 pageSize: ANALYSIS_PAGE_SIZE, 
-                type: analysisFilters.types, 
-                company: analysisFilters.companies, 
-                startDate: analysisFilters.dateRange?.from?.toISOString(), 
-                endDate: analysisFilters.dateRange?.to?.toISOString(), 
+                search: debouncedSearchQuery,
+                type: typeFilters, 
+                company: companyFilters, 
+                startDate: dateRange?.from?.toISOString(), 
+                endDate: dateRange?.to?.toISOString(), 
             };
             const newAlarms: Alarm[] = [];
             let currentHasNext: boolean = hasNextPageAnalysis;
@@ -363,10 +280,8 @@ export default function AlarmsPage() {
                 setAnalysisPage(page);
             }
             if (newAlarms.length > 0) {
-                setAnalysisAlarms(newAlarms);
+                setAnalysisAlarms(prev => [...prev, ...newAlarms]);
                 setHasNextPageAnalysis(currentHasNext);
-                setAnalysisIndex(0);
-                setLastProcessedAlarm(null);
             } else {
                 toast({ title: "Sin más alarmas", description: "No hay más alarmas para analizar." });
                 setIsAnalysisMode(false);
@@ -388,10 +303,6 @@ export default function AlarmsPage() {
                 let updatedAlarm: Alarm;
                 if (currentAlarm.status === 'pending') { 
                     updatedAlarm = await reviewAlarm(currentAlarm.id, action); 
-                } else if (currentAlarm.status === 'suspicious') { 
-                    updatedAlarm = action === 'confirmed' 
-                        ? await confirmAlarm(currentAlarm.id) 
-                        : await reviewAlarm(currentAlarm.id, action); 
                 } else { 
                     updatedAlarm = currentAlarm; 
                 }
@@ -400,7 +311,6 @@ export default function AlarmsPage() {
                 setAnalysisAlarms(newAlarms);
                 toast({ title: "Alarma Actualizada" });
                 fetchAlarms(); 
-                fetchAnalysisCounts();
             } catch (err: any) {
                 toast({ title: "Error", description: err.message, variant: "destructive" });
                 setLastProcessedAlarm(null); 
@@ -440,11 +350,7 @@ export default function AlarmsPage() {
             setAnalysisAlarms(newAlarms); 
             setAnalysisIndex(index); 
             setLastProcessedAlarm(null); 
-            toast({ 
-                title: "Acción deshecha", 
-                description: `La alarma "${revertedAlarm.type}" fue restaurada a pendiente.`, 
-            }); 
-            fetchAnalysisCounts(); 
+            toast({ title: "Acción deshecha", description: `La alarma "${revertedAlarm.type}" fue restaurada a pendiente.` }); 
             fetchAlarms(); 
         } catch (error: any) { 
             toast({ title: "Error al deshacer", description: error.message, variant: "destructive" }); 
@@ -459,12 +365,46 @@ export default function AlarmsPage() {
         confirmButtonText = "Sospechosa";
     }
 
+    const handleClearFilters = () => {
+        setTypeFilters([]);
+        setCompanyFilters([]);
+        setDateRange(undefined);
+    };
+
     return (
         <div className="space-y-6">
-            <div> 
-                <h1 className="text-3xl font-bold">Gestión de Alarmas</h1> 
-                <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p> 
-            </div> 
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div> 
+                    <h1 className="text-3xl font-bold">Gestión de Alarmas</h1> 
+                    <p className="text-muted-foreground">Revise, confirme o rechace las alarmas generadas por los dispositivos.</p> 
+                </div>
+                {/* --- CAMBIO: Filtros principales movidos aquí --- */}
+                <div className="space-y-4 p-4 border bg-card rounded-lg">
+                <div className="flex gap-2 items-center w-full sm:w-auto"> 
+                    <AdvancedFilters
+                                      dateRange={dateRange}
+                                      onDateChange={setDateRange}
+                                      onClear={handleClearFilters}
+                                      disabled={isLoading}
+                                      filterSections={[
+                                          {
+                                              title: 'Por Tipo de Alarma',
+                                              items: alarmTypes,
+                                              selectedItems: typeFilters,
+                                              onSelectionChange: setTypeFilters
+                                          },
+                                          {
+                                              title: 'Por Empresa',
+                                              items: AVAILABLE_COMPANIES,
+                                              selectedItems: companyFilters,
+                                              onSelectionChange: setCompanyFilters
+                                          }
+                                      ]}
+                                  />
+                </div> 
+                </div>
+            </div>  
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <KPICard title="Total de alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
                 <KPICard title="Total de pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />
@@ -473,36 +413,27 @@ export default function AlarmsPage() {
                 <KPICard title="Total de rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
             </div>
             <div className="flex justify-center gap-4 flex-wrap items-center"> 
-                <AnalysisFilters availableTypes={alarmTypes} availableCompanies={AVAILABLE_COMPANIES} filters={analysisFilters} onFilterChange={setAnalysisFilters} isLoading={isLoadingCounts} /> 
-                <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoadingCounts || analysisCounts.pending === 0} variant="warning"> 
-                    {isLoadingCounts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} 
-                    Analizar {analysisCounts.pending} Pendientes 
+                {/* --- CAMBIO: Se elimina el componente AnalysisFilters --- */}
+                <Button onClick={() => handleStartAnalysis('pending')} disabled={isLoading || filteredCounts.pending === 0} variant="warning"> 
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />} 
+                    Analizar {filteredCounts.pending} Pendientes 
                 </Button> 
             </div> 
             <div className="space-y-4"> 
+                <div className="space-y-4 p-4 border bg-card rounded-lg">
                 <div className="flex flex-col sm:flex-row gap-2 items-center"> 
                     <div className="relative w-full flex-grow"> 
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> 
                         <Input 
                             type="search" 
-                            placeholder="Buscar por interno, tipo, chofer..." 
+                            placeholder="Buscar por interno, patente, tipo, chofer..." 
                             className="pl-10 h-10" 
                             value={searchQuery} 
                             onChange={(e) => setSearchQuery(e.target.value)} 
                         /> 
                     </div> 
-                    <div className="flex gap-2 items-center w-full sm:w-auto"> 
-                        <AdvancedFilters 
-                            availableTypes={alarmTypes} 
-                            selectedTypes={typeFilters} 
-                            onTypeSelectionChange={setTypeFilters} 
-                            availableCompanies={AVAILABLE_COMPANIES} 
-                            selectedCompanies={companyFilters} 
-                            onCompanySelectionChange={setCompanyFilters} 
-                        /> 
-                        <DateRangePicker date={dateRange} onDateChange={setDateRange} /> 
-                    </div> 
-                </div>  
+                </div> 
+                </div> 
                 <div> 
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
                         <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
@@ -513,9 +444,23 @@ export default function AlarmsPage() {
                     </ToggleGroup> 
                 </div> 
             </div> 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> 
-                {isLoading ? Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />) : error ? <div className="p-4 text-center text-destructive col-span-full">{error}</div> : alarms.length > 0 ? alarms.map((alarm) => (<AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} /> )) : <div className="text-center text-muted-foreground pt-10 col-span-full">No se encontraron alarmas para los filtros seleccionados.</div>} 
-            </div>
+            
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+                </div>
+            ) : error ? (
+                <div className="p-4 text-center text-destructive col-span-full">{error}</div>
+            ) : alarms.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {alarms.map((alarm) => (<AlarmCard key={alarm.id} alarm={alarm} onClick={() => handleCardClick(alarm)} />))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground pt-10 col-span-full">
+                    No se encontraron alarmas para los filtros seleccionados.
+                </div>
+            )}
+            
             {paginationInfo && paginationInfo.totalPages > 1 && (<PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />)}
             
             <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> 
@@ -548,7 +493,7 @@ export default function AlarmsPage() {
                 </DialogContent> 
             </Dialog>
             
-            <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); fetchAnalysisCounts(); } setIsAnalysisMode(open); }}>
+            <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); } setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Modo Análisis de Alarmas</DialogTitle>

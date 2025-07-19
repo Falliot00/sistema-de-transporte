@@ -1,4 +1,4 @@
-// components/dashboard/resumen-tab.tsx
+// frontend/app/dashboard/resumen-tab.tsx
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,17 +7,18 @@ import { AlarmsByTypePieChart } from "./charts/alarms-by-type-pie-chart";
 import { AlarmStatusProgressCards } from "./alarm-status-progress-cards";
 import { AlarmsByDay, AlarmsByType, AlarmStatusProgress } from "@/types";
 
-// --- INICIO DE LA SOLUCIÓN: Simplificar la prop con el tipo actualizado ---
 interface ResumenTabProps {
   alarmsByDayData: AlarmsByDay[];
-  alarmsByTypeData: AlarmsByType[]; // Ahora es más simple y directo
+  alarmsByTypeData: AlarmsByType[];
   alarmStatusProgressData: AlarmStatusProgress[];
 }
-// --- FIN DE LA SOLUCIÓN ---
 
 export function ResumenTab({ alarmsByDayData, alarmsByTypeData, alarmStatusProgressData }: ResumenTabProps) {
   return (
     <div className="space-y-6 mt-4">
+      {/* --- REQUERIMIENTO 3: Las cards de progreso ahora se muestran primero --- */}
+      <AlarmStatusProgressCards data={alarmStatusProgressData} />
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -36,7 +37,6 @@ export function ResumenTab({ alarmsByDayData, alarmsByTypeData, alarmStatusProgr
           </CardContent>
         </Card>
       </div>
-      <AlarmStatusProgressCards data={alarmStatusProgressData} />
     </div>
   );
 }

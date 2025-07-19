@@ -1,102 +1,93 @@
+// frontend/app/drivers/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getDrivers } from "@/lib/api";
 import { Driver } from '@/types';
 import { DriverCard } from "@/components/drivers/driver-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Search, Terminal, Users, Building, BarChart2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from '@/components/ui/skeleton';
 import { KPICard } from '@/components/shared/kpi-card';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+//import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { AdvancedFilters } from '@/components/shared/advanced-filters';
 
+// Hook de debounce para la búsqueda
+function useDebounce(value: string, delay: number): string {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+        return () => { clearTimeout(handler); };
+    }, [value, delay]);
+    return debouncedValue;
+}
 
-// Componente Skeleton específico para las tarjetas de KPIs
 const KPICardSkeleton = () => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <div className="p-4 border rounded-lg">
+        <div className="flex items-center justify-between pb-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-            <Skeleton className="h-7 w-12" />
-        </CardContent>
-    </Card>
+        </div>
+        <Skeleton className="h-7 w-12" />
+    </div>
 );
+
+const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 
 export default function DriversPage() {
     const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    
+    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+    const loadDrivers = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const drivers = await getDrivers({ 
+                search: debouncedSearchTerm, 
+                company: companyFilters 
+            });
+            setAllDrivers(drivers);
+        } catch (err) {
+            setError("No se pudieron cargar los datos de los choferes.");
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [debouncedSearchTerm, companyFilters]);
 
     useEffect(() => {
-        const loadDrivers = async () => {
-            try {
-                setIsLoading(true);
-                const drivers = await getDrivers();
-                setAllDrivers(drivers);
-            } catch (err) {
-                setError("No se pudieron cargar los datos de los choferes. Asegúrate de que el servidor backend esté funcionando correctamente.");
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         loadDrivers();
-    }, []);
+    }, [loadDrivers]);
 
-    // Lógica de filtrado en el lado del cliente para una respuesta instantánea.
-    const filteredDrivers = useMemo(() => {
-        if (!searchTerm) {
-            return allDrivers;
-        }
-        return allDrivers.filter(driver =>
-            driver.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            driver.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            driver.dni?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            driver.empresa?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, allDrivers]);
+    const kpis = useMemo(() => {
+        // Los KPIs ahora se basan en la lista filtrada `allDrivers`
+        const totalDrivers = allDrivers.length;
+        const companyCounts = allDrivers.reduce((acc, driver) => {
+            if (driver.empresa) {
+                acc[driver.empresa] = (acc[driver.empresa] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
 
-    // KPIs calculados en el cliente después de obtener todos los datos.
-    const totalDrivers = allDrivers.length;
-    const companyCounts = useMemo(() => allDrivers.reduce((acc, driver) => {
-        if (driver.empresa) {
-            acc[driver.empresa] = (acc[driver.empresa] || 0) + 1;
-        }
-        return acc;
-    }, {} as Record<string, number>), [allDrivers]);
-
-    const mainCompany = useMemo(() => Object.keys(companyCounts).length > 0
-        ? Object.entries(companyCounts).sort((a, b) => b[1] - a[1])[0][0]
-        : "N/A", [companyCounts]);
+        const mainCompany = Object.keys(companyCounts).length > 0
+            ? Object.entries(companyCounts).sort((a, b) => b[1] - a[1])[0][0]
+            : "N/A";
+        
+        return { totalDrivers, mainCompany };
+    }, [allDrivers]);
+    
+    const handleClearFilters = () => {
+        setCompanyFilters([]);
+        setSearchTerm("");
+    };
     
     return (
         <div className="space-y-6">
-            
-             <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/">Alarmas</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>Choferes</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-            
             <div>
                 <h1 className="text-3xl font-bold">Plantel de Choferes</h1>
                 <p className="text-muted-foreground">
@@ -113,40 +104,39 @@ export default function DriversPage() {
                     </>
                 ) : (
                     <>
-                        <KPICard 
-                            title="Total de Choferes" 
-                            value={totalDrivers} 
-                            icon={<Users className="h-5 w-5" />} 
-                            iconClassName="text-blue-500"
-                        />
-                        <KPICard 
-                            title="Empresa Principal" 
-                            value={mainCompany} 
-                            icon={<Building className="h-5 w-5" />}
-                            iconClassName="text-green-500"
-                        />
-                         <KPICard 
-                            title="Actividad General" 
-                            value="Normal"
-                            icon={<BarChart2 className="h-5 w-5" />}
-                            iconClassName="text-orange-500"
-                        />
+                        <KPICard title="Total de Choferes" value={kpis.totalDrivers} icon={<Users className="h-5 w-5" />} iconClassName="text-blue-500" />
+                        <KPICard title="Empresa Principal" value={kpis.mainCompany} icon={<Building className="h-5 w-5" />} iconClassName="text-green-500" />
+                        <KPICard title="Actividad General" value="Normal" icon={<BarChart2 className="h-5 w-5" />} iconClassName="text-orange-500" />
                     </>
                 )}
             </div>
-            
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                    type="search"
-                    placeholder="Buscar por nombre, DNI, empresa..." 
-                    className="pl-10 h-10 w-full"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    disabled={isLoading}
-                />
+            <div className="space-y-4 p-4 border bg-card rounded-lg">
+                <div className="flex flex-col sm:flex-row gap-2 items-center">
+                    <div className="relative w-full flex-grow">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                            type="search"
+                            placeholder="Buscar por nombre, DNI..." 
+                            className="pl-10 h-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            disabled={isLoading}
+                        />
+                    </div>
+                    <AdvancedFilters
+                        onClear={handleClearFilters}
+                        disabled={isLoading}
+                        filterSections={[
+                            {
+                                title: 'Por Empresa',
+                                items: AVAILABLE_COMPANIES,
+                                selectedItems: companyFilters,
+                                onSelectionChange: setCompanyFilters
+                            }
+                        ]}
+                    />
+                </div>
             </div>
-            
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                      {Array.from({ length: 10 }).map((_, i) => (
@@ -161,9 +151,9 @@ export default function DriversPage() {
                     <AlertTitle>Error de Conexión</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
-            ) : filteredDrivers.length > 0 ? (
+            ) : allDrivers.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {filteredDrivers.map((driver) => (
+                    {allDrivers.map((driver) => (
                         <DriverCard key={driver.choferes_id} driver={driver} />
                     ))}
                 </div>
@@ -172,7 +162,7 @@ export default function DriversPage() {
                     <Terminal className="h-4 w-4" />
                     <AlertTitle>No se encontraron resultados</AlertTitle>
                     <AlertDescription>
-                        {searchTerm ? `No hay choferes que coincidan con tu búsqueda "${searchTerm}".` : "No hay choferes registrados en el sistema."}
+                        No hay choferes que coincidan con los filtros aplicados.
                     </AlertDescription>
                 </Alert>
             )}

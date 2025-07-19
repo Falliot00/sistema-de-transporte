@@ -1,10 +1,10 @@
-// app/dashboard/top-devices-list.tsx
+// frontend/app/dashboard/top-devices-list.tsx
 "use client";
 
 import { Device } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Server, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 interface TopDevicesListProps {
   devices: Device[];
@@ -12,7 +12,7 @@ interface TopDevicesListProps {
 
 export function TopDevicesList({ devices }: TopDevicesListProps) {
   if (!devices || devices.length === 0) {
-    return <p className="text-muted-foreground text-center py-8">No hay datos de dispositivos para mostrar en este período.</p>;
+    return <p className="text-muted-foreground text-center py-8">No hay dispositivos con alarmas en este período.</p>;
   }
 
   return (
@@ -23,10 +23,12 @@ export function TopDevicesList({ devices }: TopDevicesListProps) {
             <div className="flex items-center gap-3">
                 <span className="flex items-center justify-center h-8 w-8 rounded-full bg-muted font-bold text-muted-foreground">{index + 1}</span>
                 <div>
+                    {/* --- REQUERIMIENTO 8: `name` ahora es el Interno --- */}
                     <CardTitle className="text-md flex items-center">
                         {device.name}
                     </CardTitle>
-                    <CardDescription>SN: {device.serialNumber}</CardDescription>
+                    {/* --- REQUERIMIENTO 8: `serialNumber` ahora es la Patente --- */}
+                    <CardDescription>Patente: {device.serialNumber}</CardDescription>
                 </div>
             </div>
             <div className="flex items-center gap-2 text-lg font-bold">

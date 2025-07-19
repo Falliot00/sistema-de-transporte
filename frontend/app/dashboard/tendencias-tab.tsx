@@ -1,18 +1,19 @@
-// app/dashboard/tendencias-tab.tsx
+// frontend/app/dashboard/tendencias-tab.tsx
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HourlyDistributionChart } from "./charts/hourly-distribution-chart";
-import { WeeklyTrendChart } from "./charts/weekly-trend-chart";
-import { HourlyDistribution, WeeklyTrend } from "@/types";
+// --- REQUERIMIENTO 4: Importamos el gráfico correcto ---
+import { AlarmsByDayChart } from "./charts/alarms-by-day-chart";
+import { HourlyDistribution, AlarmsByDay } from "@/types";
 
-// --- INICIO DE LA SOLUCIÓN: El componente ahora recibe los datos como props ---
 interface TendenciasTabProps {
   hourlyData: HourlyDistribution[];
-  weeklyData: WeeklyTrend[];
+  // --- REQUERIMIENTO 4: Cambiamos la prop para recibir los datos por día ---
+  alarmsByDayData: AlarmsByDay[];
 }
 
-export function TendenciasTab({ hourlyData, weeklyData }: TendenciasTabProps) {
+export function TendenciasTab({ hourlyData, alarmsByDayData }: TendenciasTabProps) {
   return (
     <div className="space-y-6 mt-4">
       <Card>
@@ -24,16 +25,17 @@ export function TendenciasTab({ hourlyData, weeklyData }: TendenciasTabProps) {
           <HourlyDistributionChart data={hourlyData} />
         </CardContent>
       </Card>
+      
+      {/* --- REQUERIMIENTO 4: Reemplazamos el gráfico anterior --- */}
       <Card>
         <CardHeader>
-          <CardTitle>Tendencia Semanal de Alarmas</CardTitle>
-           <CardDescription>Comparación del volumen de alarmas por día entre la semana actual y la anterior.</CardDescription>
+          <CardTitle>Volumen de Alarmas por Día</CardTitle>
+           <CardDescription>Cantidad de alarmas generadas cada día en el período seleccionado.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
-          <WeeklyTrendChart data={weeklyData} />
+          <AlarmsByDayChart data={alarmsByDayData} />
         </CardContent>
       </Card>
     </div>
   );
 }
-// --- FIN DE LA SOLUCIÓN ---

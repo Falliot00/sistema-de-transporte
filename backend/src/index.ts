@@ -5,13 +5,14 @@ import { config } from './config';
 import alarmasRouter from './routes/alarmas';
 import choferesRouter from './routes/choferes';
 import dashboardRouter from './routes/dashboard';
+// --- NUEVA IMPORTACIÓN ---
+import dispositivosRouter from './routes/dispositivos';
 
 const app = express();
 
-// Middlewares
+// Middlewares (sin cambios)
 app.use(cors({
   origin: '*', 
-  // --- SOLUCIÓN: Añadir 'PATCH' a la lista de métodos ---
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -25,8 +26,10 @@ app.get('/api', (req, res) => {
 app.use('/api/alarmas', alarmasRouter);
 app.use('/api/choferes', choferesRouter);
 app.use('/api/dashboard', dashboardRouter);
+// --- NUEVA RUTA REGISTRADA ---
+app.use('/api/dispositivos', dispositivosRouter);
 
-// Iniciar el servidor
+// Iniciar el servidor (sin cambios)
 app.listen(config.port, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${config.port}`);
 });

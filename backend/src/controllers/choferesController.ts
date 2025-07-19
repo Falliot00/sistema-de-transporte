@@ -1,6 +1,6 @@
 // backend/src/controllers/choferesController.ts
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { transformAlarmData } from '../utils/transformers';
 import { DB_QUERY_STATUS_MAP } from '../utils/statusHelpers';
 
@@ -14,35 +14,43 @@ const alarmIncludesForDriverDetails = {
 };
 
 export const getAllChoferes = async (req: Request, res: Response) => {
-    const { search } = req.query;
-    let searchFilter = {};
+    const { search, company } = req.query;
+
+    let whereClause: Prisma.ChoferesWhereInput = {
+        sector: 'CHOFERES',
+        estado: 'A',
+        liquidacionEstado: 'A',
+    };
 
     if (search && typeof search === 'string') {
-        searchFilter = {
-            OR: [
-                { apellido_nombre: { contains: search } },
-                { dni: { contains: search } },
-            ],
+        whereClause.OR = [
+            { apellido_nombre: { contains: search } },
+            { dni: { contains: search } },
+        ];
+    }
+    
+    // --- NUEVO: Añadimos el filtro por empresa ---
+    const companyFilters = Array.isArray(company) ? company : (company ? [company] : []);
+    if (companyFilters.length > 0) {
+        // Asumimos que la comparación es insensible a mayúsculas/minúsculas y que los nombres coinciden.
+        const lowerCaseCompanies = companyFilters.map(c => (c as string).toLowerCase());
+        whereClause.empresaInfo = {
+            nombreMin: { in: lowerCaseCompanies }
         };
     }
 
     try {
         const choferesFromDb = await prisma.choferes.findMany({
-            where: {
-                sector: 'CHOFERES',
-                estado: 'A',
-                liquidacionEstado: 'A',
-                ...searchFilter,
-            },
+            where: whereClause,
             orderBy: [{ apellido_nombre: 'asc' }],
             include: {
-                empresaInfo: true, // Incluir la relación con la empresa
+                empresaInfo: true,
             }
         });
         
         const choferes = choferesFromDb.map((chofer: any) => ({
             choferes_id: chofer.choferes_id,
-            apellido_nombre: chofer.apellido_nombre,
+            apellido_nombre: chofer.apellido_nombre || '',
             foto: chofer.foto,
             dni: chofer.dni,
             anios: chofer.anios,
@@ -76,7 +84,7 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
                 liquidacionEstado: 'A',
             }, 
             include: {
-                empresaInfo: true, // Incluir info de la empresa del chofer
+                empresaInfo: true,
                 alarmas: { 
                     take: 10,
                     orderBy: { alarmTime: 'desc' },

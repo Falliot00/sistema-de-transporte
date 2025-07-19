@@ -66,9 +66,14 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
         whereClause.typeAlarm = { alarm: { in: typeFilters } };
     }
     
-    const companyFilters = (Array.isArray(company) ? company : (company ? [company] : [])).map(Number).filter(id => !isNaN(id));
+    const companyFilters = Array.isArray(company) ? company : (company ? [company] : []);
     if (companyFilters.length > 0) {
-        whereClause.idEmpresa = { in: companyFilters };
+        const lowerCaseCompanies = companyFilters.map(c => c.toLowerCase());
+        whereClause.empresaInfo = { 
+            nombreMin: { 
+                in: lowerCaseCompanies 
+            } 
+        };
     }
     return whereClause;
 };

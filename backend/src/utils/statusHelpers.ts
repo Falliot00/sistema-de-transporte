@@ -12,6 +12,9 @@ export const DB_QUERY_STATUS_MAP: Record<'pending' | 'suspicious' | 'confirmed' 
     rejected: ['Rechazada', 'rejected'],
 };
 
+
+export const CONFIRMED_STATUSES = DB_QUERY_STATUS_MAP.confirmed;
+
 /**
  * @description Convierte un estado de la base de datos (string) al estado tipado que espera el frontend.
  * Esta función asegura que, sin importar las variaciones en la base de datos (ej. 'Confirmada', 'confirmed', ' CONFIRMADA '),

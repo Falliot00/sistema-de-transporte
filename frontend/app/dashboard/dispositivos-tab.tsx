@@ -1,23 +1,26 @@
-// app/dashboard/dispositivos-tab.tsx
+// frontend/app/dashboard/dispositivos-tab.tsx
 "use client";
 
-import { Device, DeviceSummary } from "@/types";
+import { Device } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeviceStatusSummary } from "./device-status-summary";
+// --- REQUERIMIENTO 7: Eliminamos la importación ---
+// import { DeviceStatusSummary } from "./device-status-summary";
 import { TopDevicesList } from "./top-devices-list";
 
 interface DispositivosTabProps {
-  deviceSummary: DeviceSummary;
+  // --- REQUERIMIENTO 7: Eliminamos la prop `deviceSummary` ---
   topDevices: Device[];
 }
 
-export function DispositivosTab({ deviceSummary, topDevices }: DispositivosTabProps) {
+export function DispositivosTab({ topDevices }: DispositivosTabProps) {
   return (
     <div className="space-y-6 mt-4">
-      <DeviceStatusSummary summary={deviceSummary} />
+      {/* --- REQUERIMIENTO 7: Eliminamos el componente --- */}
+      {/* <DeviceStatusSummary summary={deviceSummary} /> */}
+      
       <Card>
         <CardHeader>
-          <CardTitle>Top 5 Dispositivos por Alarmas</CardTitle>
+          <CardTitle>Top Dispositivos por Alarmas</CardTitle>
           <CardDescription>Dispositivos con mayor actividad de alarmas en el período seleccionado.</CardDescription>
         </CardHeader>
         <CardContent>
