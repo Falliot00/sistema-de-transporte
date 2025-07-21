@@ -14,8 +14,6 @@ export const getAllAnomalias = async (req: Request, res: Response) => {
                 nomAnomalia: 'asc'
             }
         });
-
-        console.log('Anomalías encontradas:', anomalias.length);
         res.status(200).json(anomalias);
     } catch (error) {
         console.error("Error al obtener las anomalías:", error);
