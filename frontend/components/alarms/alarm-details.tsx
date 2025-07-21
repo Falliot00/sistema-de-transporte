@@ -259,15 +259,7 @@ export function AlarmDetails({
           <div>
             <div className="text-muted-foreground flex items-center gap-3 mb-2">
               <MapPin className="h-4 w-4" />
-
-
-
-
-
-
-
-
-<p className="text-xs text-muted-foreground font-medium">UBICACIÓN DEL EVENTO</p>
+              <p className="text-xs text-muted-foreground font-medium">UBICACIÓN DEL EVENTO</p>
             </div>
             <div className="h-56 w-full rounded-md overflow-hidden border">
               {position ? (

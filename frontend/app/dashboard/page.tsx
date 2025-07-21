@@ -128,8 +128,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard title="Total Alarmas" icon={<Bell />} value={isLoading ? '...' : summaryData?.kpis.totalAlarms ?? 0} iconClassName="text-black-500" />
             <KPICard title="Tasa de Confirmación" icon={<Percent />} value={isLoading ? '...' : `${summaryData?.kpis.confirmationRate ?? '0.0'}%`} description="Del total de alarmas procesadas." iconClassName="text-green-500" />
-            <KPICard title="Promedio de Choferes" icon={<Users />} value={isLoading ? '...' : summaryData?.kpis.avgAlarmsPerDriver ?? '0.0'} description="Promedio de alarmas confirmadas." iconClassName="text-blue-500" />
-            <KPICard title="Promedios de Dispositivos" icon={<Server />} value={isLoading ? '...' : summaryData?.kpis.avgAlarmsPerDevice ?? '0.0'} description="Promedio de alarmas confirmadas." iconClassName="text-orange-500" />
+            <KPICard title="Promedio de Choferes" icon={<Users />} value={isLoading ? '...' : summaryData?.kpis.avgAlarmsPerDriver ?? '0.0'} description="Promedio de alarmas confirmadas por chofer." iconClassName="text-blue-500" />
+            <KPICard title="Promedios de Dispositivos" icon={<Server />} value={isLoading ? '...' : summaryData?.kpis.avgAlarmsPerDevice ?? '0.0'} description="Promedio de alarmas confirmadas por dispositivo." iconClassName="text-orange-500" />
         </div>
 
         
