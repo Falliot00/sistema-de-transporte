@@ -88,9 +88,7 @@ export async function generateAlarmReportPDF(
     const conductorBoxHeight = conductorContentHeight + 10;
     checkAndAddPage(doc, conductorBoxHeight + 20);
     const conductorBoxStartY = doc.y;
-    const conductorBox = { x: 70, y: conductorBoxStartY, width: 475, height: conductorBoxHeight };
-    drawBox(doc, conductorBox);
-    doc.y = conductorBoxStartY + 10;
+    doc.y = conductorBoxStartY;
     if (alarm.chofer) {
         addLabelValue(doc, 'Nombre:', alarm.chofer.apellido_nombre || 'No disponible', 90);
         addLabelValue(doc, 'DNI:', alarm.chofer.dni || 'No disponible', 90);
@@ -99,7 +97,7 @@ export async function generateAlarmReportPDF(
     } else {
         doc.font(STYLES.value.font).fontSize(STYLES.value.fontSize).fillColor(STYLES.value.color).text('Chofer no asignado.', 90);
     }
-    doc.y = conductorBox.y + conductorBox.height + 20;
+    doc.moveDown(1);
 
     // --- 1.2 Información del vehículo (Dinámico) ---
     addSubsectionTitle(doc, '1.2 Información del vehículo');
@@ -111,13 +109,11 @@ export async function generateAlarmReportPDF(
     const vehiculoBoxHeight = vehiculoContentHeight + 10;
     checkAndAddPage(doc, vehiculoBoxHeight + 20);
     const vehiculoBoxStartY = doc.y;
-    const vehiculoBox = { x: 70, y: vehiculoBoxStartY, width: 475, height: vehiculoBoxHeight };
-    drawBox(doc, vehiculoBox);
-    doc.y = vehiculoBoxStartY + 10;
+    doc.y = vehiculoBoxStartY;
     addLabelValue(doc, 'Interno:', alarm.interno || 'N/A', 90);
     addLabelValue(doc, 'Patente:', alarm.deviceInfo?.patente || 'No disponible', 90);
     addLabelValue(doc, 'Dispositivo ID:', alarm.dispositivo?.toString() || 'N/A', 90);
-    doc.y = vehiculoBox.y + vehiculoBox.height + 20;
+    doc.moveDown(1);
 
     // --- 1.3 Detalles del evento (Dinámico) ---
     addSubsectionTitle(doc, '1.3 Detalles del evento');
@@ -138,9 +134,7 @@ export async function generateAlarmReportPDF(
     }
     const eventoBoxHeight = Math.max(100, eventoContentHeight + 10);
     checkAndAddPage(doc, eventoBoxHeight + 30);
-    const eventoBox = { x: 70, y: eventoBoxStartY, width: 475, height: eventoBoxHeight };
-    drawBox(doc, eventoBox);
-    doc.y = eventoBoxStartY + 10;
+    doc.y = eventoBoxStartY;
     addLabelValue(doc, 'ID de Alarma:', alarm.guid, 90);
     addLabelValue(doc, 'Fecha y Hora:', fechaFormateada, 90);
     addLabelValue(doc, 'Tipo de alarma:', alarm.typeAlarm?.alarm || 'Desconocido', 90);
@@ -150,15 +144,15 @@ export async function generateAlarmReportPDF(
     if (mapsUrl) {
         const qrBuffer = await generateQRCodeBuffer(mapsUrl);
         if (qrBuffer.length > 0) {
-            doc.image(qrBuffer, 455, eventoBoxStartY + 60, { width: 62.5, height: 62.5 });
+            doc.image(qrBuffer, 455, eventoBoxStartY + 40, { width: 62.5, height: 62.5 });
         }
         const currentY = doc.y;
         doc.fontSize(STYLES.label.fontSize).font(STYLES.label.font).fillColor(STYLES.label.color).text('Ubicación:', 90, currentY);
-        doc.fontSize(9).font('Helvetica').fillColor(COLORS.primary).text(mapsUrl, 210, currentY, { link: mapsUrl, underline: true, width: 240 });
+        doc.fontSize(10).font('Helvetica').fillColor(COLORS.primary).text(mapsUrl, 210, currentY, { link: mapsUrl, underline: true, width: 240 });
     } else {
         addLabelValue(doc, 'Ubicación:', 'Coordenadas no disponibles', 90);
     }
-    doc.y = eventoBox.y + eventoBox.height + 30;
+    doc.moveDown(2);
     
     // === Sección 2: Análisis del desvío ===
     checkAndAddPage(doc, 50);
@@ -246,17 +240,15 @@ export async function generateAlarmReportPDF(
     const videoBoxHeight = videoHeight + 20;
     checkAndAddPage(doc, videoBoxHeight);
     const videoBoxStartY = doc.y;
-    const videoBox = { x: 70, y: videoBoxStartY, width: 475, height: videoBoxHeight };
-    drawBox(doc, videoBox);
-    doc.y = videoBoxStartY + 10;
+    doc.y = videoBoxStartY;
     doc.x = 90;
     if (alarm.video) {
         doc.fontSize(10).font(STYLES.label.font).fillColor(STYLES.label.color).text('Enlace al video: ', { continued: true });
-        doc.fontSize(9).font('Helvetica').fillColor(COLORS.primary).text(' ' + videoText, { link: alarm.video, underline: true });
+        doc.fontSize(10).font('Helvetica').fillColor(COLORS.primary).text(' ' + videoText, { link: alarm.video, underline: true });
     } else {
         doc.fontSize(10).font('Helvetica').fillColor('#999999').text('No hay video disponible para este evento.', { width: 455 });
     }
-    doc.y = videoBox.y + videoBox.height + 30;
+    doc.moveDown(2);
 
     // Firmas
     const signatureHeight = 0;
