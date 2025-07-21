@@ -176,11 +176,21 @@ export async function getDrivers(params?: { search?: string; company?: string[] 
 }
 
 /**
- * Obtiene los detalles de un chofer específico.
+ * Obtiene los detalles de un chofer específico con filtros opcionales para las alarmas.
  */
-export async function getDriverDetails(id: string): Promise<Driver> {
+export async function getDriverDetails(
+    id: string, 
+    params?: { 
+        startDate?: string; 
+        endDate?: string; 
+        type?: string[]; 
+        company?: string[];
+        status?: string;
+    }
+): Promise<Driver> {
     try {
-        const response = await fetch(`${API_URL}/choferes/${id}`);
+        const query = buildQueryString(params);
+        const response = await fetch(`${API_URL}/choferes/${id}?${query}`);
         if (!response.ok) {
             if (response.status === 404) {
                  const error = new Error('Chofer no encontrado.');

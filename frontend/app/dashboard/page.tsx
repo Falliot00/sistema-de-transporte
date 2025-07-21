@@ -163,7 +163,10 @@ export default function DashboardPage() {
 
           <TabsContent value="choferes" className="mt-0">
             {isLoading || !summaryData ? <DashboardTabSkeleton /> : (
-                <ChoferesTab drivers={summaryData.driverRanking} />
+                <ChoferesTab 
+                  drivers={summaryData.driverRanking} 
+                  dateRange={dateRange || undefined}
+                />
             )}
           </TabsContent>
           

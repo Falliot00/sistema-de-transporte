@@ -107,7 +107,6 @@ export function AlarmActionForm({
       </Collapsible>
 
       <div className="pt-4">
-        <h4 className="font-semibold text-md mb-2">Acciones de Revisión</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button onClick={() => handleAction('rejected')} variant="destructive" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : rejectText}

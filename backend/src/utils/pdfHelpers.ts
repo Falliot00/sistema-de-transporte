@@ -191,3 +191,11 @@ function addCompanyText(doc: PDFKit.PDFDocument, headerY: number) {
         .text('laguna', 205, headerY + 35, { width: 70, align: 'right', continued: true })
         .text('paiva', { width: 50, align: 'left' });
 }
+
+export function normalizeLineEndings(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')   // Windows-style to Unix-style
+    .replace(/\r/g, '\n')     // Old Mac-style
+    .replace(/[^\x20-\x7E\náéíóúÁÉÍÓÚñÑüÜçÇ.,;:¡!¿?"'()]/g, '') // Remove weird non-ASCII symbols (optional)
+    .trim();
+}

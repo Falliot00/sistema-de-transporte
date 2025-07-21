@@ -82,9 +82,9 @@ export function AnomalySelector({ selectedAnomalyId, onSelectAnomaly, disabled }
                   <Check className={cn("mr-2 h-4 w-4", selectedAnomalyId === anomaly.idAnomalia ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">
                     <span className="font-medium">{anomaly.nomAnomalia || "Sin nombre"}</span>
-                    {anomaly.descAnomalia && (
+                    {/*anomaly.descAnomalia && (
                       <span className="text-xs text-muted-foreground">{anomaly.descAnomalia}</span>
-                    )}
+                    )*/}
                   </div>
                 </CommandItem>
               ))}

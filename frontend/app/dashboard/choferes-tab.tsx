@@ -9,11 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 
+import { DateRange } from 'react-day-picker';
+
 interface ChoferesTabProps {
   drivers: DriverRanking[];
+  dateRange?: DateRange;
 }
 
-export function ChoferesTab({ drivers }: ChoferesTabProps) {
+export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('efficiencyScore_desc');
 
@@ -30,6 +33,30 @@ export function ChoferesTab({ drivers }: ChoferesTabProps) {
       return order === 'asc' ? valA - valB : valB - valA;
     });
   }, [drivers, searchTerm, sortOrder]);
+
+  if (drivers.length === 0) {
+    return (
+      <div className="space-y-6 mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ranking y Métricas de Choferes</CardTitle>
+            <CardDescription>
+              {dateRange?.from && dateRange?.to 
+                ? `No hay datos de choferes del ${dateRange.from.toLocaleDateString()} al ${dateRange.to.toLocaleDateString()}`
+                : 'No hay datos de choferes para mostrar.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="min-h-[200px] flex items-center justify-center">
+            <p className="text-muted-foreground">
+              {dateRange?.from 
+                ? 'Seleccione un rango de fechas diferente para ver las métricas de los choferes.'
+                : 'Seleccione un rango de fechas para ver las métricas de los choferes.'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 mt-4">

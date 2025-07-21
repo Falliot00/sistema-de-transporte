@@ -1,19 +1,19 @@
 // frontend/app/drivers/[id]/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { getDriverDetails } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DriverStats } from "./driver-stats";
 import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
 import { Briefcase, CalendarDays, Contact, Home } from "lucide-react";
-import { Driver as DriverType, Alarm } from "@/types";
+import { Driver as DriverType } from "@/types";
 import { AdvancedFilters } from '@/components/shared/advanced-filters';
 import { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 
@@ -23,6 +23,7 @@ export default function DriverDetailPage() {
     
     const [driver, setDriver] = useState<DriverType | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingAlarms, setIsLoadingAlarms] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     // Estados de filtros
@@ -30,58 +31,40 @@ export default function DriverDetailPage() {
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
 
-    useEffect(() => {
-        const loadDriver = async () => {
-            try {
-                setIsLoading(true);
-                const data = await getDriverDetails(id);
-                setDriver(data);
-            } catch (error: any) {
-                if (error.status === 404) {
-                    notFound();
-                }
-                setError("No se pudieron cargar los detalles del chofer.");
-            } finally {
-                setIsLoading(false);
+    // Función para cargar datos del chofer con filtros
+    const loadDriverData = async () => {
+        try {
+            setIsLoadingAlarms(true);
+            const data = await getDriverDetails(id, {
+                startDate: dateRange?.from?.toISOString(),
+                endDate: dateRange?.to?.toISOString(),
+                type: typeFilters,
+                company: companyFilters
+            });
+            setDriver(data);
+        } catch (error: any) {
+            if (error.status === 404) {
+                notFound();
             }
-        };
-        
-        loadDriver();
+            setError("No se pudieron cargar los detalles del chofer.");
+        } finally {
+            setIsLoading(false);
+            setIsLoadingAlarms(false);
+        }
+    };
+
+    // Carga inicial
+    useEffect(() => {
+        setIsLoading(true);
+        loadDriverData();
     }, [id]);
 
-    // Filtrar alarmas basándose en los filtros seleccionados
-    const filteredAlarms = useMemo(() => {
-        if (!driver?.alarmas) return [];
-        
-        return driver.alarmas.filter(alarm => {
-            // Filtro por rango de fechas
-            if (dateRange?.from || dateRange?.to) {
-                const alarmDate = new Date(alarm.timestamp);
-                if (dateRange.from && alarmDate < dateRange.from) return false;
-                if (dateRange.to) {
-                    const endOfDay = new Date(dateRange.to);
-                    endOfDay.setHours(23, 59, 59, 999);
-                    if (alarmDate > endOfDay) return false;
-                }
-            }
-            
-            // Filtro por tipo de alarma
-            if (typeFilters.length > 0 && !typeFilters.includes(alarm.type)) {
-                return false;
-            }
-            
-            // Filtro por empresa
-            if (companyFilters.length > 0 && alarm.company && !companyFilters.includes(alarm.company)) {
-                return false;
-            }
-            
-            return true;
-        });
-    }, [driver?.alarmas, dateRange, typeFilters, companyFilters]);
-
-    // IMPORTANTE: Usar las estadísticas del driver, no recalcular
-    // Las estadísticas vienen del backend con TODAS las alarmas históricas
-    const driverStats = driver?.stats;
+    // Recargar cuando cambien los filtros
+    useEffect(() => {
+        if (!isLoading && driver) {
+            loadDriverData();
+        }
+    }, [dateRange, typeFilters, companyFilters]);
 
     const handleClearFilters = () => {
         setTypeFilters([]);
@@ -148,7 +131,7 @@ export default function DriverDetailPage() {
                         dateRange={dateRange}
                         onDateChange={setDateRange}
                         onClear={handleClearFilters}
-                        disabled={isLoading}
+                        disabled={isLoadingAlarms}
                         filterSections={[
                             {
                                 title: 'Por Tipo de Alarma',
@@ -169,11 +152,13 @@ export default function DriverDetailPage() {
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1">
-                    {/* IMPORTANTE: Pasar las estadísticas completas del driver */}
-                    <DriverStats stats={driverStats} />
+                    <DriverStats stats={driver.stats} />
                 </div>
                 <div className="lg:col-span-2">
-                    <RecentAlarmsTable alarms={filteredAlarms} />
+                    <RecentAlarmsTable 
+                        alarms={driver.alarmas || []} 
+                        isLoading={isLoadingAlarms}
+                    />
                 </div>
             </div>
         </div>

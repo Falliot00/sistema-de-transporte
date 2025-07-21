@@ -4,7 +4,7 @@ import { Choferes, AlarmasHistorico, TypeAlarms, Dispositivos, Empresa, Anomalia
 import {
     getLogo, addHeader, drawBox, addSectionTitle, addSubsectionTitle,
     addLabelValue, addSignatureSection, downloadImage, generateQRCodeBuffer,
-    STYLES, COLORS
+    STYLES, COLORS, normalizeLineEndings
 } from './pdfHelpers';
 
 export type AlarmWithDetails = AlarmasHistorico & {
@@ -24,7 +24,17 @@ export type AlarmWithDetails = AlarmasHistorico & {
 function checkAndAddPage(doc: PDFKit.PDFDocument, requiredHeight: number) {
     const remainingSpace = doc.page.height - doc.y - doc.page.margins.bottom;
     if (requiredHeight > remainingSpace) {
+        // Guardar el estado actual de la fuente
+        const currentFont = (doc as any)._font?.name;
+        const currentSize = (doc as any)._fontSize;
+        const currentColor = (doc as any)._fillColor?.toString();
+        
         doc.addPage();
+        
+        // Restaurar el estado de la fuente después de la nueva página
+        if (currentFont) doc.font(currentFont);
+        if (currentSize) doc.fontSize(currentSize);
+        if (currentColor) doc.fillColor(currentColor);
     }
 }
 
@@ -43,9 +53,19 @@ export async function generateAlarmReportPDF(
     doc.addPage();
     await addHeader(doc, pageNumber, logoBuffer, totalPagesOverride);
     doc.on('pageAdded', () => {
+        // Guardar el estado actual de la fuente
+        const currentFont = (doc as any)._font?.name;
+        const currentSize = (doc as any)._fontSize;
+        const currentColor = (doc as any)._fillColor?.toString();
+        
         pageNumber++;
         addHeader(doc, pageNumber, logoBuffer, totalPagesOverride);
         doc.y = 130; // Posición Y inicial en páginas nuevas
+        
+        // Restaurar el estado de la fuente después del header
+        if (currentFont) doc.font(currentFont);
+        if (currentSize) doc.fontSize(currentSize);
+        if (currentColor) doc.fillColor(currentColor);
     });
 
     doc.y = 130; // Posición Y inicial en la primera página
@@ -144,42 +164,62 @@ export async function generateAlarmReportPDF(
     checkAndAddPage(doc, 50);
     addSectionTitle(doc, '2. Análisis del desvío');
 
-    addSubsectionTitle(doc, '2.1 Detalles del control');
-    const descText = alarm.descripcion || 'Sin descripción adicional del analista.';
-    doc.font(STYLES.value.font).fontSize(STYLES.value.fontSize);
-    const descHeight = doc.heightOfString(descText, { width: 455 });
-    const descBoxHeight = descHeight + 20;
-    checkAndAddPage(doc, descBoxHeight + 20);
-    const descBoxStartY = doc.y;
-    const descBox = { x: 70, y: descBoxStartY, width: 475, height: descBoxHeight };
-    drawBox(doc, descBox);
-    doc.y = descBoxStartY + 10;
-    doc.x = 90;
-    doc.fillColor(STYLES.value.color).text(descText, { width: 455 });
-    doc.y = descBox.y + descBox.height + 20;
-
-    addSubsectionTitle(doc, '2.2 Comentarios del desvió registrado');
-    let anomaliaTitle = 'Anomalía no tipificada.';
-    let anomaliaDesc = 'No se ha asignado una anomalía específica a este evento.';
-    if (alarm.anomaliaInfo) {
-        anomaliaTitle = alarm.anomaliaInfo.nomAnomalia || 'Anomalía sin nombre';
-        anomaliaDesc = alarm.anomaliaInfo.descAnomalia || 'Sin descripción adicional para esta anomalía.';
+    // 2.1 Detalles del control - Sin recuadro, texto fluido
+    if (alarm.descripcion) {
+        addSubsectionTitle(doc, '2.1 Detalles del control');
+        const descText = normalizeLineEndings(alarm.descripcion);
+        doc.x = 70;
+        doc.font(STYLES.value.font)
+            .fontSize(STYLES.value.fontSize)
+            .fillColor(STYLES.value.color)
+            .text(descText, 70, doc.y, { 
+                width: 475,
+                align: 'justify',
+                lineGap: 2
+            });
+        doc.moveDown(1);
     }
-    doc.font('Helvetica-Bold').fontSize(11);
-    const titleHeight = doc.heightOfString(anomaliaTitle, { width: 455 });
-    doc.font('Helvetica').fontSize(10);
-    const anomaliaDescHeight = doc.heightOfString(anomaliaDesc, { width: 455 });
-    const anomaliaBoxHeight = titleHeight + anomaliaDescHeight + 25;
-    checkAndAddPage(doc, anomaliaBoxHeight + 30);
-    const anomaliaBoxStartY = doc.y;
-    const anomaliaBox = { x: 70, y: anomaliaBoxStartY, width: 475, height: anomaliaBoxHeight };
-    drawBox(doc, anomaliaBox);
-    doc.y = anomaliaBoxStartY + 10;
-    doc.x = 90;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor(alarm.anomaliaInfo ? STYLES.value.color : '#999999').text(anomaliaTitle, { width: 455 });
-    doc.moveDown(0.5);
-    doc.fontSize(10).font('Helvetica').fillColor(alarm.anomaliaInfo ? STYLES.value.color : '#999999').text(anomaliaDesc, { width: 455 });
-    doc.y = anomaliaBox.y + anomaliaBox.height + 30;
+
+    // 2.2 Comentarios del desvío registrado - Sin recuadro, texto fluido
+    addSubsectionTitle(doc, '2.2 Comentarios del desvío registrado');
+    
+    if (alarm.anomaliaInfo) {
+        const anomaliaTitle = alarm.anomaliaInfo.nomAnomalia || 'Anomalía sin nombre';
+        const anomaliaDesc = normalizeLineEndings(alarm.anomaliaInfo.descAnomalia || 'Sin descripción adicional para esta anomalía.');
+        
+        // Título de la anomalía
+        doc.x = 70;
+        doc.fontSize(11)
+            .font('Helvetica-Bold')
+            .fillColor(STYLES.value.color)
+            .text(anomaliaTitle, 70, doc.y, { width: 475 });
+        doc.moveDown(0.5);
+        
+        // Descripción de la anomalía - permitir que fluya entre páginas
+        doc.fontSize(10)
+            .font('Helvetica')
+            .fillColor(STYLES.value.color)
+            .text(anomaliaDesc, 70, doc.y, { 
+                width: 475,
+                align: 'justify',
+                lineGap: 2
+            });
+    } else {
+        doc.x = 70;
+        doc.fontSize(11)
+            .font('Helvetica-Bold')
+            .fillColor('#999999')
+            .text('Anomalía no tipificada.', 70, doc.y, { width: 475 });
+        doc.moveDown(0.5);
+        doc.fontSize(10)
+            .font('Helvetica')
+            .fillColor('#999999')
+            .text('No se ha asignado una anomalía específica a este evento.', 70, doc.y, { 
+                width: 475,
+                align: 'justify'
+            });
+    }
+    doc.moveDown(2);
     
     // === Sección 3: Multimedia y Firmas ===
     checkAndAddPage(doc, 50);
@@ -200,7 +240,7 @@ export async function generateAlarmReportPDF(
     }
 
     addSubsectionTitle(doc, '3.2 Video');
-    const videoText = alarm.video ? ` ${alarm.video}` : 'No hay video disponible para este evento.';
+    const videoText = alarm.video ? normalizeLineEndings(alarm.video) : 'No hay video disponible para este evento.';
     doc.font('Helvetica').fontSize(10);
     const videoHeight = doc.heightOfString(videoText, { width: 455 }) + 15;
     const videoBoxHeight = videoHeight + 20;
@@ -211,15 +251,15 @@ export async function generateAlarmReportPDF(
     doc.y = videoBoxStartY + 10;
     doc.x = 90;
     if (alarm.video) {
-        doc.fontSize(10).font(STYLES.label.font).fillColor(STYLES.label.color).text('Enlace al video:', { continued: true });
-        doc.fontSize(9).font('Helvetica').fillColor(COLORS.primary).text(videoText, { link: alarm.video, underline: true });
+        doc.fontSize(10).font(STYLES.label.font).fillColor(STYLES.label.color).text('Enlace al video: ', { continued: true });
+        doc.fontSize(9).font('Helvetica').fillColor(COLORS.primary).text(' ' + videoText, { link: alarm.video, underline: true });
     } else {
         doc.fontSize(10).font('Helvetica').fillColor('#999999').text('No hay video disponible para este evento.', { width: 455 });
     }
     doc.y = videoBox.y + videoBox.height + 30;
 
     // Firmas
-    const signatureHeight = 0; //antes estaba en 150 creo. la puse en 0 y no se bugeo nada... :)
+    const signatureHeight = 0;
     checkAndAddPage(doc, signatureHeight);
     doc.y = doc.page.height - 150;
     addSignatureSection(doc);

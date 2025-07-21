@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getDispositivoDetails, getAlarms } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { DeviceDetails as DeviceDetailsType, Alarm } from "@/types";
-import { Home, Server, Hash, Wifi, Filter } from "lucide-react";
+import { Home, Server, Hash, Wifi, Filter, Bell, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { DeviceStatsCards } from "./device-stats-cards";
 import { AlarmsByWeekdayChart } from "./alarms-by-weekday-chart";
 import { AdvancedFilters } from '@/components/shared/advanced-filters';
@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from '@/lib/utils';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 
@@ -34,6 +35,7 @@ export default function DeviceDetailPage() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Cargar detalles del dispositivo
     useEffect(() => {
@@ -61,8 +63,6 @@ export default function DeviceDetailPage() {
             try {
                 setIsLoadingAlarms(true);
                 
-                // IMPORTANTE: Usar el interno del dispositivo para buscar
-                // La API espera que busquemos por el número interno
                 const searchQuery = device.nroInterno ? device.nroInterno.toString() : '';
                 
                 const response = await getAlarms({
@@ -71,18 +71,15 @@ export default function DeviceDetailPage() {
                     company: companyFilters.length > 0 ? companyFilters : undefined,
                     startDate: dateRange?.from?.toISOString(),
                     endDate: dateRange?.to?.toISOString(),
-                    pageSize: 100, // Obtener más alarmas para el dispositivo
+                    status: statusFilter !== 'all' ? statusFilter : undefined,
+                    pageSize: 100,
                     page: 1
                 });
                 
-                // Filtrar las alarmas que pertenecen a este dispositivo específico
-                // Verificamos tanto por ID del dispositivo como por interno
                 const filteredAlarms = response.alarms.filter(alarm => {
-                    // Verificar por ID del dispositivo
                     if (alarm.device?.serialNumber === device.idDispositivo.toString()) {
                         return true;
                     }
-                    // Verificar por número interno
                     if (device.nroInterno && alarm.vehicle?.interno === device.nroInterno.toString()) {
                         return true;
                     }
@@ -99,7 +96,18 @@ export default function DeviceDetailPage() {
         };
         
         loadAlarms();
-    }, [device, dateRange, typeFilters, companyFilters]);
+    }, [device, dateRange, typeFilters, companyFilters, statusFilter]);
+
+    // Contar alarmas por estado
+    const alarmCounts = useMemo(() => {
+        return {
+            total: deviceAlarms.length,
+            pending: deviceAlarms.filter(a => a.status === 'pending').length,
+            suspicious: deviceAlarms.filter(a => a.status === 'suspicious').length,
+            confirmed: deviceAlarms.filter(a => a.status === 'confirmed').length,
+            rejected: deviceAlarms.filter(a => a.status === 'rejected').length,
+        };
+    }, [deviceAlarms]);
 
     // Recalcular estadísticas basándose en las alarmas filtradas
     const filteredStats = useMemo(() => {
@@ -109,7 +117,6 @@ export default function DeviceDetailPage() {
             alarmsByWeekday: [] as any[]
         };
         
-        // Recalcular alarmas por día de la semana
         const weekdayCount: Record<string, number> = {};
         const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         
@@ -132,6 +139,7 @@ export default function DeviceDetailPage() {
         setTypeFilters([]);
         setCompanyFilters([]);
         setDateRange(undefined);
+        setStatusFilter("all");
     };
 
     if (isLoading) {
@@ -200,7 +208,6 @@ export default function DeviceDetailPage() {
                 </div>
             </div>
             
-            {/* Usar las estadísticas del dispositivo para el total histórico */}
             <DeviceStatsCards 
                 stats={device.stats} 
                 topAlarmTypes={device.topAlarmTypes} 
@@ -220,6 +227,41 @@ export default function DeviceDetailPage() {
                                 </Badge>
                             )}
                         </CardTitle>
+                        {/* Filtros de estado */}
+                        <div className="mt-4">
+                            <ToggleGroup 
+                                type="single" 
+                                value={statusFilter} 
+                                onValueChange={(value) => value && setStatusFilter(value)}
+                                className="flex flex-wrap justify-start"
+                            >
+                                <ToggleGroupItem value="all" className="flex items-center gap-2">
+                                    <Bell className="h-4 w-4" />
+                                    <span>Todas</span>
+                                    <Badge variant="outline">{alarmCounts.total}</Badge>
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="pending" className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-yellow-500" />
+                                    <span>Pendientes</span>
+                                    <Badge variant="warning">{alarmCounts.pending}</Badge>
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="suspicious" className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-blue-500" />
+                                    <span>Sospechosas</span>
+                                    <Badge variant="info">{alarmCounts.suspicious}</Badge>
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="confirmed" className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                    <span>Confirmadas</span>
+                                    <Badge variant="success">{alarmCounts.confirmed}</Badge>
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="rejected" className="flex items-center gap-2">
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                    <span>Rechazadas</span>
+                                    <Badge variant="destructive">{alarmCounts.rejected}</Badge>
+                                </ToggleGroupItem>
+                            </ToggleGroup>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {isLoadingAlarms ? (

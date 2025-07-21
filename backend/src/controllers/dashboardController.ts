@@ -37,7 +37,6 @@ const buildDashboardWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhe
     return whereClause;
 };
 
-
 export const getSummary = async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query;
 
@@ -46,16 +45,25 @@ export const getSummary = async (req: Request, res: Response) => {
 
         // Lógica para construir la cláusula WHERE en queries RAW
         const rawWhereConditions: Prisma.Sql[] = [];
+        let start: Date | null = null;
+        let end: Date | null = null;
+
         if (startDate && endDate && startDate !== 'undefined' && endDate !== 'undefined') {
-            rawWhereConditions.push(Prisma.sql`a.alarmTime >= ${new Date(startDate as string)} AND a.alarmTime <= ${new Date(endDate as string)}`);
+            start = new Date(startDate as string);
+            end = new Date(endDate as string);
+            end.setUTCHours(23, 59, 59, 999);
+
+            rawWhereConditions.push(
+                Prisma.sql`a.alarmTime >= ${start} AND a.alarmTime <= ${end}`
+            );
         }
+
         const rawWhereStatement = rawWhereConditions.length > 0 
-            ? Prisma.sql`WHERE ${Prisma.join(rawWhereConditions, ' AND ')}` 
+            ? Prisma.sql`WHERE ${Prisma.join(rawWhereConditions, ' AND ')}`
             : Prisma.empty;
-        
-        // Versión para queries que no usan el alias 'a'
-        const rawWhereStatementNoAlias = rawWhereConditions.length > 0 
-            ? Prisma.sql`WHERE alarmTime >= ${new Date(startDate as string)} AND alarmTime <= ${new Date(endDate as string)}` 
+
+        const rawWhereStatementNoAlias = rawWhereConditions.length > 0 && start && end
+            ? Prisma.sql`WHERE alarmTime >= ${start} AND alarmTime <= ${end}`
             : Prisma.empty;
 
         const [
