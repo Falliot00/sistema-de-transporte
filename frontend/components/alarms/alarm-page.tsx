@@ -479,35 +479,36 @@ export default function AlarmsPage() {
             
             {paginationInfo && paginationInfo.totalPages > 1 && (<PaginationControls currentPage={currentPage} totalPages={paginationInfo.totalPages} onPageChange={setCurrentPage} />)}
             
-            <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> 
-                <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col"> 
-                    {alarmForDetails && ( 
-                        <>
-                            <DialogHeader className="p-6 pb-2 sr-only">
-                                <DialogTitle>Detalles de Alarma: {alarmForDetails.type}</DialogTitle>
-                                <DialogDescription>Información detallada y acciones para la alarma ID {alarmForDetails.id}.</DialogDescription>
-                            </DialogHeader>
-                            {isNavigating && ( 
-                                <> 
-                                    <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious || isLoadingMore || isSubmitting} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"><ChevronLeft className="h-6 w-6" /><span className="sr-only">Anterior</span></Button> 
-                                    <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext || isLoadingMore || isSubmitting} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">{isLoadingMore ? <Loader2 className="h-6 w-6 animate-spin" /> : <ChevronRight className="h-6 w-6" />}<span className="sr-only">Siguiente</span></Button> 
-                                </>
-                            )} 
-                            <div className="p-6 pt-0 overflow-y-auto flex-grow"> 
-                                <AlarmDetails alarm={alarmForDetails} current={navigationState?.current} total={navigationState?.total} /> 
-                            </div> 
-                            {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected') && ( 
-                                <DialogFooter className="p-6 border-t sm:justify-start bg-background"> 
-                                    <div className="w-full"> 
-                                        {(alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious') && (<AlarmActionForm alarm={alarmForDetails} onAction={handleDialogAction} isSubmitting={isSubmitting} confirmText={alarmForDetails.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'} initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={true} /> )} 
-                                        {alarmForDetails.status === 'rejected' && (<AlarmActionForm alarm={alarmForDetails} onAction={handleReEvaluate} isSubmitting={isSubmitting} confirmText="Marcar como Sospechosa" rejectText="Mantener Rechazada" initialDescription={alarmForDetails.descripcion || ''} showDriverSelector={false} /> )} 
-                                    </div> 
-                                </DialogFooter> 
-                            )} 
-                        </> 
-                    )} 
-                </DialogContent> 
-            </Dialog>
+            // En la sección del Dialog donde se muestra AlarmDetails, actualizar para incluir las acciones
+
+<Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}> 
+    <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col"> 
+        {alarmForDetails && ( 
+            <>
+                <DialogHeader className="p-6 pb-2 sr-only">
+                    <DialogTitle>Detalles de Alarma: {alarmForDetails.type}</DialogTitle>
+                    <DialogDescription>Información detallada y acciones para la alarma ID {alarmForDetails.id}.</DialogDescription>
+                </DialogHeader>
+                {isNavigating && ( 
+                    <> 
+                        <Button variant="outline" size="icon" onClick={goToPrevious} disabled={!hasPrevious || isLoadingMore || isSubmitting} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50"><ChevronLeft className="h-6 w-6" /><span className="sr-only">Anterior</span></Button> 
+                        <Button variant="outline" size="icon" onClick={goToNext} disabled={!hasNext || isLoadingMore || isSubmitting} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full rounded-full h-12 w-12 bg-background/80 hover:bg-background z-50">{isLoadingMore ? <Loader2 className="h-6 w-6 animate-spin" /> : <ChevronRight className="h-6 w-6" />}<span className="sr-only">Siguiente</span></Button> 
+                    </>
+                )} 
+                <div className="p-6 pt-0 overflow-y-auto flex-grow"> 
+                    <AlarmDetails 
+                        alarm={alarmForDetails} 
+                        current={navigationState?.current} 
+                        total={navigationState?.total}
+                        onAction={handleDialogAction}
+                        isSubmitting={isSubmitting}
+                        showActions={alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected'}
+                    /> 
+                </div> 
+            </> 
+        )} 
+    </DialogContent> 
+</Dialog>
             
             <Dialog open={isAnalysisMode} onOpenChange={(open) => { if (!open) { fetchAlarms(); } setIsAnalysisMode(open); }}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-2 sm:p-4">

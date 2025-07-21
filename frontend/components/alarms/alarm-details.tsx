@@ -6,15 +6,16 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AlarmMedia } from "./alarm-media";
+import { AlarmActionForm } from "./alarm-action-form";
 import { 
   Clock, CarFront, User, FileText, MapPin, Gauge, Building, Camera, 
-  Hash, ShieldAlert
+  Hash, ShieldAlert, Settings
 } from "lucide-react";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from "@/lib/utils";
+import { Button } from '../ui/button';
 
 const AlarmLocationMap = dynamic(() => import('./alarm-location-map'), {
     ssr: false,
@@ -25,6 +26,14 @@ interface AlarmDetailsProps {
   alarm: Alarm;
   current?: number;
   total?: number;
+  onAction?: (payload: { 
+    action: 'confirmed' | 'rejected', 
+    description: string, 
+    choferId?: number | null, 
+    anomalyId?: number | null 
+  }) => void;
+  isSubmitting?: boolean;
+  showActions?: boolean;
 }
 
 interface NavigationItem {
@@ -34,13 +43,21 @@ interface NavigationItem {
   ref: React.RefObject<HTMLDivElement>;
 }
 
-export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
+export function AlarmDetails({ 
+  alarm, 
+  current, 
+  total, 
+  onAction,
+  isSubmitting = false,
+  showActions = false
+}: AlarmDetailsProps) {
   const statusInfo = getAlarmStatusInfo(alarm.status);
   const [activeSection, setActiveSection] = useState<string>('informacion-evento');
 
   const informacionRef = useRef<HTMLDivElement>(null);
   const multimediaRef = useRef<HTMLDivElement>(null);
   const descripcionRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const navigationItems: NavigationItem[] = useMemo(() => {
@@ -68,8 +85,18 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
       });
     }
 
+    // Agregar sección de acciones si es necesario
+    if (showActions && (alarm.status === 'pending' || alarm.status === 'suspicious' || alarm.status === 'rejected')) {
+      items.push({
+        id: 'acciones',
+        label: 'Acciones de Revisión',
+        icon: <Settings className="h-4 w-4" />,
+        ref: actionsRef
+      });
+    }
+
     return items;
-  }, [alarm.descripcion]);
+  }, [alarm.descripcion, alarm.status, showActions]);
 
   const position = useMemo((): [number, number] | null => {
     if (alarm?.location?.latitude && alarm?.location?.longitude) {
@@ -87,7 +114,7 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
       }
       element = element.parentElement;
     }
-    return document.documentElement; // fallback
+    return document.documentElement;
   };
 
   useEffect(() => {
@@ -232,7 +259,15 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
           <div>
             <div className="text-muted-foreground flex items-center gap-3 mb-2">
               <MapPin className="h-4 w-4" />
-              <p className="text-xs text-muted-foreground font-medium">UBICACIÓN DEL EVENTO</p>
+
+
+
+
+
+
+
+
+<p className="text-xs text-muted-foreground font-medium">UBICACIÓN DEL EVENTO</p>
             </div>
             <div className="h-56 w-full rounded-md overflow-hidden border">
               {position ? (
@@ -270,6 +305,68 @@ export function AlarmDetails({ alarm, current, total }: AlarmDetailsProps) {
           <AlarmMedia alarmId={alarm.id} media={alarm.media || []} videoProcessing={alarm.videoProcessing} />
         </CardContent>
       </Card>
+
+      {/* Nueva sección de acciones integrada como Card */}
+      {showActions && onAction && (alarm.status === 'pending' || alarm.status === 'suspicious' || alarm.status === 'rejected') && (
+        <Card ref={actionsRef} id="acciones" className="scroll-mt-24">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary"/>
+              Acciones de Revisión
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {alarm.status === 'rejected' ? (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Esta alarma fue rechazada previamente. Puedes re-evaluarla si consideras que requiere una segunda revisión.
+                  </p>
+                </div>
+                <AlarmActionForm
+                  alarm={alarm}
+                  onAction={(payload) => {
+                    // Para alarmas rechazadas, solo permitimos re-evaluación
+                    if (payload.action === 'confirmed') {
+                      onAction({ ...payload, action: 'confirmed' });
+                    }
+                  }}
+                  isSubmitting={isSubmitting}
+                  confirmText="Marcar como Sospechosa"
+                  rejectText="Mantener Rechazada"
+                  initialDescription={alarm.descripcion || ''}
+                  showDriverSelector={false}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {alarm.status === 'pending' && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      Revisa la evidencia y decide si esta alarma requiere mayor investigación o puede ser descartada.
+                    </p>
+                  </div>
+                )}
+                {alarm.status === 'suspicious' && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      Esta alarma está marcada como sospechosa. Asigna un chofer y una anomalía para confirmarla, o recházala si fue un falso positivo.
+                    </p>
+                  </div>
+                )}
+                <AlarmActionForm
+                  alarm={alarm}
+                  onAction={onAction}
+                  isSubmitting={isSubmitting}
+                  confirmText={alarm.status === 'pending' ? 'Marcar como Sospechosa' : 'Confirmar Alarma'}
+                  initialDescription={alarm.descripcion || ''}
+                  showDriverSelector={true}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
