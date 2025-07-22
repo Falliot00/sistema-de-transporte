@@ -159,20 +159,20 @@ export async function generateAlarmReportPDF(
     addSectionTitle(doc, '2. Análisis del desvío');
 
     // 2.1 Detalles del control - Sin recuadro, texto fluido
-    if (alarm.descripcion) {
-        addSubsectionTitle(doc, '2.1 Detalles del control');
-        const descText = normalizeLineEndings(alarm.descripcion);
-        doc.x = 70;
-        doc.font(STYLES.value.font)
-            .fontSize(STYLES.value.fontSize)
-            .fillColor(STYLES.value.color)
-            .text(descText, 70, doc.y, { 
-                width: 475,
-                align: 'justify',
-                lineGap: 2
-            });
-        doc.moveDown(1);
-    }
+    addSubsectionTitle(doc, '2.1 Detalles del control');
+    const descText = alarm.descripcion 
+        ? normalizeLineEndings(alarm.descripcion)
+        : 'Esta alarma no tiene una descripción adicional.';
+    doc.x = 70;
+    doc.font(STYLES.value.font)
+        .fontSize(STYLES.value.fontSize)
+        .fillColor(STYLES.value.color)
+        .text(descText, 70, doc.y, { 
+            width: 475,
+            align: 'justify',
+            lineGap: 2
+        });
+    doc.moveDown(1);
 
     // 2.2 Comentarios del desvío registrado - Sin recuadro, texto fluido
     addSubsectionTitle(doc, '2.2 Comentarios del desvío registrado');
