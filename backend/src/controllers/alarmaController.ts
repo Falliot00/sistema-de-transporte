@@ -1,12 +1,13 @@
 // backend/src/controllers/alarmaController.ts
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { exec } from 'child_process';
+import { exec, execSync, ExecOptions } from 'child_process';
 import path from 'path';
 import { transformAlarmData } from '../utils/transformers';
 import { generateAlarmReportPDF } from '../utils/pdfGenerator';
 import { DB_QUERY_STATUS_MAP } from '../utils/statusHelpers';
 import streamBuffers from 'stream-buffers';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -22,23 +23,138 @@ const alarmIncludes = {
     empresaInfo: true,
 };
 
+/**
+ * Obtiene el comando correcto de Python según el sistema operativo
+ */
+const getPythonCommand = (): string => {
+    const isWindows = process.platform === 'win32';
+    
+    if (isWindows) {
+        // Rutas posibles en Windows
+        const possiblePaths = [
+            path.join(__dirname, '..', '..', '.venv', 'Scripts', 'python.exe'),
+            path.join(__dirname, '..', '..', '..', '.venv', 'Scripts', 'python.exe'),
+            path.join(process.cwd(), 'backend', '.venv', 'Scripts', 'python.exe'),
+            path.join(process.cwd(), '.venv', 'Scripts', 'python.exe'),
+            'python.exe',
+            'python',
+            'py'
+        ];
+        
+        // Verificar cuál existe y funciona
+        for (const pythonPath of possiblePaths) {
+            try {
+                // Verificar si el archivo existe primero (para rutas absolutas)
+                if (path.isAbsolute(pythonPath) && !fs.existsSync(pythonPath)) {
+                    continue;
+                }
+                
+                // Intenta ejecutar python --version
+                execSync(`"${pythonPath}" --version`, { 
+                    encoding: 'utf8',
+                    stdio: 'pipe'
+                });
+                console.log(`[✓] Python encontrado en: ${pythonPath}`);
+                return pythonPath;
+            } catch (e) {
+                // Si falla, continúa con el siguiente
+                continue;
+            }
+        }
+        
+        // Si no encontramos nada, intentar con python del sistema
+        console.warn('[⚠] No se encontró Python en el entorno virtual, usando Python del sistema');
+        return 'python';
+        
+    } else {
+        // En Linux/Mac
+        const possiblePaths = [
+            path.join(__dirname, '..', '..', '.venv', 'bin', 'python3'),
+            path.join(__dirname, '..', '..', '..', '.venv', 'bin', 'python3'),
+            path.join(process.cwd(), 'backend', '.venv', 'bin', 'python3'),
+            path.join(process.cwd(), '.venv', 'bin', 'python3'),
+            'python3',
+            'python'
+        ];
+        
+        for (const pythonPath of possiblePaths) {
+            try {
+                if (path.isAbsolute(pythonPath) && !fs.existsSync(pythonPath)) {
+                    continue;
+                }
+                execSync(`${pythonPath} --version`, { 
+                    encoding: 'utf8',
+                    stdio: 'pipe'
+                });
+                console.log(`[✓] Python encontrado en: ${pythonPath}`);
+                return pythonPath;
+            } catch (e) {
+                continue;
+            }
+        }
+        
+        return 'python3';
+    }
+};
+
 const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date | null, guid: string }) => {
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
         return;
     }
-    const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
-    const pythonExecutable = path.join(__dirname, '..', '..', '.venv', 'bin', 'python3');
-    const alarmTimeISO = alarm.alarmTime.toISOString();
-    const dispositivoStr = alarm.dispositivo.toString();
-    const command = `"${pythonExecutable}" "${scriptPath}" "${dispositivoStr}" "${alarmTimeISO}" "${alarm.guid}"`;
     
-    console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
-    exec(command, (error, stdout, stderr) => {
-        if (error) console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}: ${error.message}`);
-        if (stderr) console.error(`[!] Stderr de script de video para alarma ${alarm.guid}: ${stderr}`);
-        console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}: ${stdout}`);
-    });
+    try {
+        const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
+        const pythonExecutable = getPythonCommand();
+        const alarmTimeISO = alarm.alarmTime.toISOString();
+        const dispositivoStr = alarm.dispositivo.toString();
+        
+        // Verificar que el script existe
+        if (!fs.existsSync(scriptPath)) {
+            console.error(`[❌] El script no existe en la ruta: ${scriptPath}`);
+            return;
+        }
+        
+        // Construir el comando
+        let command: string;
+        if (process.platform === 'win32') {
+            // En Windows, usar comillas dobles y escapar correctamente
+            command = `"${pythonExecutable}" "${scriptPath}" ${dispositivoStr} "${alarmTimeISO}" ${alarm.guid}`;
+        } else {
+            // En Linux/Mac
+            command = `${pythonExecutable} "${scriptPath}" "${dispositivoStr}" "${alarmTimeISO}" "${alarm.guid}"`;
+        }
+        
+        console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
+        
+        // Opciones de ejecución
+        const execOptions: ExecOptions = {
+            cwd: path.dirname(scriptPath),
+            env: process.env,
+            shell: process.platform === 'win32' ? 'cmd.exe' : undefined,
+            windowsHide: true
+        };
+        
+        // Ejecutar el comando
+        exec(command, execOptions, (error: Error | null, stdout: string | Buffer, stderr: string | Buffer) => {
+            const stdoutStr = stdout.toString();
+            const stderrStr = stderr.toString();
+            if (error) {
+                console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}:`, error.message);
+                // Log adicional para debugging
+                console.error(`[❌] Error completo:`, error);
+            }
+            if (stderrStr) {
+                console.error(`[!] Stderr de script de video para alarma ${alarm.guid}:`, stderrStr);
+            }
+            if (stdoutStr) {
+                console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}:`, stdoutStr);
+            }
+        });
+        
+    } catch (error) {
+        console.error(`[❌] Error al configurar la ejecución del script de video:`, error);
+    }
 };
 
 const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput => {
@@ -182,7 +298,6 @@ export const reviewAlarm = async (req: Request, res: Response) => {
             if (choferToAssign.idEmpresa !== alarm.idEmpresa) {
                 return res.status(400).json({ message: `El chofer ${choferToAssign.apellido_nombre} no pertenece a la empresa de la alarma.` });
             }
-            // --- CORRECCIÓN DEL ERROR 1 ---
             dataToUpdate.chofer = { connect: { choferes_id: choferId } };
         }
 
@@ -210,7 +325,6 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
         
-        // --- CORRECCIÓN DEL ERROR 2 ---
         let dataToUpdate: Prisma.AlarmasHistoricoUpdateInput = {};
         if (typeof choferId === 'number') {
             const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
@@ -218,7 +332,6 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
             if (choferToAssign.idEmpresa !== alarm.idEmpresa) return res.status(400).json({ message: `El chofer no pertenece a la empresa de la alarma.` });
             dataToUpdate.chofer = { connect: { choferes_id: choferId } };
         } else {
-            // Para desasignar, usamos disconnect
             dataToUpdate.chofer = { disconnect: true };
         }
         
@@ -236,7 +349,7 @@ export const assignDriverToAlarm = async (req: Request, res: Response) => {
 
 export const confirmFinalAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { descripcion, choferId, anomalyId } = req.body; // NUEVO: Añadimos anomalyId
+    const { descripcion, choferId, anomalyId } = req.body;
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
@@ -256,7 +369,6 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         
         dataToUpdate.chofer = { connect: { choferes_id: choferId } };
         
-        // NUEVO: Validación y asignación de anomalía
         if (typeof anomalyId !== 'number') {
             return res.status(400).json({ message: "La selección de una anomalía es obligatoria para confirmar la alarma." });
         }
@@ -266,7 +378,6 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
             return res.status(404).json({ message: `La anomalía con ID ${anomalyId} no existe.` });
         }
         
-        // Conectamos la anomalía usando la relación anomaliaInfo
         dataToUpdate.anomaliaInfo = { connect: { idAnomalia: anomalyId } };
 
         const updatedAlarm = await prisma.alarmasHistorico.update({

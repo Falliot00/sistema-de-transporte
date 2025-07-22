@@ -143,7 +143,7 @@ def procesar_video_alarma(dispositivo_id: str, alarm_time_iso: str, guid_alarma:
 
         logging.info("Actualizando registro en la base de datos...")
         update_db_record(
-            table_name='alarmasHistorico',
+            table_name='alarmas.alarmasHistorico',
             update_fields={'video': resultado_s3['url']},
             where_conditions={'guid': guid_alarma}
         )

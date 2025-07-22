@@ -7,19 +7,19 @@ import os
 
 load_dotenv()
 
-connection = pyodbc.connect(
-    f'DRIVER={{ODBC Driver 18 for SQL Server}};'
+"""connection = pyodbc.connect(
+    f'DRIVER={{ODBC Driver 17 for SQL Server}};'
     f'SERVER={os.getenv("DB_SERVER")};'
     f'DATABASE={os.getenv("DB_NAME")};'
     f'UID={os.getenv("DB_USER")};'
     f'PWD={os.getenv("DB_PASSWORD")};'
     f'TrustServerCertificate=yes;'
-)
+)"""
 
 def conectar_db():
     try:
         connection = pyodbc.connect(
-            f'DRIVER={{ODBC Driver 18 for SQL Server}};'
+            f'DRIVER={{ODBC Driver 17 for SQL Server}};'
             f'SERVER={os.getenv("DB_SERVER")};'
             f'DATABASE={os.getenv("DB_NAME")};'
             f'UID={os.getenv("DB_USER")};'
@@ -107,7 +107,7 @@ def update_db_record(table_name: str,
         where_clause = ' AND '.join([f"[{k}] = ?" for k in where_conditions])
         where_values = list(where_conditions.values())
 
-        sql = f"UPDATE [{table_name}] SET {set_clause} WHERE {where_clause}"
+        sql = f"UPDATE {table_name} SET {set_clause} WHERE {where_clause}"
         values = set_values + where_values
 
         cursor.execute(sql, *values) # El asterisco es importante para desempacar los valores

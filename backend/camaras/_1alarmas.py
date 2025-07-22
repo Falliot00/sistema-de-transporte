@@ -146,22 +146,22 @@ for alarm in alarm_data:
     cn = infos.get('cn')
     did = infos.get('did')
 
+    empresa = 1 if cn == 'LagunaPaiva' else 2
 
     registros.append({
         'guid': alarm['guid'],
         'dispositivo': did,
-        'interno': alarm['vid'],
+        'idinterno': alarm['vid'],
         'alarmType': alarm['atp'],
         'velocidad': alarm['ssp'],
         'lng': alarm['lng'],
         'lat': alarm['lat'],
         'ubi': alarm['ubi'],
-        'patente': alarm['abbr'],
         'alarmTime': alarm['start_time'],
-        'Empresa': cn,
         'imagen': s3_url,
         'video': None,
-        'estado': 'Pendiente'
+        'estado': 'Pendiente',
+        'idEmpresa': empresa
     })
 
 
@@ -170,6 +170,6 @@ print('Imagenes almacenadas en S3')
 
 df_regisrtos = pd.DataFrame(registros)
 
-insertar_df_en_db(df_regisrtos,'dbo.alarmasHistorico')
+insertar_df_en_db(df_regisrtos,'alarmas.alarmasHistorico')
 
 #======== 28/05 14:27 FUNCIONA BIEN  ==========================
