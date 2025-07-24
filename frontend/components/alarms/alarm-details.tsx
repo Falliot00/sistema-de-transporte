@@ -62,34 +62,15 @@ export function AlarmDetails({
   isSubmitting = false,
   showActions = false
 }: AlarmDetailsProps) {
-  // Handle case when alarm is null or undefined
-  if (!alarm) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-muted-foreground">No hay alarma seleccionada</p>
-        </div>
-      </div>
-    );
-  }
-
-  const statusInfo = getAlarmStatusInfo(alarm.status);
+  // All hooks must be called before any early returns
   const [activeSection, setActiveSection] = useState<string>('informacion-evento');
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingAnomaly, setIsEditingAnomaly] = useState(false);
-  const [editedDescription, setEditedDescription] = useState(alarm.descripcion || '');
-  const [selectedAnomaly, setSelectedAnomaly] = useState(alarm.anomalia?.idAnomalia || null);
-
-  // Update local state when alarm data changes
-  useEffect(() => {
-    setEditedDescription(alarm.descripcion || '');
-  }, [alarm.descripcion]);
-
-  useEffect(() => {
-    setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
-  }, [alarm.anomalia?.idAnomalia]);
+  const [editedDescription, setEditedDescription] = useState(alarm?.descripcion || '');
+  const [selectedAnomaly, setSelectedAnomaly] = useState(alarm?.anomalia?.idAnomalia || null);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [isLoadingAnomalies, setIsLoadingAnomalies] = useState(false);
+  const [showDriverDialog, setShowDriverDialog] = useState(false);
 
   const informacionRef = useRef<HTMLDivElement>(null);
   const multimediaRef = useRef<HTMLDivElement>(null);
@@ -97,7 +78,19 @@ export function AlarmDetails({
   const detallesRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [showDriverDialog, setShowDriverDialog] = useState(false);
+
+  // Update local state when alarm data changes
+  useEffect(() => {
+    if (alarm) {
+      setEditedDescription(alarm.descripcion || '');
+    }
+  }, [alarm?.descripcion]);
+
+  useEffect(() => {
+    if (alarm) {
+      setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
+    }
+  }, [alarm?.anomalia?.idAnomalia]);
 
   // Load anomalies when editing anomaly
   useEffect(() => {
@@ -110,49 +103,9 @@ export function AlarmDetails({
     }
   }, [isEditingAnomaly, anomalies.length]);
 
-  // Handle saving description
-  const handleSaveDescription = async () => {
-    try {
-      const updatedAlarm = await updateAlarmDescription(alarm.id, editedDescription);
-      setIsEditingDescription(false);
-      if (onAlarmUpdate) {
-        onAlarmUpdate(updatedAlarm);
-      }
-    } catch (error) {
-      console.error('Error saving description:', error);
-      // Reset to original value on error
-      setEditedDescription(alarm.descripcion || '');
-    }
-  };
-
-  // Handle canceling description edit
-  const handleCancelDescription = () => {
-    setEditedDescription(alarm.descripcion || '');
-    setIsEditingDescription(false);
-  };
-
-  // Handle saving anomaly
-  const handleSaveAnomaly = async () => {
-    try {
-      const updatedAlarm = await updateAlarmAnomaly(alarm.id, selectedAnomaly);
-      setIsEditingAnomaly(false);
-      if (onAlarmUpdate) {
-        onAlarmUpdate(updatedAlarm);
-      }
-    } catch (error) {
-      console.error('Error saving anomaly:', error);
-      // Reset to original value on error
-      setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
-    }
-  };
-
-  // Handle canceling anomaly edit
-  const handleCancelAnomaly = () => {
-    setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
-    setIsEditingAnomaly(false);
-  };
-
   const navigationItems: NavigationItem[] = useMemo(() => {
+    if (!alarm) return [];
+    
     const items = [
       {
         id: 'informacion-evento',
@@ -201,7 +154,7 @@ export function AlarmDetails({
     }
 
     return items;
-  }, [alarm.descripcion, alarm.status, showActions]);
+  }, [alarm?.descripcion, alarm?.status, showActions]);
 
   const position = useMemo((): [number, number] | null => {
     if (alarm?.location?.latitude && alarm?.location?.longitude) {
@@ -251,6 +204,61 @@ export function AlarmDetails({
       observers.forEach(observer => observer.disconnect());
     };
   }, [navigationItems]);
+
+  // Handle case when alarm is null or undefined - after all hooks
+  if (!alarm) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground">No hay alarma seleccionada</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statusInfo = getAlarmStatusInfo(alarm.status);
+
+  // Handle saving description
+  const handleSaveDescription = async () => {
+    try {
+      const updatedAlarm = await updateAlarmDescription(alarm.id, editedDescription);
+      setIsEditingDescription(false);
+      if (onAlarmUpdate) {
+        onAlarmUpdate(updatedAlarm);
+      }
+    } catch (error) {
+      console.error('Error saving description:', error);
+      // Reset to original value on error
+      setEditedDescription(alarm.descripcion || '');
+    }
+  };
+
+  // Handle canceling description edit
+  const handleCancelDescription = () => {
+    setEditedDescription(alarm.descripcion || '');
+    setIsEditingDescription(false);
+  };
+
+  // Handle saving anomaly
+  const handleSaveAnomaly = async () => {
+    try {
+      const updatedAlarm = await updateAlarmAnomaly(alarm.id, selectedAnomaly);
+      setIsEditingAnomaly(false);
+      if (onAlarmUpdate) {
+        onAlarmUpdate(updatedAlarm);
+      }
+    } catch (error) {
+      console.error('Error saving anomaly:', error);
+      // Reset to original value on error
+      setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
+    }
+  };
+
+  // Handle canceling anomaly edit
+  const handleCancelAnomaly = () => {
+    setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
+    setIsEditingAnomaly(false);
+  };
 
   const scrollToSection = (sectionId: string) => {
     const item = navigationItems.find(item => item.id === sectionId);
@@ -521,7 +529,7 @@ export function AlarmDetails({
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar anomalía..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent onWheel={(e) => e.stopPropagation()}>
                           <SelectItem value="0">Sin anomalía</SelectItem>
                           {anomalies.map((anomaly) => (
                             <SelectItem key={anomaly.idAnomalia} value={anomaly.idAnomalia.toString()}>

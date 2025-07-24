@@ -67,10 +67,10 @@ export function AnomalySelector({ selectedAnomalyId, onSelectAnomaly, disabled }
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
+      <PopoverContent className="w-[400px] p-0" onWheel={(e) => e.stopPropagation()}>
         <Command>
           <CommandInput placeholder="Buscar anomalía..." />
-          <CommandList>
+          <CommandList style={{ scrollbarWidth: 'thin' }}>
             <CommandEmpty>{isLoading ? "Cargando..." : "No se encontró ninguna anomalía."}</CommandEmpty>
             <CommandGroup>
               {anomalies.map((anomaly) => (

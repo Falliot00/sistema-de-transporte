@@ -77,7 +77,7 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[300px] p-0" onWheel={(e) => e.stopPropagation()}>
         <Command>
           <CommandInput placeholder="Buscar chofer por nombre o DNI..." />
           <div className="p-2 border-b flex gap-2">
@@ -85,7 +85,7 @@ export function DriverSelector({ selectedDriverId, onSelectDriver, alarmCompany,
               <Button size="sm" variant={companyFilter === 'Monte Vera' ? 'default' : 'outline'} onClick={() => setCompanyFilter('Monte Vera')}>Monte Vera</Button>
               <Button size="sm" variant={companyFilter === 'Laguna Paiva' ? 'default' : 'outline'} onClick={() => setCompanyFilter('Laguna Paiva')}>Laguna Paiva</Button>
           </div>
-          <CommandList>
+          <CommandList style={{ scrollbarWidth: 'thin' }}>
             <CommandEmpty>{isLoading ? "Cargando..." : "No se encontró ningún chofer."}</CommandEmpty>
             <CommandGroup>
                 <CommandItem onSelect={() => handleSelect(null)} className="text-destructive">
