@@ -76,9 +76,9 @@ export const transformAlarmData = (alarm: any) => {
         ],
         // --- NUEVO: Añadimos la información de la anomalía al objeto transformado. ---
         anomalia: alarm.anomaliaInfo ? {
-            id: alarm.anomaliaInfo.idAnomalia,
-            nombre: alarm.anomaliaInfo.nomAnomalia,
-            descripcion: alarm.anomaliaInfo.descAnomalia
+            idAnomalia: alarm.anomaliaInfo.idAnomalia,
+            nomAnomalia: alarm.anomaliaInfo.nomAnomalia,
+            descAnomalia: alarm.anomaliaInfo.descAnomalia
         } : null,
         comments: [],
     };

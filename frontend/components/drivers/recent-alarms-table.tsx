@@ -104,7 +104,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
                                </DialogDescription>
                            </DialogHeader>
                            <div className="p-6 pt-0 overflow-y-auto flex-grow">
-                              <AlarmDetails alarm={selectedAlarm} />
+                              <AlarmDetails alarm={selectedAlarm} onDriverReassign={undefined} />
                            </div>
                         </>
                     )}

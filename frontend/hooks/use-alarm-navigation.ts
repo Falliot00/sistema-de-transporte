@@ -142,25 +142,41 @@ export const useAlarmNavigation = (onError?: (error: string) => void) => {
             const newAlarms = prev.alarms.filter(a => a.id !== alarmId);
             const removedIndex = prev.alarms.findIndex(a => a.id === alarmId);
             
+            // Si la alarma no se encuentra, no hacer nada
+            if (removedIndex === -1) {
+                return prev;
+            }
+            
             let newState = { ...prev };
             
             // Si eliminamos la alarma actual
             if (removedIndex === prev.currentIndex) {
-                // Si hay alarmas después, mantenemos el índice
+                // Si no quedan alarmas, establecer índice a -1
+                if (newAlarms.length === 0) {
+                    newState = {
+                        ...prev,
+                        alarms: newAlarms,
+                        currentIndex: -1,
+                        totalAlarms: Math.max(0, prev.totalAlarms - 1)
+                    };
+                }
+                // Si hay alarmas después, mantenemos el índice si es posible
                 // Si no, retrocedemos uno
-                const newIndex = prev.currentIndex >= newAlarms.length 
-                    ? Math.max(0, newAlarms.length - 1)
-                    : prev.currentIndex;
-                
-                newState = {
-                    ...prev,
-                    alarms: newAlarms,
-                    currentIndex: newIndex,
-                    totalAlarms: Math.max(0, prev.totalAlarms - 1)
-                };
+                else {
+                    const newIndex = prev.currentIndex >= newAlarms.length 
+                        ? Math.max(0, newAlarms.length - 1)
+                        : prev.currentIndex;
+                    
+                    newState = {
+                        ...prev,
+                        alarms: newAlarms,
+                        currentIndex: newIndex,
+                        totalAlarms: Math.max(0, prev.totalAlarms - 1)
+                    };
+                }
             }
             // Si eliminamos una alarma antes de la actual, ajustamos el índice
-            else if (removedIndex < prev.currentIndex && removedIndex !== -1) {
+            else if (removedIndex < prev.currentIndex) {
                 newState = {
                     ...prev,
                     alarms: newAlarms,

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
-import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, getAlarmsCount, undoAlarm } from "@/lib/api";
+import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, getAlarmsCount, undoAlarm, assignDriver } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
@@ -244,9 +244,16 @@ export default function AlarmsPage() {
     }
     toast({ title: "Alarma actualizada" });
     removeAlarm(alarmIdToUpdate);
-    if (hasNext) await goToNext();
-    else if (hasPrevious) goToPrevious();
-    else handleDialogClose();
+    
+    // Navigate to next/previous or close dialog
+    if (hasNext) {
+      await goToNext();
+    } else if (hasPrevious) {
+      goToPrevious();
+    } else {
+      handleDialogClose();
+    }
+    
     fetchAlarms();
   } catch (error: any) {
     toast({ title: "Error", variant: "destructive", description: error.message });
@@ -375,6 +382,36 @@ export default function AlarmsPage() {
         } 
     };
 
+    const handleDriverReassign = async (choferId: number | null) => {
+        if (!alarmForDetails) return;
+        
+        setIsSubmitting(true);
+        try {
+            const updatedAlarm = await assignDriver(alarmForDetails.id, choferId);
+            
+            // Update the alarm in the current navigation state
+            const currentAlarmList = alarms.map(alarm => 
+                alarm.id === alarmForDetails.id ? updatedAlarm : alarm
+            );
+            setAlarms(currentAlarmList);
+            
+            toast({ 
+                title: "Chofer actualizado", 
+                description: choferId 
+                    ? `Chofer asignado correctamente` 
+                    : "Asignación de chofer removida"
+            });
+        } catch (error: any) {
+            toast({ 
+                title: "Error", 
+                description: error.message || "Error al reasignar el chofer", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const currentAnalysisAlarm = analysisAlarms[analysisIndex];
     let confirmButtonText = "Confirmar"; 
     if (currentAnalysisAlarm?.status === 'pending') {
@@ -501,6 +538,7 @@ export default function AlarmsPage() {
                                     current={navigationState?.current} 
                                     total={navigationState?.total}
                                     onAction={handleDialogAction}
+                                    onDriverReassign={handleDriverReassign}
                                     isSubmitting={isSubmitting}
                                     showActions={alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected'}
                                 /> 
