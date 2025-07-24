@@ -317,3 +317,35 @@ export async function getAnomalias(): Promise<Anomaly[]> {
         return [];
     }
 }
+
+/**
+ * Actualiza la descripción de una alarma confirmada
+ */
+export async function updateAlarmDescription(alarmId: string, description: string): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/description`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al actualizar la descripción');
+    }
+    return await response.json();
+}
+
+/**
+ * Actualiza la anomalía asignada a una alarma confirmada
+ */
+export async function updateAlarmAnomaly(alarmId: string, anomalyId: number | null): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/anomaly`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anomalyId }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al actualizar la anomalía');
+    }
+    return await response.json();
+}

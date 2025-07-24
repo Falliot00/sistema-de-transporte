@@ -74,7 +74,8 @@ export default function AlarmsPage() {
         isNavigating, 
         removeAlarm,
         isLoadingMore,
-        navigationState 
+        navigationState,
+        updateCurrentAlarm
     } = useAlarmNavigation((error) => { toast({ title: "Error", description: error, variant: "destructive" }); });
     
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -412,6 +413,22 @@ export default function AlarmsPage() {
         }
     };
 
+    const handleAlarmUpdate = (updatedAlarm: Alarm) => {
+        // Update the alarm in the current list
+        const currentAlarmList = alarms.map(alarm => 
+            alarm.id === updatedAlarm.id ? updatedAlarm : alarm
+        );
+        setAlarms(currentAlarmList);
+        
+        // Also update the current alarm in the navigation hook
+        updateCurrentAlarm(updatedAlarm);
+        
+        toast({
+            title: "Alarma actualizada",
+            description: "Los detalles de la alarma se guardaron correctamente."
+        });
+    };
+
     const currentAnalysisAlarm = analysisAlarms[analysisIndex];
     let confirmButtonText = "Confirmar"; 
     if (currentAnalysisAlarm?.status === 'pending') {
@@ -539,6 +556,7 @@ export default function AlarmsPage() {
                                     total={navigationState?.total}
                                     onAction={handleDialogAction}
                                     onDriverReassign={handleDriverReassign}
+                                    onAlarmUpdate={handleAlarmUpdate}
                                     isSubmitting={isSubmitting}
                                     showActions={alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected'}
                                 /> 

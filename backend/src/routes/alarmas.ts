@@ -11,7 +11,9 @@ import {
     assignDriverToAlarm, 
     getAlarmsCount,
     undoAlarmAction,
-    getAlarmReport
+    getAlarmReport,
+    updateAlarmDescription,
+    updateAlarmAnomaly
 } from '../controllers/alarmaController';
 
 const router = Router();
@@ -58,6 +60,14 @@ router.post('/:id/retry-video', async (req: Request, res: Response) => {
 
 router.patch('/:id/assign-driver', async (req: Request, res: Response) => {
     await assignDriverToAlarm(req, res);
+});
+
+router.patch('/:id/description', async (req: Request, res: Response) => {
+    await updateAlarmDescription(req, res);
+});
+
+router.patch('/:id/anomaly', async (req: Request, res: Response) => {
+    await updateAlarmAnomaly(req, res);
 });
 
 export default router;

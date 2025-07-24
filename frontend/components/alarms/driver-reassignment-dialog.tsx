@@ -86,24 +86,24 @@ export function DriverReassignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+      <DialogContent className="max-w-xs sm:max-w-md lg:max-w-2xl max-h-[95vh] sm:max-h-[90vh] lg:max-h-[80vh] flex flex-col p-2 sm:p-4 lg:p-6 mx-2 sm:mx-4 lg:mx-0 gap-2 sm:gap-4">
+        <DialogHeader className="pb-1 sm:pb-2 lg:pb-4 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base lg:text-lg">
+            <User className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
             Reasignar Chofer
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm leading-tight">
             Selecciona un chofer para asignar a esta alarma o quita la asignación actual.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 min-h-0">
+        <div className="flex-1 space-y-2 sm:space-y-3 lg:space-y-4 min-h-0 overflow-hidden">
           {/* Current Driver */}
           {currentDriver && (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium mb-1">Chofer Actual:</p>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
+            <div className="p-2 sm:p-3 bg-muted/50 rounded-lg flex-shrink-0">
+              <p className="text-xs font-medium mb-1">Chofer Actual:</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <Badge variant="secondary" className="text-xs w-fit">
                   {currentDriver.apellido_nombre}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
@@ -114,24 +114,24 @@ export function DriverReassignmentDialog({
           )}
 
           {/* Remove Assignment Option */}
-          <div className="space-y-2">
+          <div className="flex-shrink-0">
             <button
               onClick={() => handleDriverSelect(null)}
               className={cn(
-                "w-full p-3 rounded-lg border-2 transition-all text-left",
+                "w-full p-2 rounded-lg border-2 transition-all text-left",
                 selectedDriverId === null
                   ? "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
                   : "border-gray-200 hover:border-red-200 hover:bg-red-50/50 dark:border-gray-700 dark:hover:border-red-700 dark:hover:bg-red-900/10"
               )}
             >
-              <div className="flex items-center gap-3">
-                <UserX className="h-4 w-4 text-red-500" />
-                <div>
-                  <p className="font-medium text-red-700 dark:text-red-300">
+              <div className="flex items-center gap-2">
+                <UserX className="h-3 w-3 text-red-500 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-medium text-red-700 dark:text-red-300 text-xs leading-tight">
                     Quitar asignación
                   </p>
-                  <p className="text-xs text-red-600 dark:text-red-400">
-                    La alarma quedará sin chofer asignado
+                  <p className="text-xs text-red-600 dark:text-red-400 leading-tight">
+                    Sin chofer asignado
                   </p>
                 </div>
               </div>
@@ -139,13 +139,13 @@ export function DriverReassignmentDialog({
           </div>
 
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-shrink-0">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
             <Input
               placeholder="Buscar por nombre o DNI..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-7 text-xs h-7 sm:h-8"
             />
           </div>
 
@@ -160,8 +160,8 @@ export function DriverReassignmentDialog({
                 <div className="text-sm text-red-500">{error}</div>
               </div>
             ) : (
-              <ScrollArea className="h-64">
-                <div className="space-y-2">
+              <ScrollArea className="h-32 sm:h-40 lg:h-56 xl:h-64">
+                <div className="space-y-1 pr-2">
                   {filteredDrivers.length === 0 ? (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       {searchTerm ? "No se encontraron choferes" : "No hay choferes disponibles"}
@@ -172,29 +172,29 @@ export function DriverReassignmentDialog({
                         key={driver.choferes_id}
                         onClick={() => handleDriverSelect(driver.choferes_id.toString())}
                         className={cn(
-                          "w-full p-3 rounded-lg border-2 transition-all text-left",
+                          "w-full p-2 rounded-lg border transition-all text-left",
                           selectedDriverId === driver.choferes_id.toString()
                             ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20"
                             : "border-gray-200 hover:border-green-200 hover:bg-green-50/50 dark:border-gray-700 dark:hover:border-green-700 dark:hover:bg-green-900/10"
                         )}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">{driver.apellido_nombre}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs leading-tight truncate">{driver.apellido_nombre}</p>
+                            <p className="text-xs text-muted-foreground leading-tight">
                               DNI: {driver.dni || 'N/A'}
                             </p>
                             {driver.empresa && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Building className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Building className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-muted-foreground truncate leading-tight">
                                   {driver.empresa}
                                 </span>
                               </div>
                             )}
                           </div>
                           {currentDriver?.id === driver.choferes_id.toString() && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs flex-shrink-0 h-fit">
                               Actual
                             </Badge>
                           )}
@@ -208,10 +208,11 @@ export function DriverReassignmentDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 sm:pt-3 border-t mt-2 sm:mt-3 flex-shrink-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto text-xs h-7 sm:h-8"
           >
             Cancelar
           </Button>
@@ -219,6 +220,7 @@ export function DriverReassignmentDialog({
             onClick={handleReassign}
             disabled={!hasChanged || loading}
             className={cn(
+              "w-full sm:w-auto text-xs h-7 sm:h-8",
               selectedDriverId === null
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-green-600 hover:bg-green-700"

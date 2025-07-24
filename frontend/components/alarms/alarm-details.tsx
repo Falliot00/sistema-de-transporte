@@ -4,7 +4,7 @@
 import dynamic from 'next/dynamic';
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Alarm, Anomaly } from "@/types";
-import { getAnomalias } from "@/lib/api";
+import { getAnomalias, updateAlarmDescription, updateAlarmAnomaly } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,7 @@ interface AlarmDetailsProps {
     anomalyId?: number | null 
   }) => void;
   onDriverReassign?: (choferId: number | null) => void;
+  onAlarmUpdate?: (updatedAlarm: Alarm) => void;
   isSubmitting?: boolean;
   showActions?: boolean;
 }
@@ -57,6 +58,7 @@ export function AlarmDetails({
   total, 
   onAction,
   onDriverReassign,
+  onAlarmUpdate,
   isSubmitting = false,
   showActions = false
 }: AlarmDetailsProps) {
@@ -77,6 +79,15 @@ export function AlarmDetails({
   const [isEditingAnomaly, setIsEditingAnomaly] = useState(false);
   const [editedDescription, setEditedDescription] = useState(alarm.descripcion || '');
   const [selectedAnomaly, setSelectedAnomaly] = useState(alarm.anomalia?.idAnomalia || null);
+
+  // Update local state when alarm data changes
+  useEffect(() => {
+    setEditedDescription(alarm.descripcion || '');
+  }, [alarm.descripcion]);
+
+  useEffect(() => {
+    setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
+  }, [alarm.anomalia?.idAnomalia]);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [isLoadingAnomalies, setIsLoadingAnomalies] = useState(false);
 
@@ -102,13 +113,15 @@ export function AlarmDetails({
   // Handle saving description
   const handleSaveDescription = async () => {
     try {
-      // TODO: Implement API call to update alarm description
-      // await updateAlarmDescription(alarm.id, editedDescription);
-      console.log('Saving description:', editedDescription);
+      const updatedAlarm = await updateAlarmDescription(alarm.id, editedDescription);
       setIsEditingDescription(false);
-      // For now, just toggle edit mode - in real implementation, would update the alarm object
+      if (onAlarmUpdate) {
+        onAlarmUpdate(updatedAlarm);
+      }
     } catch (error) {
       console.error('Error saving description:', error);
+      // Reset to original value on error
+      setEditedDescription(alarm.descripcion || '');
     }
   };
 
@@ -121,13 +134,15 @@ export function AlarmDetails({
   // Handle saving anomaly
   const handleSaveAnomaly = async () => {
     try {
-      // TODO: Implement API call to update alarm anomaly
-      // await updateAlarmAnomaly(alarm.id, selectedAnomaly);
-      console.log('Saving anomaly:', selectedAnomaly);
+      const updatedAlarm = await updateAlarmAnomaly(alarm.id, selectedAnomaly);
       setIsEditingAnomaly(false);
-      // For now, just toggle edit mode - in real implementation, would update the alarm object
+      if (onAlarmUpdate) {
+        onAlarmUpdate(updatedAlarm);
+      }
     } catch (error) {
       console.error('Error saving anomaly:', error);
+      // Reset to original value on error
+      setSelectedAnomaly(alarm.anomalia?.idAnomalia || null);
     }
   };
 

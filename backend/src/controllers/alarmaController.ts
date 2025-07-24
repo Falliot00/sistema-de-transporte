@@ -469,3 +469,59 @@ export const getAlarmReport = async (req: Request, res: Response) => {
         }
     }
 };
+
+export const updateAlarmDescription = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { description } = req.body;
+    
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) {
+            return res.status(404).json({ message: 'Alarma no encontrada.' });
+        }
+        
+        if (alarm.estado !== 'Confirmada') {
+            return res.status(400).json({ message: 'Solo se puede actualizar la descripción de alarmas confirmadas.' });
+        }
+        
+        const updatedAlarm = await prisma.alarmasHistorico.update({
+            where: { guid: id },
+            data: { descripcion: description },
+            include: alarmIncludes,
+        });
+        
+        const transformedAlarm = transformAlarmData(updatedAlarm);
+        res.json(transformedAlarm);
+    } catch (error) {
+        console.error(`Error al actualizar la descripción de la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+export const updateAlarmAnomaly = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { anomalyId } = req.body;
+    
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) {
+            return res.status(404).json({ message: 'Alarma no encontrada.' });
+        }
+        
+        if (alarm.estado !== 'Confirmada') {
+            return res.status(400).json({ message: 'Solo se puede actualizar la anomalía de alarmas confirmadas.' });
+        }
+        
+        const updatedAlarm = await prisma.alarmasHistorico.update({
+            where: { guid: id },
+            data: { idAnomalia: anomalyId },
+            include: alarmIncludes,
+        });
+        
+        const transformedAlarm = transformAlarmData(updatedAlarm);
+        res.json(transformedAlarm);
+    } catch (error) {
+        console.error(`Error al actualizar la anomalía de la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};

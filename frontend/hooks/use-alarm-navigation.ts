@@ -208,6 +208,25 @@ export const useAlarmNavigation = (onError?: (error: string) => void) => {
     }, []);
 
     /**
+     * Actualiza la alarma actual con nuevos datos
+     */
+    const updateCurrentAlarm = useCallback((updatedAlarm: Alarm) => {
+        setState(prev => {
+            if (prev.currentIndex === -1 || prev.currentIndex >= prev.alarms.length) {
+                return prev;
+            }
+
+            const updatedAlarms = [...prev.alarms];
+            updatedAlarms[prev.currentIndex] = updatedAlarm;
+
+            return {
+                ...prev,
+                alarms: updatedAlarms
+            };
+        });
+    }, []);
+
+    /**
      * Restablece el estado de navegación
      */
     const reset = useCallback(() => {
@@ -273,6 +292,7 @@ export const useAlarmNavigation = (onError?: (error: string) => void) => {
         goToNext,
         goToPrevious,
         removeAlarm,
-        loadMoreAlarms
+        loadMoreAlarms,
+        updateCurrentAlarm
     };
 };
