@@ -45,7 +45,7 @@ export function DriverReassignmentDialog({
     } else {
       const filtered = drivers.filter(driver =>
         driver.apellido_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        driver.license.includes(searchTerm)
+        (driver.dni && driver.dni.includes(searchTerm))
       );
       setFilteredDrivers(filtered);
     }
@@ -81,7 +81,7 @@ export function DriverReassignmentDialog({
     setSelectedDriverId(driverId);
   };
 
-  const selectedDriver = selectedDriverId ? drivers.find(d => d.id === selectedDriverId) : null;
+  const selectedDriver = selectedDriverId ? drivers.find(d => d.choferes_id.toString() === selectedDriverId) : null;
   const hasChanged = selectedDriverId !== currentDriver?.id;
 
   return (
@@ -169,11 +169,11 @@ export function DriverReassignmentDialog({
                   ) : (
                     filteredDrivers.map((driver) => (
                       <button
-                        key={driver.id}
-                        onClick={() => handleDriverSelect(driver.id)}
+                        key={driver.choferes_id}
+                        onClick={() => handleDriverSelect(driver.choferes_id.toString())}
                         className={cn(
                           "w-full p-3 rounded-lg border-2 transition-all text-left",
-                          selectedDriverId === driver.id
+                          selectedDriverId === driver.choferes_id.toString()
                             ? "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20"
                             : "border-gray-200 hover:border-green-200 hover:bg-green-50/50 dark:border-gray-700 dark:hover:border-green-700 dark:hover:bg-green-900/10"
                         )}
@@ -182,18 +182,18 @@ export function DriverReassignmentDialog({
                           <div className="flex-1">
                             <p className="font-medium">{driver.apellido_nombre}</p>
                             <p className="text-xs text-muted-foreground">
-                              DNI: {driver.license}
+                              DNI: {driver.dni || 'N/A'}
                             </p>
-                            {driver.company && (
+                            {driver.empresa && (
                               <div className="flex items-center gap-1 mt-1">
                                 <Building className="h-3 w-3 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground">
-                                  {driver.company}
+                                  {driver.empresa}
                                 </span>
                               </div>
                             )}
                           </div>
-                          {currentDriver?.id === driver.id && (
+                          {currentDriver?.id === driver.choferes_id.toString() && (
                             <Badge variant="outline" className="text-xs">
                               Actual
                             </Badge>
