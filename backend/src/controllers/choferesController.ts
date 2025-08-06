@@ -17,9 +17,11 @@ export const getAllChoferes = async (req: Request, res: Response) => {
     const { search, company } = req.query;
 
     let whereClause: Prisma.ChoferesWhereInput = {
-        sector: 'CHOFERES',
-        estado: 'A',
-        liquidacionEstado: 'A',
+        sector: {
+        in: ['CHOFERES', 'TALLER (varios)', 'TALLER (Jefes)']
+    },
+    estado: 'A',
+    liquidacionEstado: 'A',
     };
 
     if (search && typeof search === 'string') {
