@@ -46,7 +46,13 @@ export async function generateAlarmReportPDF(
 ) {
     const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: false });
     doc.pipe(stream);
-    const fechaFormateada = alarm.alarmTime ? new Date(alarm.alarmTime).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'medium', timeZone: 'America/Argentina/Buenos_Aires' }) : 'No disponible';
+    // Ajuste manual para mostrar la hora local de Argentina (UTC-3)
+    let fechaFormateada = 'No disponible';
+    if (alarm.alarmTime) {
+        const alarmDate = new Date(alarm.alarmTime);
+        alarmDate.setHours(alarmDate.getHours() + 3);
+        fechaFormateada = alarmDate.toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'medium' });
+    }
 
     const logoBuffer = await getLogo();
     let pageNumber = 1;
