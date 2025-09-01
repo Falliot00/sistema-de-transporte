@@ -50,7 +50,7 @@ export async function generateAlarmReportPDF(
     let fechaFormateada = 'No disponible';
     if (alarm.alarmTime) {
         const alarmDate = new Date(alarm.alarmTime);
-        alarmDate.setHours(alarmDate.getHours() + 3);
+        alarmDate.setHours(alarmDate.getHours());
         fechaFormateada = alarmDate.toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'medium' });
     }
 
