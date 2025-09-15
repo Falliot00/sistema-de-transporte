@@ -53,7 +53,8 @@ export const limitUserReview: RequestHandler = (req, res, next) => {
     // Solo permitir marcar Pendiente -> Sospechosa (status 'confirmed' en nuestro API de review)
     const status = req.body?.status;
     if (status !== 'confirmed') {
-      return res.status(403).json({ message: 'No autorizado: solo puede marcar como sospechosa.' });
+      res.status(403).json({ message: 'No autorizado: solo puede marcar como sospechosa.' });
+      return;
     }
   }
   next();
