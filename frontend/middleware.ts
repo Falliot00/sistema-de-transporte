@@ -31,7 +31,7 @@ export function middleware(req: NextRequest) {
 
   // Restricciones por rol
   if (role === 'USER') {
-    const restricted = ['/devices', '/drivers'];
+    const restricted = ['/devices', '/drivers', '/dashboard'];
     if (restricted.some((p) => pathname.startsWith(p))) {
       const url = req.nextUrl.clone();
       url.pathname = '/';
@@ -46,4 +46,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!api).*)'],
 };
-

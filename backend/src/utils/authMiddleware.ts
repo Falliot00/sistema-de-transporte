@@ -46,3 +46,15 @@ export const authorizeRoles = (...roles: string[]): RequestHandler => {
   };
 };
 
+// Limita la acción de review para usuarios con rol USER
+export const limitUserReview: RequestHandler = (req, res, next) => {
+  const role = req.user?.role;
+  if (role === 'USER') {
+    // Solo permitir marcar Pendiente -> Sospechosa (status 'confirmed' en nuestro API de review)
+    const status = req.body?.status;
+    if (status !== 'confirmed') {
+      return res.status(403).json({ message: 'No autorizado: solo puede marcar como sospechosa.' });
+    }
+  }
+  next();
+};

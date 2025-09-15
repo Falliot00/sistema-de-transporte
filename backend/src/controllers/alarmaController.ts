@@ -1,4 +1,4 @@
-// backend/src/controllers/alarmaController.ts
+﻿// backend/src/controllers/alarmaController.ts
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { exec, execSync, ExecOptions } from 'child_process';
@@ -24,7 +24,7 @@ const alarmIncludes = {
 };
 
 /**
- * Obtiene el comando correcto de Python según el sistema operativo
+ * Obtiene el comando correcto de Python segÃºn el sistema operativo
  */
 const getPythonCommand = (): string => {
     const isWindows = process.platform === 'win32';
@@ -41,7 +41,7 @@ const getPythonCommand = (): string => {
             'py'
         ];
         
-        // Verificar cuál existe y funciona
+        // Verificar cuÃ¡l existe y funciona
         for (const pythonPath of possiblePaths) {
             try {
                 // Verificar si el archivo existe primero (para rutas absolutas)
@@ -54,16 +54,16 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                console.log(`[✓] Python encontrado en: ${pythonPath}`);
+                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
-                // Si falla, continúa con el siguiente
+                // Si falla, continÃºa con el siguiente
                 continue;
             }
         }
         
         // Si no encontramos nada, intentar con python del sistema
-        console.warn('[⚠] No se encontró Python en el entorno virtual, usando Python del sistema');
+        console.warn('[âš ] No se encontrÃ³ Python en el entorno virtual, usando Python del sistema');
         return 'python';
         
     } else {
@@ -86,7 +86,7 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                console.log(`[✓] Python encontrado en: ${pythonPath}`);
+                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
                 continue;
@@ -111,7 +111,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
         
         // Verificar que el script existe
         if (!fs.existsSync(scriptPath)) {
-            console.error(`[❌] El script no existe en la ruta: ${scriptPath}`);
+            console.error(`[âŒ] El script no existe en la ruta: ${scriptPath}`);
             return;
         }
         
@@ -125,9 +125,9 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
             command = `${pythonExecutable} "${scriptPath}" "${dispositivoStr}" "${alarmTimeISO}" "${alarm.guid}"`;
         }
         
-        console.log(`[▶] Ejecutando comando para descarga de video: ${command}`);
+        console.log(`[â–¶] Ejecutando comando para descarga de video: ${command}`);
         
-        // Opciones de ejecución
+        // Opciones de ejecuciÃ³n
         const execOptions: ExecOptions = {
             cwd: path.dirname(scriptPath),
             env: process.env,
@@ -140,20 +140,20 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
             const stdoutStr = stdout.toString();
             const stderrStr = stderr.toString();
             if (error) {
-                console.error(`[❌] Error al ejecutar script de video para alarma ${alarm.guid}:`, error.message);
+                console.error(`[âŒ] Error al ejecutar script de video para alarma ${alarm.guid}:`, error.message);
                 // Log adicional para debugging
-                console.error(`[❌] Error completo:`, error);
+                console.error(`[âŒ] Error completo:`, error);
             }
             if (stderrStr) {
                 console.error(`[!] Stderr de script de video para alarma ${alarm.guid}:`, stderrStr);
             }
             if (stdoutStr) {
-                console.log(`[✔] Stdout de script de video para alarma ${alarm.guid}:`, stdoutStr);
+                console.log(`[âœ”] Stdout de script de video para alarma ${alarm.guid}:`, stdoutStr);
             }
         });
         
     } catch (error) {
-        console.error(`[❌] Error al configurar la ejecución del script de video:`, error);
+        console.error(`[âŒ] Error al configurar la ejecuciÃ³n del script de video:`, error);
     }
 };
 
@@ -218,11 +218,24 @@ export const undoAlarmAction = async (req: Request, res: Response) => {
 
 export const getAlarmsCount = async (req: Request, res: Response) => {
     try {
-        const whereClause = buildWhereClause(req.query);
+        const role = (req as any).user?.role as string | undefined;
+        const statusParam = String((req.query.status as string) || 'all');
+
+        if (role === 'USER' && (statusParam === 'confirmed' || statusParam === 'rejected')) {
+            return res.status(403).json({ message: 'No autorizado' });
+        }
+
+        let whereClause = buildWhereClause(req.query);
+        if (role === 'USER' && (statusParam === 'all' || !statusParam)) {
+            whereClause = {
+                ...whereClause,
+                estado: { in: [...DB_QUERY_STATUS_MAP.pending, ...DB_QUERY_STATUS_MAP.suspicious] },
+            };
+        }
         const count = await prisma.alarmasHistorico.count({ where: whereClause });
         res.status(200).json({ count });
     } catch (error) {
-        console.error("⛔ [ERROR] Falla en getAlarmsCount:", error);
+        console.error("â›” [ERROR] Falla en getAlarmsCount:", error);
         res.status(500).json({ message: 'Error interno del servidor al contar las alarmas.' });
     }
 };
@@ -232,7 +245,20 @@ export const getAllAlarms = async (req: Request, res: Response) => {
     const pageSize = parseInt(req.query.pageSize as string) || 12;
     const skip = (page - 1) * pageSize;
     try {
-        const whereClause = buildWhereClause(req.query);
+        const role = (req as any).user?.role as string | undefined;
+        const statusParam = String((req.query.status as string) || 'all');
+
+        if (role === 'USER' && (statusParam === 'confirmed' || statusParam === 'rejected')) {
+            return res.status(403).json({ message: 'No autorizado' });
+        }
+
+        let whereClause = buildWhereClause(req.query);
+        if (role === 'USER' && (statusParam === 'all' || !statusParam)) {
+            whereClause = {
+                ...whereClause,
+                estado: { in: [...DB_QUERY_STATUS_MAP.pending, ...DB_QUERY_STATUS_MAP.suspicious] },
+            };
+        }
         const alarmsFromDb = await prisma.alarmasHistorico.findMany({
             skip,
             take: pageSize,
@@ -255,7 +281,7 @@ export const getAllAlarms = async (req: Request, res: Response) => {
           globalCounts: { total: totalAllAlarmsGlobal, pending: totalPendingGlobal, suspicious: totalSuspiciousGlobal, confirmed: totalConfirmedGlobal, rejected: totalRejectedGlobal },
         });
     } catch (error) {
-        console.error("⛔ [ERROR] Falla en getAllAlarms:", error);
+        console.error("â›” [ERROR] Falla en getAllAlarms:", error);
         res.status(500).json({ message: 'Error interno del servidor al consultar las alarmas.' });
     }
 };
@@ -281,7 +307,7 @@ export const reviewAlarm = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, descripcion, choferId } = req.body;
     if (!status || !['confirmed', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: 'La acción proporcionada no es válida. Debe ser "confirmed" o "rejected".' });
+        return res.status(400).json({ message: 'La acciÃ³n proporcionada no es vÃ¡lida. Debe ser "confirmed" o "rejected".' });
     }
     try {
         const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
@@ -358,7 +384,7 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         const dataToUpdate: Prisma.AlarmasHistoricoUpdateInput = { estado: 'Confirmada' };
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
-        if (typeof choferId !== 'number') return res.status(400).json({ message: "La selección de un chofer es obligatoria para confirmar la alarma." });
+        if (typeof choferId !== 'number') return res.status(400).json({ message: "La selecciÃ³n de un chofer es obligatoria para confirmar la alarma." });
         
         const choferToAssign = await prisma.choferes.findUnique({ where: { choferes_id: choferId } });
         if (!choferToAssign) return res.status(404).json({ message: `El chofer con ID ${choferId} no existe.` });
@@ -370,12 +396,12 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         dataToUpdate.chofer = { connect: { choferes_id: choferId } };
         
         if (typeof anomalyId !== 'number') {
-            return res.status(400).json({ message: "La selección de una anomalía es obligatoria para confirmar la alarma." });
+            return res.status(400).json({ message: "La selecciÃ³n de una anomalÃ­a es obligatoria para confirmar la alarma." });
         }
         
         const anomaliaToAssign = await prisma.anomalia.findUnique({ where: { idAnomalia: anomalyId } });
         if (!anomaliaToAssign) {
-            return res.status(404).json({ message: `La anomalía con ID ${anomalyId} no existe.` });
+            return res.status(404).json({ message: `La anomalÃ­a con ID ${anomalyId} no existe.` });
         }
         
         dataToUpdate.anomaliaInfo = { connect: { idAnomalia: anomalyId } };
@@ -481,7 +507,7 @@ export const updateAlarmDescription = async (req: Request, res: Response) => {
         }
         
         if (alarm.estado !== 'Confirmada') {
-            return res.status(400).json({ message: 'Solo se puede actualizar la descripción de alarmas confirmadas.' });
+            return res.status(400).json({ message: 'Solo se puede actualizar la descripciÃ³n de alarmas confirmadas.' });
         }
         
         const updatedAlarm = await prisma.alarmasHistorico.update({
@@ -493,7 +519,7 @@ export const updateAlarmDescription = async (req: Request, res: Response) => {
         const transformedAlarm = transformAlarmData(updatedAlarm);
         res.json(transformedAlarm);
     } catch (error) {
-        console.error(`Error al actualizar la descripción de la alarma ${id}:`, error);
+        console.error(`Error al actualizar la descripciÃ³n de la alarma ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
@@ -509,7 +535,7 @@ export const updateAlarmAnomaly = async (req: Request, res: Response) => {
         }
         
         if (alarm.estado !== 'Confirmada') {
-            return res.status(400).json({ message: 'Solo se puede actualizar la anomalía de alarmas confirmadas.' });
+            return res.status(400).json({ message: 'Solo se puede actualizar la anomalÃ­a de alarmas confirmadas.' });
         }
         
         const updatedAlarm = await prisma.alarmasHistorico.update({
@@ -521,7 +547,7 @@ export const updateAlarmAnomaly = async (req: Request, res: Response) => {
         const transformedAlarm = transformAlarmData(updatedAlarm);
         res.json(transformedAlarm);
     } catch (error) {
-        console.error(`Error al actualizar la anomalía de la alarma ${id}:`, error);
+        console.error(`Error al actualizar la anomalÃ­a de la alarma ${id}:`, error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };

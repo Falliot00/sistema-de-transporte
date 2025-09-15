@@ -31,6 +31,9 @@ export function AlarmActionForm({
   initialDescription = "",
   showDriverSelector,
 }: AlarmActionFormProps) {
+  const role = typeof document !== 'undefined'
+    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
+    : 'USER';
   const [description, setDescription] = useState(initialDescription || alarm.descripcion || "");
   const [isDescOpen, setIsDescOpen] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null | undefined>(
@@ -48,6 +51,13 @@ export function AlarmActionForm({
   }, [alarm, initialDescription]);
 
   const handleAction = (action: 'confirmed' | 'rejected') => {
+    // Reglas de rol en cliente (la API también valida)
+    if (role === 'USER') {
+      // Solo puede: Pending -> Sospechosa (action 'confirmed')
+      if (alarm.status === 'pending' && action === 'rejected') return;
+      // No puede confirmar ni rechazar sospechosas
+      if (alarm.status === 'suspicious') return;
+    }
     
     if (action === 'confirmed' && alarm.status === 'suspicious') {
       if (selectedDriverId === null) {
@@ -108,11 +118,11 @@ export function AlarmActionForm({
 
       <div className="pt-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button onClick={() => handleAction('rejected')} variant="destructive" className="w-full" disabled={isSubmitting}>
+          <Button onClick={() => handleAction('rejected')} variant="destructive" className="w-full" disabled={isSubmitting || (role==='USER') }>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : rejectText}
           </Button>
-          <Button onClick={() => handleAction('confirmed')} variant="success" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmText}
+          <Button onClick={() => handleAction('confirmed')} variant="success" className="w-full" disabled={isSubmitting || (role==='USER' && alarm.status!=='pending')}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (role==='USER' && alarm.status==='pending' ? 'Marcar Sospechosa' : confirmText)}
           </Button>
         </div>
       </div>

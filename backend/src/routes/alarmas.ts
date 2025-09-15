@@ -1,6 +1,6 @@
 // backend/src/routes/alarmas.ts
 import { Router, Request, Response } from 'express';
-import { authenticateToken, authorizeRoles } from '../utils/authMiddleware';
+import { authenticateToken, authorizeRoles, limitUserReview } from '../utils/authMiddleware';
 
 import { 
     getAllAlarms, 
@@ -37,11 +37,11 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     await getAlarmById(req, res);
 });
 
-router.put('/:id/review', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
+router.put('/:id/review', authenticateToken, authorizeRoles('ADMIN','MANAGER','USER'), limitUserReview, async (req: Request, res: Response) => {
     await reviewAlarm(req, res);
 });
 
-router.put('/:id/confirm', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
+router.put('/:id/confirm', authenticateToken, authorizeRoles('ADMIN','MANAGER'), async (req: Request, res: Response) => {
     await confirmFinalAlarm(req, res);
 });
 

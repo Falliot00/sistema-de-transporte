@@ -82,7 +82,9 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
         const driver = await prisma.choferes.findUnique({
             where: { 
                 choferes_id: driverId,
-                sector: 'CHOFERES',
+                sector: {
+                    in: ['CHOFERES', 'TALLER (varios)', 'TALLER (Jefes)']
+                },
                 estado: 'A',
                 liquidacionEstado: 'A',
             }, 

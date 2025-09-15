@@ -47,7 +47,7 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
   ];
 
   const routes = role === 'USER'
-    ? allRoutes.filter(r => r.href === '/' || r.href === '/dashboard')
+    ? allRoutes.filter(r => r.href === '/')
     : allRoutes;
 
   const linkClasses = (isActive: boolean) => cn(

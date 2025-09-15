@@ -49,7 +49,10 @@ export default function AlarmsPage() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const role = typeof document !== 'undefined'
+      ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
+      : 'USER';
+    const [statusFilter, setStatusFilter] = useState<string>(role === 'USER' ? 'pending' : 'all');
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
@@ -99,7 +102,7 @@ export default function AlarmsPage() {
             const params: GetAlarmsParams = { 
                 page: currentPage, 
                 pageSize: 12, 
-                status: statusFilter, 
+                status: (role === 'USER' && (statusFilter === 'all' || statusFilter === 'confirmed')) ? 'pending' : statusFilter, 
                 search: debouncedSearchQuery, 
                 type: typeFilters, 
                 company: companyFilters, 
@@ -122,8 +125,8 @@ export default function AlarmsPage() {
             const [pendingCount, suspiciousCount, confirmedCount, rejectedCount] = await Promise.all([
                 getAlarmsCount({ ...baseParams, status: 'pending' }),
                 getAlarmsCount({ ...baseParams, status: 'suspicious' }),
-                getAlarmsCount({ ...baseParams, status: 'confirmed' }),
-                getAlarmsCount({ ...baseParams, status: 'rejected' })
+                role === 'USER' ? Promise.resolve({ count: 0 }) : getAlarmsCount({ ...baseParams, status: 'confirmed' }),
+                role === 'USER' ? Promise.resolve({ count: 0 }) : getAlarmsCount({ ...baseParams, status: 'rejected' })
             ]);
             
             setFilteredCounts({
@@ -479,8 +482,12 @@ export default function AlarmsPage() {
                 <KPICard title="Total de alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
                 <KPICard title="Total de pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />
                 <KPICard title="Total de sospechosas" value={isLoading ? '...' : globalAlarmCounts.suspicious.toLocaleString()} icon={<AlertTriangle className="h-4 w-4" />} iconClassName="text-blue-500" />
-                <KPICard title="Total de confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
-                <KPICard title="Total de rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
+                {role !== 'USER' && (
+                  <>
+                    <KPICard title="Total de confirmadas" value={isLoading ? '...' : globalAlarmCounts.confirmed.toLocaleString()} icon={<CheckCircle className="h-4 w-4" />} iconClassName="text-green-500" />
+                    <KPICard title="Total de rechazadas" value={isLoading ? '...' : globalAlarmCounts.rejected.toLocaleString()} icon={<XCircle className="h-4 w-4" />} iconClassName="text-red-500" />
+                  </>
+                )}
             </div>
             <div className="flex justify-center gap-4 flex-wrap items-center"> 
                 {/* --- CAMBIO: Se elimina el componente AnalysisFilters --- */}
@@ -506,11 +513,17 @@ export default function AlarmsPage() {
                 </div> 
                 <div> 
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
-                        <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
+                        {role !== 'USER' && (
+                          <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
+                        )}
                         <ToggleGroupItem value="pending" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.pending}</span><Badge variant={ALARM_STATUS_VARIANT.pending}>{filteredCounts.pending}</Badge></ToggleGroupItem>
                         <ToggleGroupItem value="suspicious" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.suspicious}</span><Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{filteredCounts.suspicious}</Badge></ToggleGroupItem>
-                        <ToggleGroupItem value="confirmed" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.confirmed}</span><Badge variant={ALARM_STATUS_VARIANT.confirmed}>{filteredCounts.confirmed}</Badge></ToggleGroupItem>
-                        <ToggleGroupItem value="rejected" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.rejected}</span><Badge variant={ALARM_STATUS_VARIANT.rejected}>{filteredCounts.rejected}</Badge></ToggleGroupItem>
+                        {role !== 'USER' && (
+                          <>
+                            <ToggleGroupItem value="confirmed" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.confirmed}</span><Badge variant={ALARM_STATUS_VARIANT.confirmed}>{filteredCounts.confirmed}</Badge></ToggleGroupItem>
+                            <ToggleGroupItem value="rejected" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.rejected}</span><Badge variant={ALARM_STATUS_VARIANT.rejected}>{filteredCounts.rejected}</Badge></ToggleGroupItem>
+                          </>
+                        )}
                     </ToggleGroup> 
                 </div> 
             </div> 
@@ -558,7 +571,7 @@ export default function AlarmsPage() {
                                     onDriverReassign={handleDriverReassign}
                                     onAlarmUpdate={handleAlarmUpdate}
                                     isSubmitting={isSubmitting}
-                                    showActions={alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected'}
+                                    showActions={role !== 'USER' && (alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected')}
                                 /> 
                             </div> 
                         </> 
