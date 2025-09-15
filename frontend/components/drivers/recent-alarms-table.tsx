@@ -62,7 +62,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
                                                 <TableCell className="font-medium">{alarm.type}</TableCell>
                                                 <TableCell>{formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge variant={statusInfo.variant as any} className="capitalize">{statusInfo.label}</Badge>
+                                                    <Badge variant={statusInfo.variant as "default" | "secondary" | "destructive" | "outline" | null | undefined} className="capitalize">{statusInfo.label}</Badge>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex justify-center gap-2">

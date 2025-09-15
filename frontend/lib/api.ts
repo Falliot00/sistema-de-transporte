@@ -18,13 +18,15 @@ const API_URL_OLD = isServer
 
 
 
-const buildQueryString = (params: Record<string, any> = {}): string => {
+const buildQueryString = (params: Record<string, string | string[] | number | boolean | undefined> | GetAlarmsParams | undefined = {}): string => {
     const query = new URLSearchParams();
+    
+    if (!params) return '';
     
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
             if (Array.isArray(value)) {
-                if (value.length > 0) { // Solo aÃ±adir si el array no estÃ¡ vacÃ­o
+                if (value.length > 0) { // Solo añadir si el array no está vacío
                     value.forEach(item => query.append(key, item));
                 }
             } else {
@@ -191,9 +193,9 @@ export async function getDriverDetails(
         const response = await fetch(`${API_URL}/choferes/${id}?${query}`);
         if (!response.ok) {
             if (response.status === 404) {
-                 const error = new Error('Chofer no encontrado.');
-                 (error as any).status = 404;
-                 throw error;
+                const error = new Error('Chofer no encontrado.') as Error & { status: number };
+                error.status = 404;
+                throw error;
             }
             throw new Error(`Error al obtener los detalles del chofer: ${response.statusText}`);
         }
@@ -225,7 +227,7 @@ export async function getDashboardSummary(params: {
     
     const data = await response.json();
     const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-    const alarmsByTypeWithFill = data.alarmsByType.map((item: any, index: number) => ({
+    const alarmsByTypeWithFill = data.alarmsByType.map((item: { name: string; value: number }, index: number) => ({
       ...item,
       fill: colors[index % colors.length]
     }));
@@ -285,9 +287,9 @@ export async function getDispositivoDetails(id: string): Promise<DeviceDetails> 
         const response = await fetch(`${API_URL}/dispositivos/${id}`);
         if (!response.ok) {
             if (response.status === 404) {
-                 const error = new Error('Dispositivo no encontrado.');
-                 (error as any).status = 404;
-                 throw error;
+                const error = new Error('Dispositivo no encontrado.') as Error & { status: number };
+                error.status = 404;
+                throw error;
             }
             throw new Error(`Error al obtener los detalles del dispositivo: ${response.statusText}`);
         }
