@@ -1,5 +1,6 @@
 // backend/src/routes/alarmas.ts
 import { Router, Request, Response } from 'express';
+import { authenticateToken, authorizeRoles } from '../utils/authMiddleware';
 
 import { 
     getAllAlarms, 
@@ -18,55 +19,55 @@ import {
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
     await getAllAlarms(req, res);
 });
 
-router.get('/count', async (req: Request, res: Response) => {
+router.get('/count', authenticateToken, async (req: Request, res: Response) => {
     await getAlarmsCount(req, res);
 });
 
 // Es importante que esta ruta con '/reporte' esté ANTES de la ruta genérica '/:id'
 // para que no sea interpretada como un ID.
-router.get('/:id/reporte', async (req: Request, res: Response) => {
+router.get('/:id/reporte', authenticateToken, async (req: Request, res: Response) => {
     await getAlarmReport(req, res);
 });
 
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     await getAlarmById(req, res);
 });
 
-router.put('/:id/review', async (req: Request, res: Response) => {
+router.put('/:id/review', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await reviewAlarm(req, res);
 });
 
-router.put('/:id/confirm', async (req: Request, res: Response) => {
+router.put('/:id/confirm', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await confirmFinalAlarm(req, res);
 });
 
-router.put('/:id/re-evaluate', async (req: Request, res: Response) => {
+router.put('/:id/re-evaluate', authenticateToken, authorizeRoles('ADMIN','MANAGER'), async (req: Request, res: Response) => {
     await reEvaluateAlarm(req, res);
 });
 
 
-router.put('/:id/undo', async (req: Request, res: Response) => {
+router.put('/:id/undo', authenticateToken, authorizeRoles('ADMIN','MANAGER'), async (req: Request, res: Response) => {
     await undoAlarmAction(req, res);
 });
 
 
-router.post('/:id/retry-video', async (req: Request, res: Response) => {
+router.post('/:id/retry-video', authenticateToken, authorizeRoles('ADMIN','MANAGER'), async (req: Request, res: Response) => {
     await retryVideoDownload(req, res);
 });
 
-router.patch('/:id/assign-driver', async (req: Request, res: Response) => {
+router.patch('/:id/assign-driver', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await assignDriverToAlarm(req, res);
 });
 
-router.patch('/:id/description', async (req: Request, res: Response) => {
+router.patch('/:id/description', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await updateAlarmDescription(req, res);
 });
 
-router.patch('/:id/anomaly', async (req: Request, res: Response) => {
+router.patch('/:id/anomaly', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await updateAlarmAnomaly(req, res);
 });
 

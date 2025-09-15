@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MainNav } from "./main-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LogoutButton } from "@/components/auth/logout-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,7 @@ export function Header() {
               </SheetContent>
             </Sheet>
             
+            <LogoutButton />
             {/* Dropdown de usuario */}
             {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>

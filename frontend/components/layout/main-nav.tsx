@@ -13,9 +13,12 @@ interface MainNavProps {
 
 export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
   const pathname = usePathname();
+  const role = typeof document !== 'undefined'
+    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
+    : 'USER';
 
   // --- CAMBIO: Añadimos una propiedad `colorClass` a cada ruta ---
-  const routes = [
+  const allRoutes = [
     {
       href: "/",
       label: "Alarmas",
@@ -42,6 +45,10 @@ export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
       active: pathname.startsWith("/devices"),
     },
   ];
+
+  const routes = role === 'USER'
+    ? allRoutes.filter(r => r.href === '/' || r.href === '/dashboard')
+    : allRoutes;
 
   const linkClasses = (isActive: boolean) => cn(
     "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors",

@@ -135,3 +135,18 @@ model Sysdiagrams {
   @@schema("dbo")
   @@map("sysdiagrams")
 }
+
+// --- USERS: modelo y enum de roles ---
+
+
+model User {
+  id       Int    @id @default(autoincrement())
+  username String @unique @db.NVarChar(255)
+  // Contraseña almacenada hasheada (bcrypt)
+  password String @db.VarChar(255)
+  // Prisma enum (se almacena como texto en SQL Server)
+  role     String @default("USER") @db.NVarChar(32)
+
+  @@schema("dimCentral")
+  @@map("users")
+}
