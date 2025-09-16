@@ -3,9 +3,16 @@ import { cookies } from 'next/headers';
 
 export const runtime = 'nodejs';
 
+function normalizeApiBase(url: string) {
+  const trimmed = url.replace(/\/$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
 function backendBase() {
-  // En producción, usar la URL interna del backend
-  // En desarrollo, usar localhost  
+  const envBase = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL;
+  if (envBase && envBase.trim()) {
+    return normalizeApiBase(envBase.trim());
+  }
   return 'http://localhost:3001/api';
 }
 
@@ -25,7 +32,6 @@ async function forward(req: NextRequest, path: string[]) {
 
   const headers = new Headers();
   headers.set('accept', 'application/json');
-  headers.set('content-type', 'application/json');
 
   const jar = await cookies();
   const token = jar.get('token')?.value;
@@ -36,6 +42,9 @@ async function forward(req: NextRequest, path: string[]) {
 
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
   const body = hasBody ? await req.text() : undefined;
+  if (hasBody) {
+    headers.set('content-type', 'application/json');
+  }
 
   try {
     console.log('[PROXY] Making request to:', targetUrl);
@@ -107,3 +116,4 @@ export async function DELETE(req: NextRequest, context: any) {
   const { path = [] } = context.params || {};
   return forward(req, Array.isArray(path) ? path : []);
 }
+
