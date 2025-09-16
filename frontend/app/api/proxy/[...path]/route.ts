@@ -9,8 +9,9 @@ function backendBase() {
   const isProduction = process.env.NODE_ENV === 'production';
   
   if (isProduction) {
-    // URL interna para comunicación entre servicios en producción
-    return process.env.BACKEND_INTERNAL_URL || 'https://alarmas.monteverasrl.com.ar/api';
+    // Usar URL local para comunicación interna en el mismo servidor
+    // Esto evita problemas de red y SSL
+    return process.env.BACKEND_INTERNAL_URL || 'http://localhost:3001/api';
   }
   
   // Para desarrollo
@@ -24,28 +25,53 @@ async function forward(req: NextRequest, path: string[]) {
   const joined = path?.join('/') || '';
   const targetUrl = `${base}/${joined}${req.nextUrl.search}`;
 
+  console.log('[PROXY] Forward request:', {
+    method: req.method,
+    path,
+    joined,
+    targetUrl,
+    base,
+    search: req.nextUrl.search
+  });
+
   const headers = new Headers(req.headers);
   headers.delete('host');
   headers.set('accept', 'application/json');
 
   const jar = await cookies();
   const token = jar.get('token')?.value;
+  console.log('[PROXY] Token found:', !!token);
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
   const body = hasBody ? await req.text() : undefined;
 
-  const resp = await fetch(targetUrl, {
-    method: req.method,
-    headers,
-    body,
-    redirect: 'manual',
-  });
+  try {
+    const resp = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body,
+      redirect: 'manual',
+    });
 
-  const respHeaders = new Headers(resp.headers);
-  // Asegura CORS mínimo cuando se usa desde el navegador
-  respHeaders.set('access-control-allow-origin', '*');
-  return new NextResponse(resp.body, { status: resp.status, headers: respHeaders });
+    console.log('[PROXY] Response:', {
+      status: resp.status,
+      statusText: resp.statusText,
+      headers: Object.fromEntries(resp.headers.entries())
+    });
+
+    const respHeaders = new Headers(resp.headers);
+    // Asegura CORS mínimo cuando se usa desde el navegador
+    respHeaders.set('access-control-allow-origin', '*');
+    return new NextResponse(resp.body, { status: resp.status, headers: respHeaders });
+  } catch (error) {
+    console.error('[PROXY] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new NextResponse(JSON.stringify({ error: 'Proxy error', details: errorMessage }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
