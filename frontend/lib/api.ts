@@ -1,4 +1,4 @@
-﻿// frontend/lib/api.ts
+// frontend/lib/api.ts
 import { 
     Alarm, 
     Driver, 
@@ -12,9 +12,8 @@ import {
 
 const isServer = typeof window === 'undefined';
 
-const API_URL_OLD = isServer
-  ? 'http://localhost:3001/api'
-  : process.env.NEXT_PUBLIC_API_URL!;
+// API base URL - uses proxy in production to handle auth cookies
+const API_URL = '/api/proxy';
 
 
 
@@ -26,7 +25,7 @@ const buildQueryString = (params: Record<string, string | string[] | number | bo
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
             if (Array.isArray(value)) {
-                if (value.length > 0) { // Solo añadir si el array no está vacío
+                if (value.length > 0) { // Solo a�adir si el array no est� vac�o
                     value.forEach(item => query.append(key, item));
                 }
             } else {
@@ -79,12 +78,11 @@ export async function getAlarmsCount(params?: GetAlarmsParams): Promise<{ count:
 }
 
 /**
- * EnvÃ­a una revisiÃ³n inicial para una alarma (Pendiente -> Sospechosa/Rechazada).
+ * Envía una revisión inicial para una alarma (Pendiente -> Sospechosa/Rechazada).
  */
 export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'rejected', description?: string, choferId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/review`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, descripcion: description, choferId }),
     });
     if (!response.ok) {
@@ -100,7 +98,6 @@ export async function reviewAlarm(alarmId: string, status: 'confirmed' | 'reject
 export async function assignDriver(alarmId: string, choferId: number | null): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/assign-driver`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ choferId }),
     });
     if (!response.ok) {
@@ -112,12 +109,11 @@ export async function assignDriver(alarmId: string, choferId: number | null): Pr
 
 /**
  * Confirma finalmente una alarma (Sospechosa -> Confirmada).
- * ACTUALIZADO: Ahora incluye anomalyId como parÃ¡metro obligatorio
+ * ACTUALIZADO: Ahora incluye anomalyId como parámetro obligatorio
  */
 export async function confirmAlarm(alarmId: string, description?: string, choferId?: number, anomalyId?: number): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/confirm`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ descripcion: description, choferId, anomalyId }),
     });
     if (!response.ok) {
@@ -133,7 +129,6 @@ export async function confirmAlarm(alarmId: string, description?: string, chofer
 export async function reEvaluateAlarm(alarmId: string, description?: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/re-evaluate`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ descripcion: description }),
     });
     if (!response.ok) {
@@ -149,7 +144,6 @@ export async function reEvaluateAlarm(alarmId: string, description?: string): Pr
 export async function retryVideo(alarmId: string): Promise<{ message: string }> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/retry-video`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
@@ -176,7 +170,7 @@ export async function getDrivers(params?: { search?: string; company?: string[] 
 }
 
 /**
- * Obtiene los detalles de un chofer especÃ­fico con filtros opcionales para las alarmas.
+ * Obtiene los detalles de un chofer específico con filtros opcionales para las alarmas.
  */
 export async function getDriverDetails(
     id: string, 
@@ -208,7 +202,7 @@ export async function getDriverDetails(
 
 /**
  * Obtiene los datos agregados para el Dashboard.
- * Los parÃ¡metros son opcionales. Si no se proveen fechas, se obtendrÃ¡n datos histÃ³ricos.
+ * Los parámetros son opcionales. Si no se proveen fechas, se obtendrán datos históricos.
  */
 export async function getDashboardSummary(params: { 
   startDate?: string, 
@@ -253,17 +247,16 @@ export async function getDashboardSummary(params: {
 export async function undoAlarm(alarmId: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/undo`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
-        throw new Error(errorData.message || 'Error al deshacer la acciÃ³n de la alarma');
+        throw new Error(errorData.message || 'Error al deshacer la acción de la alarma');
     }
     return await response.json();
 }
 
 /**
- * Obtiene la lista de todos los dispositivos, con un filtro de bÃºsqueda opcional.
+ * Obtiene la lista de todos los dispositivos, con un filtro de búsqueda opcional.
  */
 export async function getDispositivos(params?: { search?: string }): Promise<DeviceListItem[]> {
     try {
@@ -274,13 +267,13 @@ export async function getDispositivos(params?: { search?: string }): Promise<Dev
         }
         return await response.json();
     } catch (error) {
-        console.error("Hubo un problema con la operaciÃ³n de fetch en getDispositivos:", error);
+        console.error("Hubo un problema con la operación de fetch en getDispositivos:", error);
         throw error;
     }
 }
 
 /**
- * Obtiene los detalles y estadÃ­sticas de un dispositivo especÃ­fico por su ID.
+ * Obtiene los detalles y estadísticas de un dispositivo específico por su ID.
  */
 export async function getDispositivoDetails(id: string): Promise<DeviceDetails> {
     try {
@@ -295,20 +288,20 @@ export async function getDispositivoDetails(id: string): Promise<DeviceDetails> 
         }
         return await response.json();
     } catch (error) {
-        console.error(`Hubo un problema con la operaciÃ³n de fetch en getDispositivoDetails para el id ${id}:`, error);
+        console.error(`Hubo un problema con la operación de fetch en getDispositivoDetails para el id ${id}:`, error);
         throw error;
     }
 }
 
 /**
- * Obtiene todas las anomalÃ­as disponibles desde la base de datos
+ * Obtiene todas las anomalías disponibles desde la base de datos
  */
 export async function getAnomalias(): Promise<Anomaly[]> {
     try {
         const response = await fetch(`${API_URL}/anomalias`);
         if (!response.ok) {
             console.error('Response status:', response.status);
-            throw new Error(`Error al obtener las anomalÃ­as: ${response.statusText}`);
+            throw new Error(`Error al obtener las anomalías: ${response.statusText}`);
         }
         const data = await response.json();
         return data;
@@ -319,38 +312,33 @@ export async function getAnomalias(): Promise<Anomaly[]> {
 }
 
 /**
- * Actualiza la descripciÃ³n de una alarma confirmada
+ * Actualiza la descripción de una alarma confirmada
  */
 export async function updateAlarmDescription(alarmId: string, description: string): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/description`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
-        throw new Error(errorData.message || 'Error al actualizar la descripciÃ³n');
+        throw new Error(errorData.message || 'Error al actualizar la descripción');
     }
     return await response.json();
 }
 
 /**
- * Actualiza la anomalÃ­a asignada a una alarma confirmada
+ * Actualiza la anomalía asignada a una alarma confirmada
  */
 export async function updateAlarmAnomaly(alarmId: string, anomalyId: number | null): Promise<Alarm> {
     const response = await fetch(`${API_URL}/alarmas/${alarmId}/anomaly`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ anomalyId }),
     });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
-        throw new Error(errorData.message || 'Error al actualizar la anomalÃ­a');
+        throw new Error(errorData.message || 'Error al actualizar la anomalía');
     }
     return await response.json();
 }
 
-
-// Usamos el proxy interno del frontend para adjuntar el token automáticamente
-const API_URL = '/api/proxy';
 
