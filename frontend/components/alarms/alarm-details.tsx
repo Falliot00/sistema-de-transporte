@@ -4,7 +4,7 @@
 import dynamic from 'next/dynamic';
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Alarm, Anomaly } from "@/types";
-import { getAnomalias, updateAlarmDescription, updateAlarmAnomaly } from "@/lib/api";
+import { getAnomalias, updateAlarmDescription, updateAlarmAnomaly, markAlarmAsReported } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,7 @@ import { DriverReassignmentDialog } from "./driver-reassignment-dialog";
 import { 
   Clock, CarFront, User, FileText, MapPin, Gauge, Building, Camera, 
   Hash, ShieldAlert, Settings, UserCheck, AlertTriangle, Edit, Download,
-  Save, X
+  Save, X, Check
 } from "lucide-react";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,6 +71,7 @@ export function AlarmDetails({
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [isLoadingAnomalies, setIsLoadingAnomalies] = useState(false);
   const [showDriverDialog, setShowDriverDialog] = useState(false);
+  const [isReporting, setIsReporting] = useState(false); // Estado para el botón de informar
 
   const informacionRef = useRef<HTMLDivElement>(null);
   const multimediaRef = useRef<HTMLDivElement>(null);
@@ -260,6 +261,24 @@ export function AlarmDetails({
     setIsEditingAnomaly(false);
   };
 
+  // Handle marking alarm as reported
+  const handleMarkAsReported = async () => {
+    if (!alarm || alarm.informada === true) return;
+    
+    setIsReporting(true);
+    try {
+      const updatedAlarm = await markAlarmAsReported(alarm.id);
+      if (onAlarmUpdate) {
+        onAlarmUpdate(updatedAlarm);
+      }
+    } catch (error) {
+      console.error('Error marking alarm as reported:', error);
+      // Aquí podrías mostrar un toast de error
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   const scrollToSection = (sectionId: string) => {
     const item = navigationItems.find(item => item.id === sectionId);
     if (!item?.ref.current) return;
@@ -407,13 +426,38 @@ export function AlarmDetails({
                 Detalles de Seguimiento
               </CardTitle>
               {alarm.status === 'confirmed' && (
-                // Descargar vía proxy para incluir Authorization automáticamente
-                <a href={`/proxy/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
-                  <Button variant="outline" size="sm" className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Descargar Informe
-                  </Button>
-                </a>
+                <div className="flex items-center gap-2">
+                  {/* Botón para marcar como informada (solo si no está informada) */}
+                  {alarm.informada === false && (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={handleMarkAsReported}
+                      disabled={isReporting}
+                      className="flex items-center gap-2"
+                      title="Marcar alarma como informada"
+                    >
+                      <Check className="h-4 w-4" />
+                      {isReporting ? 'Informando...' : 'Informar'}
+                    </Button>
+                  )}
+                  
+                  {/* Indicador de estado informada */}
+                  {alarm.informada === true && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                      <Check className="h-3 w-3 mr-1" />
+                      Informada
+                    </Badge>
+                  )}
+                  
+                  {/* Descargar vía proxy para incluir Authorization automáticamente */}
+                  <a href={`/proxy/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      Descargar Informe
+                    </Button>
+                  </a>
+                </div>
               )}
             </div>
           </CardHeader>

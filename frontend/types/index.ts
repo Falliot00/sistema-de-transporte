@@ -37,6 +37,7 @@ export interface Alarm {
     speed?: number;
     descripcion?: string;
     company?: string;
+    informada?: boolean; // Nueva columna informada
     location: {
         latitude: number;
         longitude: number;

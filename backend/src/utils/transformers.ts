@@ -38,6 +38,7 @@ export const transformAlarmData = (alarm: any) => {
         videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
         speed: alarm.velocidad,
         descripcion: alarm.descripcion,
+        informada: alarm.informada, // Nuevo campo informada
         // --- CAMBIO: Usamos la relación `empresaInfo` para obtener el nombre de la empresa.
         // Usamos `nombreMin` que parece ser el formato deseado para mostrar.
         // Como fallback, mantenemos el campo de texto original por si la relación no viene.

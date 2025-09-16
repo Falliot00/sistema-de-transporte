@@ -62,6 +62,9 @@ model AlarmasHistorico {
 
   // --- CAMBIO 2: La columna idEmpresa ahora es un INT y se usa para la relación ---
   idEmpresa   Int?      @map("idEmpresa") @db.Int
+  
+  // --- NUEVA COLUMNA: informada ---
+  informada   Boolean?  @db.Bit
 
   // --- RELACIONES ACTUALIZADAS Y NUEVAS ---
   chofer    Choferes?   @relation(fields: [choferId], references: [choferes_id], onDelete: NoAction, onUpdate: NoAction)
@@ -149,4 +152,30 @@ model User {
 
   @@schema("dimCentral")
   @@map("users")
+}
+
+// --- NUEVAS TABLAS DE INFORMES ---
+
+model Informes {
+  idInforme Int      @id @default(autoincrement()) @map("idInforme")
+  fecha     DateTime @db.Date
+  hora      DateTime @db.Time
+
+  // Relación inversa
+  informeAlarmas InformeAlarma[]
+
+  @@schema("alarmas")
+  @@map("informes")
+}
+
+model InformeAlarma {
+  idInforme Int    @map("idInforme")
+  idAlarma  String @map("idAlarma") @db.VarChar(50)
+
+  // Relaciones
+  informe Informes @relation(fields: [idInforme], references: [idInforme], onDelete: Cascade)
+
+  @@id([idInforme, idAlarma])
+  @@schema("alarmas")
+  @@map("informeAlarma")
 }

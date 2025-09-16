@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
-import { History, Eye, Download, Loader2 } from "lucide-react"; 
+import { History, Eye, Download, Loader2, FileText } from "lucide-react"; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlarmDetails } from '@/components/alarms/alarm-details';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generateAlarmReport } from "@/lib/api";
 
 interface RecentAlarmsTableProps {
     alarms: Alarm[];
@@ -22,19 +24,78 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTableProps) {
     const [selectedAlarm, setSelectedAlarm] = useState<Alarm | null>(null);
+    const [selectedAlarmIds, setSelectedAlarmIds] = useState<string[]>([]);
+    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+    // Filtrar alarmas confirmadas que no han sido informadas para los checkboxes
+    const reportableAlarms = alarms.filter(alarm => 
+        alarm.status === 'confirmed' && alarm.informada === false
+    );
+
+    // Manejar selección/deselección de alarmas
+    const handleAlarmSelection = (alarmId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedAlarmIds(prev => [...prev, alarmId]);
+        } else {
+            setSelectedAlarmIds(prev => prev.filter(id => id !== alarmId));
+        }
+    };
+
+    // Manejar selección de todas las alarmas reportables
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedAlarmIds(reportableAlarms.map(alarm => alarm.id));
+        } else {
+            setSelectedAlarmIds([]);
+        }
+    };
+
+    // Generar informe
+    const handleGenerateReport = async () => {
+        if (selectedAlarmIds.length === 0) return;
+        
+        setIsGeneratingReport(true);
+        try {
+            const result = await generateAlarmReport(selectedAlarmIds);
+            console.log('Informe generado:', result);
+            // Aquí podrías mostrar un toast de éxito
+            setSelectedAlarmIds([]);
+        } catch (error) {
+            console.error('Error generating report:', error);
+            // Aquí podrías mostrar un toast de error
+        } finally {
+            setIsGeneratingReport(false);
+        }
+    };
 
     return (
         <>
             <Card className="h-full">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <History className="h-6 w-6 text-primary" />
-                        Alarmas Recientes
-                        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    </CardTitle>
-                    <CardDescription>
-                        {isLoading ? 'Cargando alarmas filtradas...' : `Mostrando ${alarms.length} alarmas${alarms.length === 10 ? ' (máximo 10)' : ''}`}
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <History className="h-6 w-6 text-primary" />
+                                Alarmas Recientes
+                                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                            </CardTitle>
+                            <CardDescription>
+                                {isLoading ? 'Cargando alarmas filtradas...' : `Mostrando ${alarms.length} alarmas${alarms.length === 10 ? ' (máximo 10)' : ''}`}
+                            </CardDescription>
+                        </div>
+                        
+                        {/* Botón de generar informe */}
+                        {reportableAlarms.length > 0 && (
+                            <Button 
+                                onClick={handleGenerateReport}
+                                disabled={selectedAlarmIds.length === 0 || isGeneratingReport}
+                                className="flex items-center gap-2"
+                            >
+                                <FileText className="h-4 w-4" />
+                                {isGeneratingReport ? 'Generando...' : `Generar Informe ${selectedAlarmIds.length > 0 ? `(${selectedAlarmIds.length})` : ''}`}
+                            </Button>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -48,6 +109,15 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        {reportableAlarms.length > 0 && (
+                                            <TableHead className="w-[50px]">
+                                                <Checkbox
+                                                    checked={selectedAlarmIds.length === reportableAlarms.length && reportableAlarms.length > 0}
+                                                    onCheckedChange={handleSelectAll}
+                                                    aria-label="Seleccionar todas las alarmas para informe"
+                                                />
+                                            </TableHead>
+                                        )}
                                         <TableHead>Tipo de Alarma</TableHead>
                                         <TableHead>Fecha</TableHead>
                                         <TableHead className="text-center">Estado</TableHead>
@@ -57,12 +127,34 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
                                 <TableBody>
                                     {alarms.map((alarm) => {
                                         const statusInfo = getAlarmStatusInfo(alarm.status);
+                                        const isReportable = alarm.status === 'confirmed' && alarm.informada === false;
+                                        
                                         return (
                                             <TableRow key={alarm.id}>
+                                                {reportableAlarms.length > 0 && (
+                                                    <TableCell>
+                                                        {isReportable ? (
+                                                            <Checkbox
+                                                                checked={selectedAlarmIds.includes(alarm.id)}
+                                                                onCheckedChange={(checked) => handleAlarmSelection(alarm.id, checked as boolean)}
+                                                                aria-label={`Seleccionar alarma ${alarm.type}`}
+                                                            />
+                                                        ) : null}
+                                                    </TableCell>
+                                                )}
                                                 <TableCell className="font-medium">{alarm.type}</TableCell>
                                                 <TableCell>{formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge variant={statusInfo.variant as "default" | "secondary" | "destructive" | "outline" | null | undefined} className="capitalize">{statusInfo.label}</Badge>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Badge variant={statusInfo.variant as "default" | "secondary" | "destructive" | "outline" | null | undefined} className="capitalize">
+                                                            {statusInfo.label}
+                                                        </Badge>
+                                                        {alarm.status === 'confirmed' && alarm.informada === true && (
+                                                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                                                Informada
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex justify-center gap-2">

@@ -341,4 +341,33 @@ export async function updateAlarmAnomaly(alarmId: string, anomalyId: number | nu
     return await response.json();
 }
 
+/**
+ * Marca una alarma confirmada como informada
+ */
+export async function markAlarmAsReported(alarmId: string): Promise<Alarm> {
+    const response = await fetch(`${API_URL}/alarmas/${alarmId}/report`, {
+        method: 'PATCH',
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al marcar la alarma como informada');
+    }
+    return await response.json();
+}
+
+/**
+ * Genera un informe de múltiples alarmas
+ */
+export async function generateAlarmReport(alarmIds: string[]): Promise<any> {
+    const response = await fetch(`${API_URL}/alarmas/generate-report`, {
+        method: 'POST',
+        body: JSON.stringify({ alarmIds }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido.' }));
+        throw new Error(errorData.message || 'Error al generar el informe');
+    }
+    return await response.json();
+}
+
 

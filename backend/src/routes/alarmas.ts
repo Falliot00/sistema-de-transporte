@@ -14,7 +14,9 @@ import {
     undoAlarmAction,
     getAlarmReport,
     updateAlarmDescription,
-    updateAlarmAnomaly
+    updateAlarmAnomaly,
+    markAlarmAsReported,
+    generateAlarmReport
 } from '../controllers/alarmaController';
 
 const router = Router();
@@ -69,6 +71,16 @@ router.patch('/:id/description', authenticateToken, authorizeRoles('ADMIN','MANA
 
 router.patch('/:id/anomaly', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
     await updateAlarmAnomaly(req, res);
+});
+
+// Ruta para marcar una alarma como informada
+router.patch('/:id/report', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
+    await markAlarmAsReported(req, res);
+});
+
+// Ruta para generar informe de múltiples alarmas
+router.post('/generate-report', authenticateToken, authorizeRoles('ADMIN','MANAGER','OPERADOR'), async (req: Request, res: Response) => {
+    await generateAlarmReport(req, res);
 });
 
 export default router;

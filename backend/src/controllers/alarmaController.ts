@@ -381,7 +381,10 @@ export const confirmFinalAlarm = async (req: Request, res: Response) => {
         if (!alarm) return res.status(404).json({ message: 'Alarma no encontrada.' });
         if (alarm.estado !== 'Sospechosa') return res.status(400).json({ message: `Solo se puede confirmar una alarma en estado "Sospechosa".` });
         
-        const dataToUpdate: Prisma.AlarmasHistoricoUpdateInput = { estado: 'Confirmada' };
+        const dataToUpdate: Prisma.AlarmasHistoricoUpdateInput = { 
+            estado: 'Confirmada',
+            informada: false // Establecer como no informada al confirmar
+        };
         if (descripcion) dataToUpdate.descripcion = descripcion;
         
         if (typeof choferId !== 'number') return res.status(400).json({ message: "La selecciÃ³n de un chofer es obligatoria para confirmar la alarma." });
@@ -548,6 +551,99 @@ export const updateAlarmAnomaly = async (req: Request, res: Response) => {
         res.json(transformedAlarm);
     } catch (error) {
         console.error(`Error al actualizar la anomalÃ­a de la alarma ${id}:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+// Función para marcar una alarma como informada
+export const markAlarmAsReported = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    
+    try {
+        const alarm = await prisma.alarmasHistorico.findUnique({ where: { guid: id } });
+        if (!alarm) {
+            return res.status(404).json({ message: 'Alarma no encontrada.' });
+        }
+        
+        if (alarm.estado !== 'Confirmada') {
+            return res.status(400).json({ message: 'Solo se pueden informar alarmas confirmadas.' });
+        }
+        
+        if (alarm.informada === true) {
+            return res.status(400).json({ message: 'Esta alarma ya ha sido informada.' });
+        }
+        
+        const updatedAlarm = await prisma.alarmasHistorico.update({
+            where: { guid: id },
+            data: { informada: true },
+            include: alarmIncludes,
+        });
+        
+        const transformedAlarm = transformAlarmData(updatedAlarm);
+        res.json(transformedAlarm);
+    } catch (error) {
+        console.error(`Error al marcar la alarma ${id} como informada:`, error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+// Función para generar informe de alarmas
+export const generateAlarmReport = async (req: Request, res: Response) => {
+    const { alarmIds } = req.body; // Array de GUIDs de alarmas
+    
+    if (!Array.isArray(alarmIds) || alarmIds.length === 0) {
+        return res.status(400).json({ message: 'Se debe proporcionar al menos una alarma para generar el informe.' });
+    }
+    
+    try {
+        // Verificar que todas las alarmas existen y están confirmadas pero no informadas
+        const alarms = await prisma.alarmasHistorico.findMany({
+            where: { 
+                guid: { in: alarmIds },
+                estado: 'Confirmada',
+                informada: false
+            },
+            include: alarmIncludes
+        });
+        
+        if (alarms.length !== alarmIds.length) {
+            return res.status(400).json({ 
+                message: 'Algunas alarmas no existen, no están confirmadas o ya han sido informadas.' 
+            });
+        }
+        
+        // Crear el informe
+        const now = new Date();
+        const informe = await prisma.informes.create({
+            data: {
+                fecha: now,
+                hora: now
+            }
+        });
+        
+        // Crear las relaciones en informeAlarma
+        const informeAlarmaData = alarmIds.map(alarmId => ({
+            idInforme: informe.idInforme,
+            idAlarma: alarmId
+        }));
+        
+        await prisma.informeAlarma.createMany({
+            data: informeAlarmaData
+        });
+        
+        // Por ahora, devolver información del informe creado
+        // TODO: Implementar generación de PDF para múltiples alarmas
+        res.json({
+            message: 'Informe generado exitosamente',
+            informe: {
+                id: informe.idInforme,
+                fecha: informe.fecha,
+                hora: informe.hora,
+                alarmas: alarms.length
+            }
+        });
+    } catch (error) {
+        console.error('Error al generar el informe de alarmas:', error);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
