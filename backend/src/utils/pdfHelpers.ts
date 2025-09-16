@@ -33,21 +33,67 @@ export async function generateQRCodeBuffer(text: string): Promise<Buffer> {
 }
 
 export async function getLogo(): Promise<Buffer | null> {
-    const logoPath = path.join(__dirname, '..', '..', 'assets', 'LogosNegros.png');
-    if (fs.existsSync(logoPath)) return fs.readFileSync(logoPath);
+    try {
+        // Ruta principal del logo
+        const logoPath = path.join(__dirname, '..', '..', 'assets', 'LogosNegros.png');
+        console.log('Intentando cargar logo desde:', logoPath);
+        console.log('__dirname actual:', __dirname);
+        
+        if (fs.existsSync(logoPath)) {
+            console.log('Logo encontrado en ruta principal');
+            return fs.readFileSync(logoPath);
+        }
 
-    const alternatives = [
-        'logosNegros.png',
-        'logos_negros.png',
-        'logo.png'
-    ];
+        // Rutas alternativas
+        const alternatives = [
+            'logosNegros.png',
+            'logos_negros.png',
+            'logo.png',
+            'logo-grupo-alliot.png'
+        ];
 
-    for (const file of alternatives) {
-        const altPath = path.join(__dirname, '..', '..', 'assets', file);
-        if (fs.existsSync(altPath)) return fs.readFileSync(altPath);
+        for (const file of alternatives) {
+            const altPath = path.join(__dirname, '..', '..', 'assets', file);
+            console.log('Intentando ruta alternativa:', altPath);
+            if (fs.existsSync(altPath)) {
+                console.log('Logo encontrado en ruta alternativa:', altPath);
+                return fs.readFileSync(altPath);
+            }
+        }
+
+        // Ruta absoluta como último recurso
+        const absoluteBackendPath = process.cwd();
+        console.log('Process.cwd():', absoluteBackendPath);
+        
+        const absoluteLogoPath = path.join(absoluteBackendPath, 'assets', 'LogosNegros.png');
+        console.log('Intentando ruta absoluta:', absoluteLogoPath);
+        
+        if (fs.existsSync(absoluteLogoPath)) {
+            console.log('Logo encontrado en ruta absoluta');
+            return fs.readFileSync(absoluteLogoPath);
+        }
+
+        // Verificar si estamos en un subdirectorio y necesitamos ir al directorio backend
+        if (absoluteBackendPath.includes('backend')) {
+            const backendLogoPath = path.join(absoluteBackendPath, 'assets', 'LogosNegros.png');
+            if (fs.existsSync(backendLogoPath)) {
+                console.log('Logo encontrado en directorio backend');
+                return fs.readFileSync(backendLogoPath);
+            }
+        } else {
+            const backendLogoPath = path.join(absoluteBackendPath, 'backend', 'assets', 'LogosNegros.png');
+            if (fs.existsSync(backendLogoPath)) {
+                console.log('Logo encontrado en backend subdirectorio');
+                return fs.readFileSync(backendLogoPath);
+            }
+        }
+
+        console.warn('No se pudo encontrar el logo en ninguna ruta');
+        return null;
+    } catch (error) {
+        console.error('Error al cargar el logo:', error);
+        return null;
     }
-
-    return null;
 }
 
 export async function downloadImage(url: string): Promise<Buffer | null> {
@@ -149,13 +195,17 @@ export function addHeader(doc: PDFKit.PDFDocument, pageNumber: number, logoBuffe
         .text('REG Informe anomalía', 60, headerY + 15, { width: 130, align: 'center' })
         .text('en conducción', 60, headerY + 30, { width: 130, align: 'center' });
 
-    if (logoBuffer) {
+    if (logoBuffer && logoBuffer.length > 0) {
         try {
+            console.log('Intentando insertar logo en PDF, tamaño del buffer:', logoBuffer.length);
             doc.image(logoBuffer, 220, headerY + 5, { fit: [155, 50], align: 'center', valign: 'center' });
+            console.log('Logo insertado exitosamente en PDF');
         } catch (err) {
+            console.error('Error al insertar logo en PDF:', err);
             addCompanyText(doc, headerY);
         }
     } else {
+        console.warn('No hay buffer de logo disponible, usando texto de empresa');
         addCompanyText(doc, headerY);
     }
 
