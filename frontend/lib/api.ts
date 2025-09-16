@@ -12,8 +12,8 @@ import {
 
 const isServer = typeof window === 'undefined';
 
-// API base URL - uses simple proxy route
-const API_URL = '/api/proxy';
+// API base URL - proxy fuera de /api para evitar colisiones con reverse proxy
+const API_URL = '/proxy';
 
 
 
