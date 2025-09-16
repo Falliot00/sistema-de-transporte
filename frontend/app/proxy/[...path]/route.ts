@@ -26,7 +26,8 @@ async function forward(req: NextRequest, path: string[]) {
   const targetUrl = `${base}/${joined}${req.nextUrl.search}`;
 
   const headers = new Headers();
-  headers.set('accept', 'application/json');
+  const accept = req.headers.get('accept');
+  if (accept) headers.set('accept', accept);
 
   const jar = await cookies();
   const token = jar.get('token')?.value;
@@ -70,4 +71,3 @@ export async function DELETE(req: NextRequest, context: any) {
   const { path = [] } = context.params || {};
   return forward(req, Array.isArray(path) ? path : []);
 }
-

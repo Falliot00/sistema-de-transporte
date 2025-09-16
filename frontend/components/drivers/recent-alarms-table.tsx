@@ -70,7 +70,8 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
                                                             <Eye className="h-4 w-4" />
                                                             <span className="sr-only">Ver detalles</span>
                                                         </Button>
-                                                        <a href={`${API_URL}/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
+                                                        {/* Descargar PDF vía proxy para agregar Authorization */}
+                                                        <a href={`/proxy/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
                                                             <Button variant="ghost" size="icon">
                                                                 <Download className="h-4 w-4" />
                                                                 <span className="sr-only">Descargar Informe</span>

@@ -407,7 +407,8 @@ export function AlarmDetails({
                 Detalles de Seguimiento
               </CardTitle>
               {alarm.status === 'confirmed' && (
-                <a href={`${API_URL}/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
+                // Descargar vía proxy para incluir Authorization automáticamente
+                <a href={`/proxy/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
                   <Button variant="outline" size="sm" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Descargar Informe
