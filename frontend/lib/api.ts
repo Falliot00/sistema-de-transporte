@@ -12,7 +12,7 @@ import {
 
 const isServer = typeof window === 'undefined';
 
-// API base URL - uses proxy in production to handle auth cookies
+// API base URL - uses simple proxy route
 const API_URL = '/api/proxy';
 
 
