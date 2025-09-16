@@ -9,6 +9,11 @@ function normalizeApiBase(url: string) {
 }
 
 function backendBase() {
+  // Preferir una URL interna si existe para evitar auto-llamarse al mismo dominio
+  const internal = process.env.BACKEND_INTERNAL_URL;
+  if (internal && internal.trim()) {
+    return normalizeApiBase(internal.trim());
+  }
   const envBase = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL;
   if (envBase && envBase.trim()) {
     return normalizeApiBase(envBase.trim());
@@ -116,4 +121,3 @@ export async function DELETE(req: NextRequest, context: any) {
   const { path = [] } = context.params || {};
   return forward(req, Array.isArray(path) ? path : []);
 }
-
