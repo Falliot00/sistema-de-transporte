@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Play, Undo2 } from "lucide-react"; 
 import { Badge } from "@/components/ui/badge";
 import { getColorVariantForType } from "@/lib/utils";
+import Image from "next/image";
 
 interface AlarmAnalysisViewProps {
   alarm: Alarm;
@@ -32,8 +33,16 @@ export function AlarmAnalysisView({
     isUndoDisabled
     // --- FIN DE LA SOLUCIÓN ---
 }: AlarmAnalysisViewProps) {
+  const role = typeof document !== 'undefined'
+    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
+    : 'USER';
   const primaryMedia = alarm.media?.find(m => m.type === 'video') || alarm.media?.[0];
   const typeColorVariant = getColorVariantForType(alarm.type);
+
+  // Determinar qué botones mostrar según el rol y estado de la alarma
+  const showActions = role === 'USER' ? alarm.status === 'pending' : true;
+  const canReject = role === 'USER' ? alarm.status === 'pending' : true;
+  const canConfirm = role === 'USER' ? alarm.status === 'pending' : true;
 
   return (
     <div className="flex flex-col h-full w-full items-center p-4">
@@ -76,10 +85,13 @@ export function AlarmAnalysisView({
                 Tu navegador no soporta el tag de video.
               </video>
             ) : (
-              <img
+              <Image
                 src={primaryMedia.url}
                 alt={`Evidencia de ${alarm.type}`}
                 className="w-full h-full object-contain"
+                width={800}
+                height={600}
+                unoptimized
               />
             )}
           </>
@@ -94,35 +106,43 @@ export function AlarmAnalysisView({
         </Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 w-full max-w-lg flex-shrink-0">
-        <Button
-          variant="destructive"
-          size="lg"
-          onClick={() => onAction('rejected')}
-          disabled={isSubmitting}
-          className="h-14 text-lg"
-        >
-          {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'Rechazar'}
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={() => onAction('skip')}
-          disabled={isSubmitting}
-          className="h-14 text-lg"
-        >
-          Omitir
-        </Button>
-        <Button
-          variant="success"
-          size="lg"
-          onClick={() => onAction('confirmed')}
-          disabled={isSubmitting}
-          className="h-14 text-lg"
-        >
-          {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : (confirmText || 'Confirmar')}
-        </Button>
-      </div>
+      {showActions && (
+        <div className="grid grid-cols-3 gap-4 w-full max-w-lg flex-shrink-0">
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={() => onAction('rejected')}
+            disabled={isSubmitting || !canReject}
+            className="h-14 text-lg"
+          >
+            {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : 'Rechazar'}
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => onAction('skip')}
+            disabled={isSubmitting}
+            className="h-14 text-lg"
+          >
+            Omitir
+          </Button>
+          <Button
+            variant="success"
+            size="lg"
+            onClick={() => onAction('confirmed')}
+            disabled={isSubmitting || !canConfirm}
+            className="h-14 text-lg"
+          >
+            {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : (confirmText || 'Confirmar')}
+          </Button>
+        </div>
+      )}
+
+      {!showActions && (
+        <div className="text-center text-muted-foreground">
+          <p>Esta alarma está en estado {alarm.status === 'suspicious' ? 'sospechosa' : alarm.status} y solo puede ser visualizada.</p>
+        </div>
+      )}
     </div>
   );
 }

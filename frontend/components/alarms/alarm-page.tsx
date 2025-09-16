@@ -145,7 +145,7 @@ export default function AlarmsPage() {
         } finally { 
             setIsLoading(false); 
         } 
-    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
+    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange, role]);
 
     // --- ELIMINADO: useEffect y useCallback para fetchAnalysisCounts ---
 
@@ -571,7 +571,11 @@ export default function AlarmsPage() {
                                     onDriverReassign={handleDriverReassign}
                                     onAlarmUpdate={handleAlarmUpdate}
                                     isSubmitting={isSubmitting}
-                                    showActions={role !== 'USER' && (alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected')}
+                                    showActions={
+                            role === 'USER' 
+                                ? alarmForDetails.status === 'pending'  // USER solo puede actuar sobre pendientes
+                                : (alarmForDetails.status === 'pending' || alarmForDetails.status === 'suspicious' || alarmForDetails.status === 'rejected')  // Otros roles pueden actuar sobre más estados
+                        }
                                 /> 
                             </div> 
                         </> 

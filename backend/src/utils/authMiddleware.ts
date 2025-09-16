@@ -50,10 +50,10 @@ export const authorizeRoles = (...roles: string[]): RequestHandler => {
 export const limitUserReview: RequestHandler = (req, res, next) => {
   const role = req.user?.role;
   if (role === 'USER') {
-    // Solo permitir marcar Pendiente -> Sospechosa (status 'confirmed' en nuestro API de review)
+    // Permitir marcar Pendiente -> Sospechosa ('confirmed') o Pendiente -> Rechazada ('rejected')
     const status = req.body?.status;
-    if (status !== 'confirmed') {
-      res.status(403).json({ message: 'No autorizado: solo puede marcar como sospechosa.' });
+    if (!['confirmed', 'rejected'].includes(status)) {
+      res.status(403).json({ message: 'No autorizado: solo puede marcar como sospechosa o rechazar alarmas pendientes.' });
       return;
     }
   }

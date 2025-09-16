@@ -53,10 +53,9 @@ export function AlarmActionForm({
   const handleAction = (action: 'confirmed' | 'rejected') => {
     // Reglas de rol en cliente (la API también valida)
     if (role === 'USER') {
-      // Solo puede: Pending -> Sospechosa (action 'confirmed')
-      if (alarm.status === 'pending' && action === 'rejected') return;
-      // No puede confirmar ni rechazar sospechosas
-      if (alarm.status === 'suspicious') return;
+      // Para USER: Solo puede actuar sobre alarmas pendientes
+      // Pending -> Sospechosa (action 'confirmed') o Pending -> Rechazada (action 'rejected')
+      if (alarm.status !== 'pending') return;
     }
     
     if (action === 'confirmed' && alarm.status === 'suspicious') {
@@ -118,11 +117,21 @@ export function AlarmActionForm({
 
       <div className="pt-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button onClick={() => handleAction('rejected')} variant="destructive" className="w-full" disabled={isSubmitting || (role==='USER') }>
+          <Button 
+            onClick={() => handleAction('rejected')} 
+            variant="destructive" 
+            className="w-full" 
+            disabled={isSubmitting || (role === 'USER' && alarm.status !== 'pending')}
+          >
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : rejectText}
           </Button>
-          <Button onClick={() => handleAction('confirmed')} variant="success" className="w-full" disabled={isSubmitting || (role==='USER' && alarm.status!=='pending')}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (role==='USER' && alarm.status==='pending' ? 'Marcar Sospechosa' : confirmText)}
+          <Button 
+            onClick={() => handleAction('confirmed')} 
+            variant="success" 
+            className="w-full" 
+            disabled={isSubmitting || (role === 'USER' && alarm.status !== 'pending')}
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (role === 'USER' && alarm.status === 'pending' ? 'Marcar Sospechosa' : confirmText)}
           </Button>
         </div>
       </div>
