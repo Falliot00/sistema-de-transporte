@@ -160,6 +160,7 @@ model Informes {
   idInforme Int      @id @default(autoincrement()) @map("idInforme")
   fecha     DateTime @db.Date
   hora      DateTime @db.Time
+  url       String?  @db.VarChar(512)
 
   // Relación inversa
   informeAlarmas InformeAlarma[]

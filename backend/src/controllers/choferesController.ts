@@ -151,6 +151,63 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
             prisma.alarmasHistorico.count({ where: { choferId: driverId, estado: { in: DB_QUERY_STATUS_MAP.rejected } } }),
         ]);
 
+        // Obtener informes generados para este chofer
+        const informesGenerados = await prisma.informes.findMany({
+            include: {
+                informeAlarmas: {
+                    include: {
+                        informe: true,
+                    },
+                    where: {
+                        idAlarma: {
+                            in: (await prisma.alarmasHistorico.findMany({
+                                where: { choferId: driverId },
+                                select: { guid: true }
+                            })).map(alarm => alarm.guid)
+                        }
+                    }
+                }
+            },
+            where: {
+                informeAlarmas: {
+                    some: {
+                        idAlarma: {
+                            in: (await prisma.alarmasHistorico.findMany({
+                                where: { choferId: driverId },
+                                select: { guid: true }
+                            })).map(alarm => alarm.guid)
+                        }
+                    }
+                }
+            },
+            orderBy: { fecha: 'desc' },
+            take: 10
+        });
+
+        // Transformar informes a formato amigable para el frontend
+        const informesTransformed = await Promise.all(informesGenerados.map(async (informe) => {
+            // Contar las alarmas asociadas a este informe que pertenecen al chofer
+            const alarmasDelInforme = await prisma.informeAlarma.count({
+                where: {
+                    idInforme: informe.idInforme,
+                    idAlarma: {
+                        in: (await prisma.alarmasHistorico.findMany({
+                            where: { choferId: driverId },
+                            select: { guid: true }
+                        })).map(alarm => alarm.guid)
+                    }
+                }
+            });
+
+            return {
+                id: informe.idInforme,
+                fecha: informe.fecha,
+                hora: informe.hora,
+                url: informe.url,
+                totalAlarmas: alarmasDelInforme
+            };
+        }));
+
         const recentAlarmsTransformed = alarmasFiltradasFromDb.map(alarm => transformAlarmData({ ...alarm, chofer: driver }));
         
         const responsePayload = {
@@ -167,7 +224,8 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
                 confirmed: confirmedAlarms,
                 rejected: rejectedAlarms,
             },
-            alarmas: recentAlarmsTransformed
+            alarmas: recentAlarmsTransformed,
+            informes: informesTransformed
         };
 
         res.status(200).json(responsePayload);

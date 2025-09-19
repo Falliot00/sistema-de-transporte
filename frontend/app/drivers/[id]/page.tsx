@@ -7,6 +7,7 @@ import { useParams, notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DriverStats } from "./driver-stats";
 import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
+import { GeneratedReportsTable } from "@/components/drivers/generated-reports-table";
 import { Briefcase, CalendarDays, Contact, Home } from "lucide-react";
 import { Driver as DriverType } from "@/types";
 import { AdvancedFilters } from '@/components/shared/advanced-filters';
@@ -57,6 +58,7 @@ export default function DriverDetailPage() {
     useEffect(() => {
         setIsLoading(true);
         loadDriverData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     // Recargar cuando cambien los filtros
@@ -64,6 +66,7 @@ export default function DriverDetailPage() {
         if (!isLoading && driver) {
             loadDriverData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dateRange, typeFilters, companyFilters]);
 
     const handleClearFilters = () => {
@@ -151,13 +154,18 @@ export default function DriverDetailPage() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 space-y-8">
                     <DriverStats stats={driver.stats} />
+                    <GeneratedReportsTable 
+                        reports={driver.informes || []} 
+                        isLoading={isLoadingAlarms}
+                    />
                 </div>
                 <div className="lg:col-span-2">
                     <RecentAlarmsTable 
                         alarms={driver.alarmas || []} 
                         isLoading={isLoadingAlarms}
+                        onReportGenerated={loadDriverData}
                     />
                 </div>
             </div>

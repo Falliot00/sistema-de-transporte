@@ -18,11 +18,12 @@ import { generateAlarmReport } from "@/lib/api";
 interface RecentAlarmsTableProps {
     alarms: Alarm[];
     isLoading?: boolean;
+    onReportGenerated?: () => void | Promise<void>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTableProps) {
+export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated }: RecentAlarmsTableProps) {
     const [selectedAlarm, setSelectedAlarm] = useState<Alarm | null>(null);
     const [selectedAlarmIds, setSelectedAlarmIds] = useState<string[]>([]);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -60,6 +61,11 @@ export function RecentAlarmsTable({ alarms, isLoading = false }: RecentAlarmsTab
             console.log('Informe generado:', result);
             // Aquí podrías mostrar un toast de éxito
             setSelectedAlarmIds([]);
+            
+            // Llamar al callback para refrescar los datos
+            if (onReportGenerated) {
+                await onReportGenerated();
+            }
         } catch (error) {
             console.error('Error generating report:', error);
             // Aquí podrías mostrar un toast de error

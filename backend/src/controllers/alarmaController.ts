@@ -4,10 +4,11 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { exec, execSync, ExecOptions } from 'child_process';
 import path from 'path';
 import { transformAlarmData } from '../utils/transformers';
-import { generateAlarmReportPDF } from '../utils/pdfGenerator';
+import { generateAlarmReportPDF, generateDriverAlarmsSummaryPDF } from '../utils/pdfGenerator';
 import { DB_QUERY_STATUS_MAP } from '../utils/statusHelpers';
 import streamBuffers from 'stream-buffers';
 import fs from 'fs';
+import { s3Uploader } from '../utils/s3Uploader';
 
 const prisma = new PrismaClient();
 
@@ -603,7 +604,17 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
                 estado: 'Confirmada',
                 informada: false
             },
-            include: alarmIncludes
+            include: {
+                chofer: {
+                    include: {
+                        empresaInfo: true,
+                    },
+                },
+                typeAlarm: true,
+                deviceInfo: true,
+                anomaliaInfo: true,
+                empresaInfo: true,
+            }
         });
         
         if (alarms.length !== alarmIds.length) {
@@ -612,38 +623,100 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
             });
         }
         
-        // Crear el informe
-        const now = new Date();
-        const informe = await prisma.informes.create({
-            data: {
-                fecha: now,
-                hora: now
+        // Verificar que todas las alarmas pertenecen al mismo chofer
+        const choferIds = [...new Set(alarms.map(alarm => alarm.choferId))];
+        if (choferIds.length !== 1 || !choferIds[0]) {
+            return res.status(400).json({ 
+                message: 'Todas las alarmas deben pertenecer al mismo chofer.' 
+            });
+        }
+        
+        const choferId = choferIds[0];
+        const chofer = alarms[0].chofer;
+        
+        if (!chofer) {
+            return res.status(400).json({ 
+                message: 'No se encontró información del chofer.' 
+            });
+        }
+        
+        // Usar transacción para asegurar consistencia
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Crear el informe
+            const now = new Date();
+            const informe = await tx.informes.create({
+                data: {
+                    fecha: now,
+                    hora: now,
+                    url: null // Se actualizará después de subir a S3
+                }
+            });
+            
+            // 2. Crear las relaciones en informeAlarma
+            const informeAlarmaData = alarmIds.map(alarmId => ({
+                idInforme: informe.idInforme,
+                idAlarma: alarmId
+            }));
+            
+            await tx.informeAlarma.createMany({
+                data: informeAlarmaData
+            });
+            
+            // 3. Generar el PDF
+            const driverAlarmsData = {
+                chofer: chofer,
+                alarmas: alarms.map(alarm => ({
+                    ...alarm,
+                    typeAlarm: alarm.typeAlarm,
+                    deviceInfo: alarm.deviceInfo
+                }))
+            };
+            
+            const pdfBuffer = await generateDriverAlarmsSummaryPDF(driverAlarmsData);
+            
+            // 4. Subir el PDF a S3
+            const fileName = `informe-${choferId}-${informe.idInforme}-${now.getTime()}`;
+            const uploadResult = await s3Uploader.uploadPDFReport(pdfBuffer, fileName, choferId);
+            
+            if (!uploadResult.success) {
+                throw new Error(`Error al subir PDF a S3: ${uploadResult.error}`);
             }
+            
+            // 5. Actualizar el informe con la URL
+            const informeUpdated = await tx.informes.update({
+                where: { idInforme: informe.idInforme },
+                data: { url: uploadResult.url }
+            });
+            
+            // 6. Marcar las alarmas como informadas
+            await tx.alarmasHistorico.updateMany({
+                where: { guid: { in: alarmIds } },
+                data: { informada: true }
+            });
+            
+            return {
+                informe: informeUpdated,
+                uploadResult,
+                alarmasCount: alarms.length
+            };
         });
         
-        // Crear las relaciones en informeAlarma
-        const informeAlarmaData = alarmIds.map(alarmId => ({
-            idInforme: informe.idInforme,
-            idAlarma: alarmId
-        }));
-        
-        await prisma.informeAlarma.createMany({
-            data: informeAlarmaData
-        });
-        
-        // Por ahora, devolver información del informe creado
-        // TODO: Implementar generación de PDF para múltiples alarmas
         res.json({
             message: 'Informe generado exitosamente',
             informe: {
-                id: informe.idInforme,
-                fecha: informe.fecha,
-                hora: informe.hora,
-                alarmas: alarms.length
+                id: result.informe.idInforme,
+                fecha: result.informe.fecha,
+                hora: result.informe.hora,
+                url: result.informe.url,
+                alarmas: result.alarmasCount
             }
         });
+        
     } catch (error) {
         console.error('Error al generar el informe de alarmas:', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+        res.status(500).json({ 
+            message: 'Error interno del servidor.',
+            error: error instanceof Error ? error.message : 'Error desconocido'
+        });
     }
 };

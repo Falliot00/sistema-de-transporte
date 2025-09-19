@@ -100,6 +100,14 @@ export interface DriverStats {
     rejected: number;
 }
 
+export interface DriverReport {
+    id: number;
+    fecha: string; // ISO date
+    hora: string; // ISO time
+    url: string | null;
+    totalAlarmas: number;
+}
+
 export interface Driver {
     choferes_id: number;
     apellido_nombre: string;
@@ -112,6 +120,7 @@ export interface Driver {
     puesto?: string;
     stats?: DriverStats;
     alarmas?: Alarm[];
+    informes?: DriverReport[];
 }
 
 // --- TIPOS DE DISPOSITIVOS (NUEVOS Y ACTUALIZADOS) ---
