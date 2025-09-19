@@ -43,7 +43,7 @@ async function loginAction(formData: FormData) {
   // Rol legible por el cliente para mostrar/hidear menús
   jar.set('role', role, { httpOnly: false, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 2 });
 
-  redirect('/dashboard');
+  redirect('/');
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
