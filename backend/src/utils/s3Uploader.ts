@@ -14,13 +14,6 @@ export class S3Uploader {
   private bucketName: string;
 
   constructor() {
-    console.log('[DEBUG S3] Initializing S3Uploader with config:', {
-      region: config.aws.region,
-      bucketName: config.aws.s3BucketName,
-      hasAccessKey: !!config.aws.accessKeyId,
-      hasSecretKey: !!config.aws.secretAccessKey,
-    });
-
     this.s3Client = new S3Client({
       region: config.aws.region,
       credentials: {
@@ -31,7 +24,7 @@ export class S3Uploader {
     this.bucketName = config.aws.s3BucketName;
 
     if (!this.bucketName) {
-      console.error('[ERROR S3] Bucket name is empty!');
+      console.error('S3 bucket name is not configured');
     }
   }
 
@@ -48,17 +41,8 @@ export class S3Uploader {
     choferId: number
   ): Promise<UploadResult> {
     try {
-      console.log('[DEBUG S3] Starting upload with params:', {
-        fileName,
-        choferId,
-        bufferSize: pdfBuffer.length,
-        bucketName: this.bucketName
-      });
-
       const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const s3Key = `informes-chofer/${fecha}/${choferId}/${fileName}.pdf`;
-
-      console.log('[DEBUG S3] Generated S3 key:', s3Key);
 
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -73,13 +57,10 @@ export class S3Uploader {
         }
       });
 
-      console.log('[DEBUG S3] Sending command to S3...');
       await this.s3Client.send(command);
-      console.log('[DEBUG S3] Upload successful');
 
       // Construir la URL pública del archivo
       const s3Url = `https://${this.bucketName}.s3.${config.aws.region}.amazonaws.com/${s3Key}`;
-      console.log('[DEBUG S3] Generated URL:', s3Url);
 
       return {
         success: true,
@@ -87,14 +68,7 @@ export class S3Uploader {
         key: s3Key,
       };
     } catch (error) {
-      console.error('[ERROR S3] Error uploading PDF to S3:', error);
-      
-      // Log más detalles del error
-      if (error instanceof Error) {
-        console.error('[ERROR S3] Error name:', error.name);
-        console.error('[ERROR S3] Error message:', error.message);
-        console.error('[ERROR S3] Error stack:', error.stack);
-      }
+      console.error('Error uploading PDF to S3:', error);
 
       return {
         success: false,

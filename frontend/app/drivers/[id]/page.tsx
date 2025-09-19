@@ -153,15 +153,22 @@ export default function DriverDetailPage() {
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-8">
-                    <DriverStats stats={driver.stats} />
-                    <GeneratedReportsTable 
-                        reports={driver.informes || []} 
-                        isLoading={isLoadingAlarms}
-                    />
+            <div className="space-y-8">
+                {/* Fila superior: Stats e Informes Generados */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="lg:col-span-1">
+                        <DriverStats stats={driver.stats} />
+                    </div>
+                    <div className="lg:col-span-1">
+                        <GeneratedReportsTable 
+                            reports={driver.informes || []} 
+                            isLoading={isLoadingAlarms}
+                        />
+                    </div>
                 </div>
-                <div className="lg:col-span-2">
+                
+                {/* Fila inferior: Alarmas Recientes ocupando todo el ancho */}
+                <div className="w-full">
                     <RecentAlarmsTable 
                         alarms={driver.alarmas || []} 
                         isLoading={isLoadingAlarms}

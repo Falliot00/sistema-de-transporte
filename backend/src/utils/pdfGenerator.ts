@@ -280,19 +280,12 @@ export async function generateAlarmReportPDF(
  * @returns Buffer del PDF generado
  */
 export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Promise<Buffer> {
-    console.log('[DEBUG PDF] Starting PDF generation with data:', {
-        choferName: data.chofer.apellido_nombre,
-        choferId: data.chofer.choferes_id,
-        alarmsCount: data.alarmas.length
-    });
-
     try {
         const streamBuffer = new WritableStreamBuffer();
         const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: false });
         
         doc.pipe(streamBuffer);
 
-        console.log('[DEBUG PDF] Getting logo...');
         const logoBuffer = await getLogo();
         let pageNumber = 1;
         
@@ -316,7 +309,6 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
 
         doc.y = 130;
 
-        console.log('[DEBUG PDF] Adding title and chofer info...');
         // === Título del Informe ===
         doc.font(STYLES.sectionTitle.font)
            .fontSize(16)
@@ -334,7 +326,6 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         addLabelValue(doc, 'Empresa:', choferInfo.empresaInfo?.nombreMin || 'No disponible', 90);
         doc.moveDown(1.5);
 
-        console.log('[DEBUG PDF] Adding alarms summary and table...');
         // === Resumen de Alarmas ===
         addSectionTitle(doc, '2. Resumen de Alarmas');
         
@@ -355,11 +346,11 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         // Encabezados de la tabla
         const tableTop = doc.y;
         const colWidths = {
-            guid: 120,
-            fecha: 120,
-            tipo: 100,
+            id: 40,          // Columna más pequeña para ID numérico
+            fecha: 100,      // Más pequeña para fecha
+            tipo: 140,       // Más ancha para el tipo completo de alarma
             imagen: 80,
-            video: 75
+            video: 80
         };
         
         const startX = 50;
@@ -368,8 +359,8 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         // Dibuja encabezados
         doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
         
-        doc.text('GUID', currentX, tableTop, { width: colWidths.guid });
-        currentX += colWidths.guid;
+        doc.text('ID', currentX, tableTop, { width: colWidths.id });
+        currentX += colWidths.id;
         
         doc.text('Fecha y Hora', currentX, tableTop, { width: colWidths.fecha });
         currentX += colWidths.fecha;
@@ -391,7 +382,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         doc.font('Helvetica').fontSize(8).fillColor('#000000');
 
         // Datos de las alarmas
-        for (const alarma of data.alarmas) {
+        data.alarmas.forEach((alarma, index) => {
             // Verificar si necesitamos nueva página
             if (currentY > doc.page.height - 100) {
                 doc.addPage();
@@ -401,8 +392,8 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                 doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
                 currentX = startX;
                 
-                doc.text('GUID', currentX, currentY - 20, { width: colWidths.guid });
-                currentX += colWidths.guid;
+                doc.text('ID', currentX, currentY - 20, { width: colWidths.id });
+                currentX += colWidths.id;
                 doc.text('Fecha y Hora', currentX, currentY - 20, { width: colWidths.fecha });
                 currentX += colWidths.fecha;
                 doc.text('Tipo de Alarma', currentX, currentY - 20, { width: colWidths.tipo });
@@ -420,12 +411,12 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
 
             currentX = startX;
             
-            // GUID (truncado)
-            const guidTruncated = alarma.guid.substring(0, 16) + '...';
-            doc.text(guidTruncated, currentX, currentY, { width: colWidths.guid });
-            currentX += colWidths.guid;
+            // ID numérico (comenzando desde 1)
+            const numeroId = (index + 1).toString();
+            doc.text(numeroId, currentX, currentY, { width: colWidths.id, align: 'center' });
+            currentX += colWidths.id;
             
-            // Fecha y hora
+            // Fecha y hora (formato más compacto)
             const fechaAlarma = alarma.alarmTime 
                 ? new Date(alarma.alarmTime).toLocaleString('es-AR', { 
                     day: '2-digit', 
@@ -438,15 +429,22 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
             doc.text(fechaAlarma, currentX, currentY, { width: colWidths.fecha });
             currentX += colWidths.fecha;
             
-            // Tipo de alarma (truncado)
+            // Tipo de alarma completo (sin truncar)
             const tipoAlarma = alarma.typeAlarm?.alarm || 'N/A';
-            const tipoTruncated = tipoAlarma.length > 15 ? tipoAlarma.substring(0, 15) + '...' : tipoAlarma;
-            doc.text(tipoTruncated, currentX, currentY, { width: colWidths.tipo });
+            // Usar fontSize más pequeño si el texto es muy largo
+            const fontSize = tipoAlarma.length > 25 ? 7 : 8;
+            doc.fontSize(fontSize).text(tipoAlarma, currentX, currentY, { 
+                width: colWidths.tipo,
+                lineBreak: true
+            });
             currentX += colWidths.tipo;
+            
+            // Restablecer fontSize para las siguientes columnas
+            doc.fontSize(8);
             
             // Link de imagen
             if (alarma.imagen) {
-                const imagenUrl = alarma.imagen.length > 12 ? '🔗 Ver imagen' : alarma.imagen;
+                const imagenUrl = '🔗 Ver imagen';
                 doc.fillColor(COLORS.primary)
                    .text(imagenUrl, currentX, currentY, { 
                        width: colWidths.imagen, 
@@ -461,7 +459,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
             
             // Link de video
             if (alarma.video) {
-                const videoUrl = alarma.video.length > 10 ? '🔗 Ver video' : alarma.video;
+                const videoUrl = '🔗 Ver video';
                 doc.fillColor(COLORS.primary)
                    .text(videoUrl, currentX, currentY, { 
                        width: colWidths.video, 
@@ -473,7 +471,11 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                 doc.text('N/A', currentX, currentY, { width: colWidths.video });
             }
             
-            currentY += 20;
+            // Calcular la altura necesaria para esta fila (considerando text wrapping)
+            const tipoAlarmaHeight = doc.heightOfString(tipoAlarma, { width: colWidths.tipo });
+            const rowHeight = Math.max(20, tipoAlarmaHeight + 5);
+            
+            currentY += rowHeight;
             
             // Línea separadora entre filas
             doc.moveTo(startX, currentY - 5)
@@ -481,34 +483,29 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                .strokeColor('#f0f0f0')
                .stroke()
                .strokeColor('#000000');
-        }
+        });
 
-        console.log('[DEBUG PDF] Adding signatures...');
         // Firmas al final
         doc.y = doc.page.height - 150;
         addSignatureSection(doc);
         
         doc.end();
 
-        console.log('[DEBUG PDF] Waiting for PDF generation to complete...');
         return new Promise((resolve, reject) => {
             streamBuffer.on('finish', () => {
                 const contents = streamBuffer.getContents();
                 if (contents) {
-                    console.log('[DEBUG PDF] PDF generation completed, buffer size:', contents.length);
                     resolve(contents as Buffer);
                 } else {
-                    console.error('[ERROR PDF] PDF buffer is empty');
                     reject(new Error('PDF buffer is empty'));
                 }
             });
             streamBuffer.on('error', (error) => {
-                console.error('[ERROR PDF] Stream buffer error:', error);
                 reject(error);
             });
         });
     } catch (error) {
-        console.error('[ERROR PDF] Error generating PDF:', error);
+        console.error('Error generating PDF:', error);
         throw error;
     }
 }
