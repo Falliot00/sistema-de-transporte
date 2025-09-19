@@ -54,7 +54,7 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
+                //console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
                 // Si falla, continÃºa con el siguiente
@@ -86,7 +86,7 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
+                //console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
                 continue;
@@ -111,7 +111,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
         
         // Verificar que el script existe
         if (!fs.existsSync(scriptPath)) {
-            console.error(`[âŒ] El script no existe en la ruta: ${scriptPath}`);
+            //console.error(`[âŒ] El script no existe en la ruta: ${scriptPath}`);
             return;
         }
         
