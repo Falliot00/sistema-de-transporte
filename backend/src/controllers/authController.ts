@@ -40,7 +40,7 @@ export const login: RequestHandler = async (req, res) => {
     const token = jwt.sign(
       { sub: user.id, username: user.username, role: user.role },
       secret,
-      { expiresIn: '2h' }
+      { expiresIn: '8h' }
     );
 
     dlog('Login OK para', { id: user.id, username: user.username, role: user.role });

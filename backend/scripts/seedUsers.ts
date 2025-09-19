@@ -16,8 +16,7 @@ type SeedUser = {
 const seedUsers: SeedUser[] = [
   { username: 'Fermin',   role: 'ADMIN',   password: 'fermin050600' },
   { username: 'Lorenzo', role: 'MANAGER', password: 'lorenzo311295' },
-  { username: 'Andres',   role: 'USER',    password: 'Taller6558' },
-  { username: 'Ejemplo',   role: 'USER',    password: 'Taller6558' },
+  { username: 'Andres',   role: 'USER',    password: 'taller6558' }
 ];
 
 export async function seedUsersIfNeeded() {

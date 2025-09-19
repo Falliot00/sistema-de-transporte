@@ -38,7 +38,7 @@ async function loginAction(formData: FormData) {
     sameSite: 'lax',
     secure,
     path: '/',
-    maxAge: 60 * 60 * 2, // 2h
+    maxAge: 60 * 60 * 8, // 8h
   });
   // Rol legible por el cliente para mostrar/hidear menús
   jar.set('role', role, { httpOnly: false, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 2 });
