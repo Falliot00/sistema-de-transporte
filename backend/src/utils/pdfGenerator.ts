@@ -280,209 +280,235 @@ export async function generateAlarmReportPDF(
  * @returns Buffer del PDF generado
  */
 export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Promise<Buffer> {
-    const streamBuffer = new WritableStreamBuffer();
-    const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: false });
-    
-    doc.pipe(streamBuffer);
+    console.log('[DEBUG PDF] Starting PDF generation with data:', {
+        choferName: data.chofer.apellido_nombre,
+        choferId: data.chofer.choferes_id,
+        alarmsCount: data.alarmas.length
+    });
 
-    const logoBuffer = await getLogo();
-    let pageNumber = 1;
-    
-    // Primera página
-    doc.addPage();
-    await addHeader(doc, pageNumber, logoBuffer, 0);
-    
-    doc.on('pageAdded', () => {
-        const currentFont = (doc as any)._font?.name;
-        const currentSize = (doc as any)._fontSize;
-        const currentColor = (doc as any)._fillColor?.toString();
+    try {
+        const streamBuffer = new WritableStreamBuffer();
+        const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: false });
         
-        pageNumber++;
-        addHeader(doc, pageNumber, logoBuffer, 0);
+        doc.pipe(streamBuffer);
+
+        console.log('[DEBUG PDF] Getting logo...');
+        const logoBuffer = await getLogo();
+        let pageNumber = 1;
+        
+        // Primera página
+        doc.addPage();
+        await addHeader(doc, pageNumber, logoBuffer, 0);
+        
+        doc.on('pageAdded', () => {
+            const currentFont = (doc as any)._font?.name;
+            const currentSize = (doc as any)._fontSize;
+            const currentColor = (doc as any)._fillColor?.toString();
+            
+            pageNumber++;
+            addHeader(doc, pageNumber, logoBuffer, 0);
+            doc.y = 130;
+            
+            if (currentFont) doc.font(currentFont);
+            if (currentSize) doc.fontSize(currentSize);
+            if (currentColor) doc.fillColor(currentColor);
+        });
+
         doc.y = 130;
+
+        console.log('[DEBUG PDF] Adding title and chofer info...');
+        // === Título del Informe ===
+        doc.font(STYLES.sectionTitle.font)
+           .fontSize(16)
+           .fillColor(STYLES.sectionTitle.color)
+           .text('INFORME CONSOLIDADO DE ALARMAS', 50, doc.y, { align: 'center' });
+        doc.moveDown(2);
+
+        // === Información del Chofer ===
+        addSectionTitle(doc, '1. Información del Conductor');
         
-        if (currentFont) doc.font(currentFont);
-        if (currentSize) doc.fontSize(currentSize);
-        if (currentColor) doc.fillColor(currentColor);
-    });
+        const choferInfo = data.chofer;
+        addLabelValue(doc, 'Nombre:', choferInfo.apellido_nombre || 'No disponible', 90);
+        addLabelValue(doc, 'DNI:', choferInfo.dni || 'No disponible', 90);
+        addLabelValue(doc, 'Legajo:', choferInfo.anios?.toString() || 'No disponible', 90);
+        addLabelValue(doc, 'Empresa:', choferInfo.empresaInfo?.nombreMin || 'No disponible', 90);
+        doc.moveDown(1.5);
 
-    doc.y = 130;
-
-    // === Título del Informe ===
-    doc.font(STYLES.sectionTitle.font)
-       .fontSize(16)
-       .fillColor(STYLES.sectionTitle.color)
-       .text('INFORME CONSOLIDADO DE ALARMAS', 50, doc.y, { align: 'center' });
-    doc.moveDown(2);
-
-    // === Información del Chofer ===
-    addSectionTitle(doc, '1. Información del Conductor');
-    
-    const choferInfo = data.chofer;
-    addLabelValue(doc, 'Nombre:', choferInfo.apellido_nombre || 'No disponible', 90);
-    addLabelValue(doc, 'DNI:', choferInfo.dni || 'No disponible', 90);
-    addLabelValue(doc, 'Legajo:', choferInfo.anios?.toString() || 'No disponible', 90);
-    addLabelValue(doc, 'Empresa:', choferInfo.empresaInfo?.nombreMin || 'No disponible', 90);
-    doc.moveDown(1.5);
-
-    // === Resumen de Alarmas ===
-    addSectionTitle(doc, '2. Resumen de Alarmas');
-    
-    const fechaInforme = new Date().toLocaleDateString('es-AR', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-    });
-    
-    addLabelValue(doc, 'Fecha del informe:', fechaInforme, 90);
-    addLabelValue(doc, 'Total de alarmas:', data.alarmas.length.toString(), 90);
-    doc.moveDown(1.5);
-
-    // === Tabla de Alarmas ===
-    addSectionTitle(doc, '3. Detalle de Alarmas');
-    doc.moveDown(0.5);
-
-    // Encabezados de la tabla
-    const tableTop = doc.y;
-    const colWidths = {
-        guid: 120,
-        fecha: 120,
-        tipo: 100,
-        imagen: 80,
-        video: 75
-    };
-    
-    const startX = 50;
-    let currentX = startX;
-
-    // Dibuja encabezados
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
-    
-    doc.text('GUID', currentX, tableTop, { width: colWidths.guid });
-    currentX += colWidths.guid;
-    
-    doc.text('Fecha y Hora', currentX, tableTop, { width: colWidths.fecha });
-    currentX += colWidths.fecha;
-    
-    doc.text('Tipo de Alarma', currentX, tableTop, { width: colWidths.tipo });
-    currentX += colWidths.tipo;
-    
-    doc.text('Imagen', currentX, tableTop, { width: colWidths.imagen });
-    currentX += colWidths.imagen;
-    
-    doc.text('Video', currentX, tableTop, { width: colWidths.video });
-
-    // Línea debajo de encabezados
-    doc.moveTo(startX, tableTop + 15)
-       .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), tableTop + 15)
-       .stroke();
-
-    let currentY = tableTop + 25;
-    doc.font('Helvetica').fontSize(8).fillColor('#000000');
-
-    // Datos de las alarmas
-    for (const alarma of data.alarmas) {
-        // Verificar si necesitamos nueva página
-        if (currentY > doc.page.height - 100) {
-            doc.addPage();
-            currentY = 150; // Reset Y position on new page
-            
-            // Redibujar encabezados en nueva página
-            doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
-            currentX = startX;
-            
-            doc.text('GUID', currentX, currentY - 20, { width: colWidths.guid });
-            currentX += colWidths.guid;
-            doc.text('Fecha y Hora', currentX, currentY - 20, { width: colWidths.fecha });
-            currentX += colWidths.fecha;
-            doc.text('Tipo de Alarma', currentX, currentY - 20, { width: colWidths.tipo });
-            currentX += colWidths.tipo;
-            doc.text('Imagen', currentX, currentY - 20, { width: colWidths.imagen });
-            currentX += colWidths.imagen;
-            doc.text('Video', currentX, currentY - 20, { width: colWidths.video });
-            
-            doc.moveTo(startX, currentY - 5)
-               .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), currentY - 5)
-               .stroke();
-               
-            doc.font('Helvetica').fontSize(8).fillColor('#000000');
-        }
-
-        currentX = startX;
+        console.log('[DEBUG PDF] Adding alarms summary and table...');
+        // === Resumen de Alarmas ===
+        addSectionTitle(doc, '2. Resumen de Alarmas');
         
-        // GUID (truncado)
-        const guidTruncated = alarma.guid.substring(0, 16) + '...';
-        doc.text(guidTruncated, currentX, currentY, { width: colWidths.guid });
+        const fechaInforme = new Date().toLocaleDateString('es-AR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        });
+        
+        addLabelValue(doc, 'Fecha del informe:', fechaInforme, 90);
+        addLabelValue(doc, 'Total de alarmas:', data.alarmas.length.toString(), 90);
+        doc.moveDown(1.5);
+
+        // === Tabla de Alarmas ===
+        addSectionTitle(doc, '3. Detalle de Alarmas');
+        doc.moveDown(0.5);
+
+        // Encabezados de la tabla
+        const tableTop = doc.y;
+        const colWidths = {
+            guid: 120,
+            fecha: 120,
+            tipo: 100,
+            imagen: 80,
+            video: 75
+        };
+        
+        const startX = 50;
+        let currentX = startX;
+
+        // Dibuja encabezados
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
+        
+        doc.text('GUID', currentX, tableTop, { width: colWidths.guid });
         currentX += colWidths.guid;
         
-        // Fecha y hora
-        const fechaAlarma = alarma.alarmTime 
-            ? new Date(alarma.alarmTime).toLocaleString('es-AR', { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            : 'N/A';
-        doc.text(fechaAlarma, currentX, currentY, { width: colWidths.fecha });
+        doc.text('Fecha y Hora', currentX, tableTop, { width: colWidths.fecha });
         currentX += colWidths.fecha;
         
-        // Tipo de alarma (truncado)
-        const tipoAlarma = alarma.typeAlarm?.alarm || 'N/A';
-        const tipoTruncated = tipoAlarma.length > 15 ? tipoAlarma.substring(0, 15) + '...' : tipoAlarma;
-        doc.text(tipoTruncated, currentX, currentY, { width: colWidths.tipo });
+        doc.text('Tipo de Alarma', currentX, tableTop, { width: colWidths.tipo });
         currentX += colWidths.tipo;
         
-        // Link de imagen
-        if (alarma.imagen) {
-            const imagenUrl = alarma.imagen.length > 12 ? '🔗 Ver imagen' : alarma.imagen;
-            doc.fillColor(COLORS.primary)
-               .text(imagenUrl, currentX, currentY, { 
-                   width: colWidths.imagen, 
-                   link: alarma.imagen,
-                   underline: true 
-               })
-               .fillColor('#000000');
-        } else {
-            doc.text('N/A', currentX, currentY, { width: colWidths.imagen });
-        }
+        doc.text('Imagen', currentX, tableTop, { width: colWidths.imagen });
         currentX += colWidths.imagen;
         
-        // Link de video
-        if (alarma.video) {
-            const videoUrl = alarma.video.length > 10 ? '🔗 Ver video' : alarma.video;
-            doc.fillColor(COLORS.primary)
-               .text(videoUrl, currentX, currentY, { 
-                   width: colWidths.video, 
-                   link: alarma.video,
-                   underline: true 
-               })
-               .fillColor('#000000');
-        } else {
-            doc.text('N/A', currentX, currentY, { width: colWidths.video });
+        doc.text('Video', currentX, tableTop, { width: colWidths.video });
+
+        // Línea debajo de encabezados
+        doc.moveTo(startX, tableTop + 15)
+           .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), tableTop + 15)
+           .stroke();
+
+        let currentY = tableTop + 25;
+        doc.font('Helvetica').fontSize(8).fillColor('#000000');
+
+        // Datos de las alarmas
+        for (const alarma of data.alarmas) {
+            // Verificar si necesitamos nueva página
+            if (currentY > doc.page.height - 100) {
+                doc.addPage();
+                currentY = 150; // Reset Y position on new page
+                
+                // Redibujar encabezados en nueva página
+                doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
+                currentX = startX;
+                
+                doc.text('GUID', currentX, currentY - 20, { width: colWidths.guid });
+                currentX += colWidths.guid;
+                doc.text('Fecha y Hora', currentX, currentY - 20, { width: colWidths.fecha });
+                currentX += colWidths.fecha;
+                doc.text('Tipo de Alarma', currentX, currentY - 20, { width: colWidths.tipo });
+                currentX += colWidths.tipo;
+                doc.text('Imagen', currentX, currentY - 20, { width: colWidths.imagen });
+                currentX += colWidths.imagen;
+                doc.text('Video', currentX, currentY - 20, { width: colWidths.video });
+                
+                doc.moveTo(startX, currentY - 5)
+                   .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), currentY - 5)
+                   .stroke();
+                   
+                doc.font('Helvetica').fontSize(8).fillColor('#000000');
+            }
+
+            currentX = startX;
+            
+            // GUID (truncado)
+            const guidTruncated = alarma.guid.substring(0, 16) + '...';
+            doc.text(guidTruncated, currentX, currentY, { width: colWidths.guid });
+            currentX += colWidths.guid;
+            
+            // Fecha y hora
+            const fechaAlarma = alarma.alarmTime 
+                ? new Date(alarma.alarmTime).toLocaleString('es-AR', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : 'N/A';
+            doc.text(fechaAlarma, currentX, currentY, { width: colWidths.fecha });
+            currentX += colWidths.fecha;
+            
+            // Tipo de alarma (truncado)
+            const tipoAlarma = alarma.typeAlarm?.alarm || 'N/A';
+            const tipoTruncated = tipoAlarma.length > 15 ? tipoAlarma.substring(0, 15) + '...' : tipoAlarma;
+            doc.text(tipoTruncated, currentX, currentY, { width: colWidths.tipo });
+            currentX += colWidths.tipo;
+            
+            // Link de imagen
+            if (alarma.imagen) {
+                const imagenUrl = alarma.imagen.length > 12 ? '🔗 Ver imagen' : alarma.imagen;
+                doc.fillColor(COLORS.primary)
+                   .text(imagenUrl, currentX, currentY, { 
+                       width: colWidths.imagen, 
+                       link: alarma.imagen,
+                       underline: true 
+                   })
+                   .fillColor('#000000');
+            } else {
+                doc.text('N/A', currentX, currentY, { width: colWidths.imagen });
+            }
+            currentX += colWidths.imagen;
+            
+            // Link de video
+            if (alarma.video) {
+                const videoUrl = alarma.video.length > 10 ? '🔗 Ver video' : alarma.video;
+                doc.fillColor(COLORS.primary)
+                   .text(videoUrl, currentX, currentY, { 
+                       width: colWidths.video, 
+                       link: alarma.video,
+                       underline: true 
+                   })
+                   .fillColor('#000000');
+            } else {
+                doc.text('N/A', currentX, currentY, { width: colWidths.video });
+            }
+            
+            currentY += 20;
+            
+            // Línea separadora entre filas
+            doc.moveTo(startX, currentY - 5)
+               .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), currentY - 5)
+               .strokeColor('#f0f0f0')
+               .stroke()
+               .strokeColor('#000000');
         }
-        
-        currentY += 20;
-        
-        // Línea separadora entre filas
-        doc.moveTo(startX, currentY - 5)
-           .lineTo(startX + Object.values(colWidths).reduce((a, b) => a + b, 0), currentY - 5)
-           .strokeColor('#f0f0f0')
-           .stroke()
-           .strokeColor('#000000');
-    }
 
-    // Firmas al final
-    doc.y = doc.page.height - 150;
-    addSignatureSection(doc);
-    
-    doc.end();
+        console.log('[DEBUG PDF] Adding signatures...');
+        // Firmas al final
+        doc.y = doc.page.height - 150;
+        addSignatureSection(doc);
+        
+        doc.end();
 
-    return new Promise((resolve, reject) => {
-        streamBuffer.on('finish', () => {
-            resolve(streamBuffer.getContents() as Buffer);
+        console.log('[DEBUG PDF] Waiting for PDF generation to complete...');
+        return new Promise((resolve, reject) => {
+            streamBuffer.on('finish', () => {
+                const contents = streamBuffer.getContents();
+                if (contents) {
+                    console.log('[DEBUG PDF] PDF generation completed, buffer size:', contents.length);
+                    resolve(contents as Buffer);
+                } else {
+                    console.error('[ERROR PDF] PDF buffer is empty');
+                    reject(new Error('PDF buffer is empty'));
+                }
+            });
+            streamBuffer.on('error', (error) => {
+                console.error('[ERROR PDF] Stream buffer error:', error);
+                reject(error);
+            });
         });
-        streamBuffer.on('error', reject);
-    });
+    } catch (error) {
+        console.error('[ERROR PDF] Error generating PDF:', error);
+        throw error;
+    }
 }

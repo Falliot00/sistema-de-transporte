@@ -592,11 +592,15 @@ export const markAlarmAsReported = async (req: Request, res: Response) => {
 export const generateAlarmReport = async (req: Request, res: Response) => {
     const { alarmIds } = req.body; // Array de GUIDs de alarmas
     
+    console.log('[DEBUG] generateAlarmReport called with:', { alarmIds });
+    
     if (!Array.isArray(alarmIds) || alarmIds.length === 0) {
+        console.log('[ERROR] Invalid alarmIds:', alarmIds);
         return res.status(400).json({ message: 'Se debe proporcionar al menos una alarma para generar el informe.' });
     }
     
     try {
+        console.log('[DEBUG] Fetching alarms from database...');
         // Verificar que todas las alarmas existen y están confirmadas pero no informadas
         const alarms = await prisma.alarmasHistorico.findMany({
             where: { 
@@ -617,7 +621,10 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
             }
         });
         
+        console.log('[DEBUG] Found alarms:', alarms.length, 'of', alarmIds.length, 'requested');
+        
         if (alarms.length !== alarmIds.length) {
+            console.log('[ERROR] Alarm count mismatch. Found:', alarms.length, 'Expected:', alarmIds.length);
             return res.status(400).json({ 
                 message: 'Algunas alarmas no existen, no están confirmadas o ya han sido informadas.' 
             });
@@ -625,7 +632,10 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
         
         // Verificar que todas las alarmas pertenecen al mismo chofer
         const choferIds = [...new Set(alarms.map(alarm => alarm.choferId))];
+        console.log('[DEBUG] Unique chofer IDs found:', choferIds);
+        
         if (choferIds.length !== 1 || !choferIds[0]) {
+            console.log('[ERROR] Multiple or no chofer IDs found:', choferIds);
             return res.status(400).json({ 
                 message: 'Todas las alarmas deben pertenecer al mismo chofer.' 
             });
@@ -635,13 +645,16 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
         const chofer = alarms[0].chofer;
         
         if (!chofer) {
+            console.log('[ERROR] No chofer information found');
             return res.status(400).json({ 
                 message: 'No se encontró información del chofer.' 
             });
         }
         
+        console.log('[DEBUG] Starting transaction...');
         // Usar transacción para asegurar consistencia
         const result = await prisma.$transaction(async (tx) => {
+            console.log('[DEBUG] Creating informe record...');
             // 1. Crear el informe
             const now = new Date();
             const informe = await tx.informes.create({
@@ -652,16 +665,20 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
                 }
             });
             
+            console.log('[DEBUG] Created informe with ID:', informe.idInforme);
+            
             // 2. Crear las relaciones en informeAlarma
             const informeAlarmaData = alarmIds.map(alarmId => ({
                 idInforme: informe.idInforme,
                 idAlarma: alarmId
             }));
             
+            console.log('[DEBUG] Creating informeAlarma relations...');
             await tx.informeAlarma.createMany({
                 data: informeAlarmaData
             });
             
+            console.log('[DEBUG] Preparing data for PDF generation...');
             // 3. Generar el PDF
             const driverAlarmsData = {
                 chofer: chofer,
@@ -672,28 +689,36 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
                 }))
             };
             
+            console.log('[DEBUG] Generating PDF...');
             const pdfBuffer = await generateDriverAlarmsSummaryPDF(driverAlarmsData);
+            console.log('[DEBUG] PDF generated, buffer size:', pdfBuffer.length);
             
             // 4. Subir el PDF a S3
             const fileName = `informe-${choferId}-${informe.idInforme}-${now.getTime()}`;
+            console.log('[DEBUG] Uploading to S3 with filename:', fileName);
+            
             const uploadResult = await s3Uploader.uploadPDFReport(pdfBuffer, fileName, choferId);
+            console.log('[DEBUG] Upload result:', uploadResult);
             
             if (!uploadResult.success) {
                 throw new Error(`Error al subir PDF a S3: ${uploadResult.error}`);
             }
             
+            console.log('[DEBUG] Updating informe with URL...');
             // 5. Actualizar el informe con la URL
             const informeUpdated = await tx.informes.update({
                 where: { idInforme: informe.idInforme },
                 data: { url: uploadResult.url }
             });
             
+            console.log('[DEBUG] Marking alarms as informed...');
             // 6. Marcar las alarmas como informadas
             await tx.alarmasHistorico.updateMany({
                 where: { guid: { in: alarmIds } },
                 data: { informada: true }
             });
             
+            console.log('[DEBUG] Transaction completed successfully');
             return {
                 informe: informeUpdated,
                 uploadResult,
@@ -701,6 +726,7 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
             };
         });
         
+        console.log('[DEBUG] Sending success response...');
         res.json({
             message: 'Informe generado exitosamente',
             informe: {
@@ -713,7 +739,14 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
         });
         
     } catch (error) {
-        console.error('Error al generar el informe de alarmas:', error);
+        console.error('[ERROR] Error al generar el informe de alarmas:', error);
+        
+        // Log más detallado del error
+        if (error instanceof Error) {
+            console.error('[ERROR] Error message:', error.message);
+            console.error('[ERROR] Error stack:', error.stack);
+        }
+        
         res.status(500).json({ 
             message: 'Error interno del servidor.',
             error: error instanceof Error ? error.message : 'Error desconocido'
