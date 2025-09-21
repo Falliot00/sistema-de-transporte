@@ -154,12 +154,8 @@ export default function DriverDetailPage() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-8">
+                <div className="lg:col-span-1">
                     <DriverStats stats={driver.stats} />
-                    <GeneratedReportsTable 
-                        reports={driver.informes || []} 
-                        isLoading={isLoadingAlarms}
-                    />
                 </div>
                 <div className="lg:col-span-2">
                     <RecentAlarmsTable 
@@ -168,6 +164,13 @@ export default function DriverDetailPage() {
                         onReportGenerated={loadDriverData}
                     />
                 </div>
+            </div>
+            
+            <div className="w-full">
+                <GeneratedReportsTable 
+                    reports={driver.informes || []} 
+                    isLoading={isLoadingAlarms}
+                />
             </div>
         </div>
     );

@@ -59,6 +59,12 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
         try {
             const result = await generateAlarmReport(selectedAlarmIds);
             //console.log('Informe generado:', result);
+            
+            // Abrir automáticamente el PDF en una nueva pestaña si se generó exitosamente
+            if (result?.informe?.url) {
+                window.open(result.informe.url, '_blank');
+            }
+            
             // Aquí podrías mostrar un toast de éxito
             setSelectedAlarmIds([]);
             

@@ -20,10 +20,29 @@ export function GeneratedReportsTable({ reports, isLoading = false }: GeneratedR
         try {
             const fechaDate = new Date(fecha);
             
-            // Extraer solo HH:MM:SS del formato "19:42:06.3050000"
-            const horaParts = hora.split('.');
-            const horaBasica = horaParts[0]; // "19:42:06"
-            const horaDate = new Date(`1970-01-01T${horaBasica}`);
+            let horaFormatted: string;
+            
+            // Verificar si hora es un timestamp ISO completo
+            if (hora.includes('T') && (hora.includes('Z') || hora.includes('+'))) {
+                // Es un timestamp ISO, extraer solo la hora
+                const horaDate = new Date(hora);
+                horaFormatted = horaDate.toLocaleTimeString('es-AR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            } else {
+                // Es formato de hora simple "19:42:06.3050000"
+                const horaParts = hora.split('.');
+                const horaBasica = horaParts[0]; // "19:42:06"
+                
+                // Validar que horaBasica tenga el formato correcto HH:MM:SS
+                if (!/^\d{2}:\d{2}:\d{2}$/.test(horaBasica)) {
+                    throw new Error('Formato de hora inválido');
+                }
+                
+                horaFormatted = horaBasica.substring(0, 5); // Solo HH:MM
+            }
             
             const fechaFormatted = fechaDate.toLocaleDateString('es-AR', {
                 day: '2-digit',
@@ -31,14 +50,9 @@ export function GeneratedReportsTable({ reports, isLoading = false }: GeneratedR
                 year: 'numeric'
             });
             
-            const horaFormatted = horaDate.toLocaleTimeString('es-AR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-            
             return { fecha: fechaFormatted, hora: horaFormatted };
         } catch (error) {
+            console.error('Error formateando fecha/hora:', error, { fecha, hora });
             return { fecha: 'N/A', hora: 'N/A' };
         }
     };
