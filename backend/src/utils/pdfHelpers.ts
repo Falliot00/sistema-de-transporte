@@ -36,11 +36,11 @@ export async function getLogo(): Promise<Buffer | null> {
     try {
         // Ruta principal del logo
         const logoPath = path.join(__dirname, '..', '..', 'assets', 'LogosNegros.png');
-        console.log('Intentando cargar logo desde:', logoPath);
-        console.log('__dirname actual:', __dirname);
+        //console.log('Intentando cargar logo desde:', logoPath);
+        //console.log('__dirname actual:', __dirname);
         
         if (fs.existsSync(logoPath)) {
-            console.log('Logo encontrado en ruta principal');
+            //console.log('Logo encontrado en ruta principal');
             return fs.readFileSync(logoPath);
         }
 
@@ -54,22 +54,22 @@ export async function getLogo(): Promise<Buffer | null> {
 
         for (const file of alternatives) {
             const altPath = path.join(__dirname, '..', '..', 'assets', file);
-            console.log('Intentando ruta alternativa:', altPath);
+            //console.log('Intentando ruta alternativa:', altPath);
             if (fs.existsSync(altPath)) {
-                console.log('Logo encontrado en ruta alternativa:', altPath);
+                //console.log('Logo encontrado en ruta alternativa:', altPath);
                 return fs.readFileSync(altPath);
             }
         }
 
         // Ruta absoluta como último recurso
         const absoluteBackendPath = process.cwd();
-        console.log('Process.cwd():', absoluteBackendPath);
+        //console.log('Process.cwd():', absoluteBackendPath);
         
         const absoluteLogoPath = path.join(absoluteBackendPath, 'assets', 'LogosNegros.png');
-        console.log('Intentando ruta absoluta:', absoluteLogoPath);
+        //console.log('Intentando ruta absoluta:', absoluteLogoPath);
         
         if (fs.existsSync(absoluteLogoPath)) {
-            console.log('Logo encontrado en ruta absoluta');
+            //console.log('Logo encontrado en ruta absoluta');
             return fs.readFileSync(absoluteLogoPath);
         }
 
@@ -77,13 +77,13 @@ export async function getLogo(): Promise<Buffer | null> {
         if (absoluteBackendPath.includes('backend')) {
             const backendLogoPath = path.join(absoluteBackendPath, 'assets', 'LogosNegros.png');
             if (fs.existsSync(backendLogoPath)) {
-                console.log('Logo encontrado en directorio backend');
+                //console.log('Logo encontrado en directorio backend');
                 return fs.readFileSync(backendLogoPath);
             }
         } else {
             const backendLogoPath = path.join(absoluteBackendPath, 'backend', 'assets', 'LogosNegros.png');
             if (fs.existsSync(backendLogoPath)) {
-                console.log('Logo encontrado en backend subdirectorio');
+                //console.log('Logo encontrado en backend subdirectorio');
                 return fs.readFileSync(backendLogoPath);
             }
         }
@@ -197,9 +197,9 @@ export function addHeader(doc: PDFKit.PDFDocument, pageNumber: number, logoBuffe
 
     if (logoBuffer && logoBuffer.length > 0) {
         try {
-            console.log('Intentando insertar logo en PDF, tamaño del buffer:', logoBuffer.length);
+            //console.log('Intentando insertar logo en PDF, tamaño del buffer:', logoBuffer.length);
             doc.image(logoBuffer, 220, headerY + 5, { fit: [155, 50], align: 'center', valign: 'center' });
-            console.log('Logo insertado exitosamente en PDF');
+            //console.log('Logo insertado exitosamente en PDF');
         } catch (err) {
             console.error('Error al insertar logo en PDF:', err);
             addCompanyText(doc, headerY);

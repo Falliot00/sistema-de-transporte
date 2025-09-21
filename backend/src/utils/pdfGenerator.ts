@@ -280,11 +280,11 @@ export async function generateAlarmReportPDF(
  * @returns Buffer del PDF generado
  */
 export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Promise<Buffer> {
-    console.log('[DEBUG PDF] Starting PDF generation with data:', {
+    /*console.log('[DEBUG PDF] Starting PDF generation with data:', {
         choferName: data.chofer.apellido_nombre,
         choferId: data.chofer.choferes_id,
         alarmsCount: data.alarmas.length
-    });
+    });*/
 
     try {
         const streamBuffer = new WritableStreamBuffer();
@@ -292,7 +292,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         
         doc.pipe(streamBuffer);
 
-        console.log('[DEBUG PDF] Getting logo...');
+        //console.log('[DEBUG PDF] Getting logo...');
         const logoBuffer = await getLogo();
         let pageNumber = 1;
         
@@ -316,7 +316,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
 
         doc.y = 130;
 
-        console.log('[DEBUG PDF] Adding title and chofer info...');
+        //console.log('[DEBUG PDF] Adding title and chofer info...');
         // === Título del Informe ===
         doc.font(STYLES.sectionTitle.font)
            .fontSize(16)
@@ -334,7 +334,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         addLabelValue(doc, 'Empresa:', choferInfo.empresaInfo?.nombreMin || 'No disponible', 90);
         doc.moveDown(1.5);
 
-        console.log('[DEBUG PDF] Adding alarms summary and table...');
+        //console.log('[DEBUG PDF] Adding alarms summary and table...');
         // === Resumen de Alarmas ===
         addSectionTitle(doc, '2. Resumen de Alarmas');
         
@@ -483,19 +483,19 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                .strokeColor('#000000');
         }
 
-        console.log('[DEBUG PDF] Adding signatures...');
+        //console.log('[DEBUG PDF] Adding signatures...');
         // Firmas al final
         doc.y = doc.page.height - 150;
         addSignatureSection(doc);
         
         doc.end();
 
-        console.log('[DEBUG PDF] Waiting for PDF generation to complete...');
+        //console.log('[DEBUG PDF] Waiting for PDF generation to complete...');
         return new Promise((resolve, reject) => {
             streamBuffer.on('finish', () => {
                 const contents = streamBuffer.getContents();
                 if (contents) {
-                    console.log('[DEBUG PDF] PDF generation completed, buffer size:', contents.length);
+                    /*console.log('[DEBUG PDF] PDF generation completed, buffer size:', contents.length);*/
                     resolve(contents as Buffer);
                 } else {
                     console.error('[ERROR PDF] PDF buffer is empty');

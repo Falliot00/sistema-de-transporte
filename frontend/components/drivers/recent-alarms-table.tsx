@@ -58,7 +58,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
         setIsGeneratingReport(true);
         try {
             const result = await generateAlarmReport(selectedAlarmIds);
-            console.log('Informe generado:', result);
+            //console.log('Informe generado:', result);
             // Aquí podrías mostrar un toast de éxito
             setSelectedAlarmIds([]);
             

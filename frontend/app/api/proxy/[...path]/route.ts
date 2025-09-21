@@ -26,21 +26,21 @@ async function forward(req: NextRequest, path: string[]) {
   const joined = path?.join('/') || '';
   const targetUrl = `${base}/${joined}${req.nextUrl.search}`;
 
-  console.log('[PROXY] Forward request:', {
+  /*console.log('[PROXY] Forward request:', {
     method: req.method,
     path,
     joined,
     targetUrl,
     base,
     search: req.nextUrl.search
-  });
+  });*/
 
   const headers = new Headers();
   headers.set('accept', 'application/json');
 
   const jar = await cookies();
   const token = jar.get('token')?.value;
-  console.log('[PROXY] Token found:', !!token);
+  //console.log('[PROXY] Token found:', !!token);
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -52,8 +52,8 @@ async function forward(req: NextRequest, path: string[]) {
   }
 
   try {
-    console.log('[PROXY] Making request to:', targetUrl);
-    console.log('[PROXY] With headers:', Object.fromEntries(headers.entries()));
+    //console.log('[PROXY] Making request to:', targetUrl);
+    //console.log('[PROXY] With headers:', Object.fromEntries(headers.entries()));
     
     const resp = await fetch(targetUrl, {
       method: req.method,
@@ -61,11 +61,11 @@ async function forward(req: NextRequest, path: string[]) {
       body,
     });
 
-    console.log('[PROXY] Response:', {
+    /*console.log('[PROXY] Response:', {
       status: resp.status,
       statusText: resp.statusText,
       headers: Object.fromEntries(resp.headers.entries())
-    });
+    });*/
 
     if (!resp.ok) {
       const errorText = await resp.text();
