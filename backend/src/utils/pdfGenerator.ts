@@ -355,11 +355,11 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         // Encabezados de la tabla
         const tableTop = doc.y;
         const colWidths = {
-            guid: 120,
+            id: 50,
             fecha: 120,
-            tipo: 100,
+            tipo: 160,
             imagen: 80,
-            video: 75
+            video: 65
         };
         
         const startX = 50;
@@ -368,8 +368,8 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         // Dibuja encabezados
         doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
         
-        doc.text('GUID', currentX, tableTop, { width: colWidths.guid });
-        currentX += colWidths.guid;
+        doc.text('ID', currentX, tableTop, { width: colWidths.id });
+        currentX += colWidths.id;
         
         doc.text('Fecha y Hora', currentX, tableTop, { width: colWidths.fecha });
         currentX += colWidths.fecha;
@@ -391,7 +391,8 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         doc.font('Helvetica').fontSize(8).fillColor('#000000');
 
         // Datos de las alarmas
-        for (const alarma of data.alarmas) {
+        for (let index = 0; index < data.alarmas.length; index++) {
+            const alarma = data.alarmas[index];
             // Verificar si necesitamos nueva página
             if (currentY > doc.page.height - 100) {
                 doc.addPage();
@@ -401,8 +402,8 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                 doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333');
                 currentX = startX;
                 
-                doc.text('GUID', currentX, currentY - 20, { width: colWidths.guid });
-                currentX += colWidths.guid;
+                doc.text('ID', currentX, currentY - 20, { width: colWidths.id });
+                currentX += colWidths.id;
                 doc.text('Fecha y Hora', currentX, currentY - 20, { width: colWidths.fecha });
                 currentX += colWidths.fecha;
                 doc.text('Tipo de Alarma', currentX, currentY - 20, { width: colWidths.tipo });
@@ -420,10 +421,10 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
 
             currentX = startX;
             
-            // GUID (truncado)
-            const guidTruncated = alarma.guid.substring(0, 16) + '...';
-            doc.text(guidTruncated, currentX, currentY, { width: colWidths.guid });
-            currentX += colWidths.guid;
+            // ID secuencial (empezando desde 1)
+            const alarmId = (index + 1).toString();
+            doc.text(alarmId, currentX, currentY, { width: colWidths.id });
+            currentX += colWidths.id;
             
             // Fecha y hora
             const fechaAlarma = alarma.alarmTime 
@@ -438,15 +439,14 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
             doc.text(fechaAlarma, currentX, currentY, { width: colWidths.fecha });
             currentX += colWidths.fecha;
             
-            // Tipo de alarma (truncado)
+            // Tipo de alarma (sin truncar)
             const tipoAlarma = alarma.typeAlarm?.alarm || 'N/A';
-            const tipoTruncated = tipoAlarma.length > 15 ? tipoAlarma.substring(0, 15) + '...' : tipoAlarma;
-            doc.text(tipoTruncated, currentX, currentY, { width: colWidths.tipo });
+            doc.text(tipoAlarma, currentX, currentY, { width: colWidths.tipo });
             currentX += colWidths.tipo;
             
             // Link de imagen
             if (alarma.imagen) {
-                const imagenUrl = alarma.imagen.length > 12 ? '🔗 Ver imagen' : alarma.imagen;
+                const imagenUrl = alarma.imagen.length > 12 ? 'Ver imagen' : alarma.imagen;
                 doc.fillColor(COLORS.primary)
                    .text(imagenUrl, currentX, currentY, { 
                        width: colWidths.imagen, 
@@ -461,7 +461,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
             
             // Link de video
             if (alarma.video) {
-                const videoUrl = alarma.video.length > 10 ? '🔗 Ver video' : alarma.video;
+                const videoUrl = alarma.video.length > 10 ? 'Ver video' : alarma.video;
                 doc.fillColor(COLORS.primary)
                    .text(videoUrl, currentX, currentY, { 
                        width: colWidths.video, 

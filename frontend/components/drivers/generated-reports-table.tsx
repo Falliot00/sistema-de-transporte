@@ -19,7 +19,11 @@ export function GeneratedReportsTable({ reports, isLoading = false }: GeneratedR
     const formatDateTime = (fecha: string, hora: string) => {
         try {
             const fechaDate = new Date(fecha);
-            const horaDate = new Date(`1970-01-01T${hora}`);
+            
+            // Extraer solo HH:MM:SS del formato "19:42:06.3050000"
+            const horaParts = hora.split('.');
+            const horaBasica = horaParts[0]; // "19:42:06"
+            const horaDate = new Date(`1970-01-01T${horaBasica}`);
             
             const fechaFormatted = fechaDate.toLocaleDateString('es-AR', {
                 day: '2-digit',
