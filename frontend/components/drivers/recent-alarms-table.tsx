@@ -130,7 +130,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                                 />
                                             </TableHead>
                                         )}
-                                        <TableHead>Tipo de Alarma</TableHead>
+                                        <TableHead>Tipo de Anomalía</TableHead>
                                         <TableHead>Fecha</TableHead>
                                         <TableHead className="text-center">Estado</TableHead>
                                         <TableHead className="text-center w-[120px]">Acciones</TableHead> 
@@ -154,7 +154,9 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                                         ) : null}
                                                     </TableCell>
                                                 )}
-                                                <TableCell className="font-medium">{alarm.type}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    {alarm.anomalia?.nomAnomalia || alarm.type}
+                                                </TableCell>
                                                 <TableCell>{formatCorrectedTimestamp(alarm.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex items-center justify-center gap-2">

@@ -21,6 +21,7 @@ export type DriverAlarmsData = {
     alarmas: (AlarmasHistorico & { 
         typeAlarm: TypeAlarms | null;
         deviceInfo: Dispositivos | null;
+        anomaliaInfo: Anomalia | null;
     })[];
 };
 
@@ -374,7 +375,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
         doc.text('Fecha y Hora', currentX, tableTop, { width: colWidths.fecha });
         currentX += colWidths.fecha;
         
-        doc.text('Tipo de Alarma', currentX, tableTop, { width: colWidths.tipo });
+        doc.text('Tipo de Anomalía', currentX, tableTop, { width: colWidths.tipo });
         currentX += colWidths.tipo;
         
         doc.text('Imagen', currentX, tableTop, { width: colWidths.imagen });
@@ -406,7 +407,7 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
                 currentX += colWidths.id;
                 doc.text('Fecha y Hora', currentX, currentY - 20, { width: colWidths.fecha });
                 currentX += colWidths.fecha;
-                doc.text('Tipo de Alarma', currentX, currentY - 20, { width: colWidths.tipo });
+                doc.text('Tipo de Anomalía', currentX, currentY - 20, { width: colWidths.tipo });
                 currentX += colWidths.tipo;
                 doc.text('Imagen', currentX, currentY - 20, { width: colWidths.imagen });
                 currentX += colWidths.imagen;
@@ -439,9 +440,9 @@ export async function generateDriverAlarmsSummaryPDF(data: DriverAlarmsData): Pr
             doc.text(fechaAlarma, currentX, currentY, { width: colWidths.fecha });
             currentX += colWidths.fecha;
             
-            // Tipo de alarma (sin truncar)
-            const tipoAlarma = alarma.typeAlarm?.alarm || 'N/A';
-            doc.text(tipoAlarma, currentX, currentY, { width: colWidths.tipo });
+            // Tipo de anomalía (sin truncar)
+            const tipoAnomalia = alarma.anomaliaInfo?.nomAnomalia || alarma.typeAlarm?.alarm || 'N/A';
+            doc.text(tipoAnomalia, currentX, currentY, { width: colWidths.tipo });
             currentX += colWidths.tipo;
             
             // Link de imagen

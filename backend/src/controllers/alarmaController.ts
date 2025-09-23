@@ -709,7 +709,8 @@ export const generateAlarmReport = async (req: Request, res: Response) => {
                 alarmas: alarms.map(alarm => ({
                     ...alarm,
                     typeAlarm: alarm.typeAlarm,
-                    deviceInfo: alarm.deviceInfo
+                    deviceInfo: alarm.deviceInfo,
+                    anomaliaInfo: alarm.anomaliaInfo
                 }))
             };
             
