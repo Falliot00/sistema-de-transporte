@@ -14,12 +14,12 @@ export class S3Uploader {
   private bucketName: string;
 
   constructor() {
-    /*console.log('[DEBUG S3] Initializing S3Uploader with config:', {
+    console.log('[DEBUG S3] Initializing S3Uploader with config:', {
       region: config.aws.region,
       bucketName: config.aws.s3BucketName,
       hasAccessKey: !!config.aws.accessKeyId,
       hasSecretKey: !!config.aws.secretAccessKey,
-    });*/
+    });
 
     this.s3Client = new S3Client({
       region: config.aws.region,
@@ -48,17 +48,17 @@ export class S3Uploader {
     choferId: number
   ): Promise<UploadResult> {
     try {
-      /*console.log('[DEBUG S3] Starting upload with params:', {
+      console.log('[DEBUG S3] Starting upload with params:', {
         fileName,
         choferId,
         bufferSize: pdfBuffer.length,
         bucketName: this.bucketName
-      });*/
+      });
 
       const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const s3Key = `informes-chofer/${fecha}/${choferId}/${fileName}.pdf`;
 
-      //console.log('[DEBUG S3] Generated S3 key:', s3Key);
+      console.log('[DEBUG S3] Generated S3 key:', s3Key);
 
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -73,13 +73,13 @@ export class S3Uploader {
         }
       });
 
-      //console.log('[DEBUG S3] Sending command to S3...');
+      console.log('[DEBUG S3] Sending command to S3...');
       await this.s3Client.send(command);
-      //console.log('[DEBUG S3] Upload successful');
+      console.log('[DEBUG S3] Upload successful');
 
       // Construir la URL pública del archivo
       const s3Url = `https://${this.bucketName}.s3.${config.aws.region}.amazonaws.com/${s3Key}`;
-      //console.log('[DEBUG S3] Generated URL:', s3Url);
+      console.log('[DEBUG S3] Generated URL:', s3Url);
 
       return {
         success: true,

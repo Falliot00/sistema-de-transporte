@@ -126,7 +126,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
             command = `${pythonExecutable} "${scriptPath}" "${dispositivoStr}" "${alarmTimeISO}" "${alarm.guid}"`;
         }
         
-        //console.log(`[â–¶] Ejecutando comando para descarga de video: ${command}`);
+        console.log(`[â–¶] Ejecutando comando para descarga de video: ${command}`);
         
         // Opciones de ejecuciÃ³n
         const execOptions: ExecOptions = {
@@ -149,7 +149,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
                 console.error(`[!] Stderr de script de video para alarma ${alarm.guid}:`, stderrStr);
             }
             if (stdoutStr) {
-                //console.log(`[âœ”] Stdout de script de video para alarma ${alarm.guid}:`, stdoutStr);
+                console.log(`[âœ”] Stdout de script de video para alarma ${alarm.guid}:`, stdoutStr);
             }
         });
         
@@ -454,7 +454,7 @@ export const retryVideoDownload = async (req: Request, res: Response) => {
         if (alarm.estado !== 'Sospechosa') {
             return res.status(400).json({ message: `Solo se puede reintentar el video para una alarma "Sospechosa".` });
         }
-        //console.log(`[+] Reintentando descarga de video para la alarma ${id}...`);
+        console.log(`[+] Reintentando descarga de video para la alarma ${id}...`);
         triggerVideoScript(alarm);
         res.status(202).json({ message: 'Se ha iniciado el re-procesamiento del video.' });
     } catch (error: any) {
