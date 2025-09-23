@@ -112,7 +112,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
         
         // Verificar que el script existe
         if (!fs.existsSync(scriptPath)) {
-            //console.error(`[âŒ] El script no existe en la ruta: ${scriptPath}`);
+            console.error(`[âŒ] El script no existe en la ruta: ${scriptPath}`);
             return;
         }
         
