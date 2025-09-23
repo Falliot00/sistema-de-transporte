@@ -55,7 +55,7 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                //console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
+                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
                 // Si falla, continÃºa con el siguiente
@@ -87,7 +87,7 @@ const getPythonCommand = (): string => {
                     encoding: 'utf8',
                     stdio: 'pipe'
                 });
-                //console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
+                console.log(`[âœ“] Python encontrado en: ${pythonPath}`);
                 return pythonPath;
             } catch (e) {
                 continue;
