@@ -98,6 +98,26 @@ const getPythonCommand = (): string => {
     }
 };
 
+
+const resolveVideoScriptPath = (): string | null => {
+    // Locate the video script when running from src or compiled dist output
+    const scriptName = '_2video.py';
+    const candidatePaths = [
+        path.join(process.cwd(), 'backend', 'camaras', scriptName),
+        path.join(process.cwd(), 'camaras', scriptName),
+        path.join(__dirname, '..', '..', 'camaras', scriptName),
+        path.join(__dirname, '..', '..', '..', 'camaras', scriptName),
+    ];
+
+    for (const candidate of candidatePaths) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    return null;
+};
+
 const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date | null, guid: string }) => {
     if (!alarm.dispositivo || !alarm.alarmTime || !alarm.guid) {
         console.error(`[!] Datos insuficientes para descargar video de la alarma ${alarm.guid}.`);
@@ -105,7 +125,11 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
     }
     
     try {
-        const scriptPath = path.join(__dirname, '..', '..', 'camaras', '_2video.py');
+        const scriptPath = resolveVideoScriptPath();
+        if (!scriptPath) {
+            console.error('[ERROR] No se pudo resolver la ruta del script _2video.py.');
+            return;
+        }
         const pythonExecutable = getPythonCommand();
         const alarmTimeISO = alarm.alarmTime.toISOString();
         const dispositivoStr = alarm.dispositivo.toString();
