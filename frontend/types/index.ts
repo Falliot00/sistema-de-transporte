@@ -88,6 +88,7 @@ export interface GetAlarmsParams {
     startDate?: string;
     endDate?: string;
     company?: string[];
+    includeRejected?: boolean;
 }
 
 // --- TIPOS DE CHOFERES ---

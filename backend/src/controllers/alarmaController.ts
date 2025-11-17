@@ -183,11 +183,19 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
 };
 
 const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput => {
-    const { status, search, type, company, startDate, endDate } = queryParams;
+    const { status, search, type, company, startDate, endDate, includeRejected } = queryParams;
     let whereClause: Prisma.AlarmasHistoricoWhereInput = {};
 
-    if (status && status !== 'all' && DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP]) {
-        whereClause.estado = { in: DB_QUERY_STATUS_MAP[status as keyof typeof DB_QUERY_STATUS_MAP] };
+    const normalizedStatus = Array.isArray(status) ? status[0] : status;
+    const includeRejectedRaw = Array.isArray(includeRejected) ? includeRejected[0] : includeRejected;
+    const shouldIncludeRejected = typeof includeRejectedRaw === 'string'
+        ? ['true', '1'].includes(includeRejectedRaw.toLowerCase())
+        : Boolean(includeRejectedRaw);
+
+    if (normalizedStatus && normalizedStatus !== 'all' && DB_QUERY_STATUS_MAP[normalizedStatus as keyof typeof DB_QUERY_STATUS_MAP]) {
+        whereClause.estado = { in: DB_QUERY_STATUS_MAP[normalizedStatus as keyof typeof DB_QUERY_STATUS_MAP] };
+    } else if (!shouldIncludeRejected) {
+        whereClause.estado = { notIn: DB_QUERY_STATUS_MAP.rejected };
     }
     if (startDate && endDate) {
         const endOfDay = new Date(endDate as string);
