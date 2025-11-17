@@ -92,6 +92,12 @@ AWS_REGION="tu_region"
 AWS_S3_BUCKET="tu_bucket_name"
 ```
 
+#### Autenticación vía Authentik
+1. Define una clave compartida (`INTERNAL_SSO_SECRET`) en el backend y usa el mismo valor en el frontend como `AUTH_SSO_SHARED_SECRET`.
+2. Configura el mapeo de grupos a roles con `SSO_ROLE_MAP`, por ejemplo `ADMIN=seguridad_vial:admin;USER=seguridad_vial:alarmas`.
+3. (Opcional) Exige grupos mínimos mediante `SSO_REQUIRED_GROUPS` y ajusta `SSO_DEFAULT_ROLE` para usuarios sin coincidencias.
+4. En el frontend puedes indicar los encabezados que envía OAuth2 Proxy (`AUTH_SSO_HEADER_*`) y desactivar el formulario local dejando `ENABLE_LOCAL_LOGIN_FORM=false`.
+
 Generar cliente Prisma:
 ```bash
 npx prisma generate

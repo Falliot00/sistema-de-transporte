@@ -2,9 +2,11 @@ import { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 
 export interface AuthUser {
-  sub: number;
+  sub: number | string;
   username: string;
   role: string;
+  email?: string;
+  name?: string;
 }
 
 declare global {

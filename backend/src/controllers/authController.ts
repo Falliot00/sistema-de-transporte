@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { resolveRoleFromGroups } from '../utils/ssoRoleMapper';
 
 const prisma = new PrismaClient();
 const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
@@ -53,5 +54,90 @@ export const login: RequestHandler = async (req, res) => {
     console.error('[auth.login] error:', err);
     res.status(500).json({ message: 'Error interno' });
     return;
+  }
+};
+
+const SHARED_SSO_SECRET = process.env.INTERNAL_SSO_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+
+function parseGroups(payloadGroups: unknown): string[] {
+  if (!payloadGroups) return [];
+  if (Array.isArray(payloadGroups)) {
+    return payloadGroups
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean);
+  }
+  if (typeof payloadGroups === 'string') {
+    try {
+      const maybeJson = JSON.parse(payloadGroups);
+      if (Array.isArray(maybeJson)) {
+        return maybeJson
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter(Boolean);
+      }
+    } catch {
+      // No es JSON, continuamos con split
+    }
+    return payloadGroups
+      .split(/[;,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export const ssoLogin: RequestHandler = async (req, res) => {
+  try {
+    if (!SHARED_SSO_SECRET) {
+      res.status(503).json({ message: 'SSO no est�� configurado en el backend.' });
+      return;
+    }
+
+    const providedSecret = req.headers['x-internal-sso-secret'];
+    if (providedSecret !== SHARED_SSO_SECRET) {
+      res.status(403).json({ message: 'No autorizado para realizar intercambio SSO.' });
+      return;
+    }
+
+    const { username, email, name, groups } = req.body ?? {};
+    if (!username || typeof username !== 'string') {
+      res.status(400).json({ message: 'username es requerido para el intercambio SSO.' });
+      return;
+    }
+
+    const normalizedGroups = parseGroups(groups);
+    let role = 'USER';
+    try {
+      role = resolveRoleFromGroups(normalizedGroups);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Usuario sin permisos';
+      res.status(403).json({ message });
+      return;
+    }
+
+    const token = jwt.sign(
+      {
+        sub: username,
+        username,
+        email: typeof email === 'string' ? email : undefined,
+        name: typeof name === 'string' ? name : undefined,
+        role,
+      },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        username,
+        email,
+        role,
+        groups: normalizedGroups,
+      },
+    });
+  } catch (error) {
+    console.error('[auth.ssoLogin] error:', error);
+    res.status(500).json({ message: 'Error interno al intercambiar credenciales SSO.' });
   }
 };

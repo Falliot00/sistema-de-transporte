@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 
+const ENABLE_LOCAL_LOGIN = process.env.ENABLE_LOCAL_LOGIN_FORM === 'true';
+
 async function loginAction(formData: FormData) {
   'use server';
 
@@ -49,6 +51,30 @@ async function loginAction(formData: FormData) {
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams;
   const error = sp?.error;
+  if (!ENABLE_LOCAL_LOGIN) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-full max-w-lg p-6 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4 text-center">
+          <div className="flex flex-col items-center mb-2">
+            <Image src="/logo-grupo-alliot.png" alt="Logo" width={140} height={40} />
+            <h1 className="mt-2 text-xl font-semibold">Autenticación centralizada</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            El acceso ahora se gestiona desde Authentik. Si ves esta pantalla es porque la sesión automática no pudo completarse o no tienes permisos
+            para el grupo seleccionado. Volvé a ingresar desde la página principal o contactá al administrador.
+          </p>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <a
+            className="inline-flex justify-center rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
+            href="/"
+          >
+            Volver al inicio
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm p-6 rounded-lg border bg-card text-card-foreground shadow-sm">
