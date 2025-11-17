@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, AlertTriangle, CheckCircle, Percent } from "lucide-react";
+import Link from "next/link";
 
 interface DriverRankingListProps {
   drivers: DriverRanking[];
@@ -22,16 +23,16 @@ export function DriverRankingList({ drivers }: DriverRankingListProps) {
       {drivers.map((driver) => (
         <Card key={driver.id}>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Avatar className="h-12 w-12">
+            <Link href={`/drivers/${driver.id}`} className="flex items-center gap-4 mb-4 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md">
+              <Avatar className="h-12 w-12 ring-2 ring-transparent transition-all group-hover:ring-primary">
                 <AvatarImage src={driver.avatar || undefined} alt={driver.name} />
                 <AvatarFallback>{driver.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="text-md font-bold">{driver.name}</h3>
+                <h3 className="text-md font-bold group-hover:text-primary transition-colors">{driver.name}</h3>
                 <p className="text-sm text-muted-foreground">ID: {driver.id}</p>
               </div>
-            </div>
+            </Link>
             
             {/* --- REQUERIMIENTO 6: Actualizamos la información mostrada --- */}
             <div className="space-y-3 text-sm">
