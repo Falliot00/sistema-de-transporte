@@ -19,7 +19,6 @@ export function FilterPanel({ statusFilter, onStatusChange }: FilterPanelProps) 
         }}
         aria-label="Filtrar alarmas por estado"
       >
-        <ToggleGroupItem value="all" aria-label="Mostrar todos">Todos</ToggleGroupItem>
         <ToggleGroupItem value="pending" aria-label="Mostrar pendientes">{ALARM_STATUS_ES_PLURAL.pending}</ToggleGroupItem>
         <ToggleGroupItem value="confirmed" aria-label="Mostrar sospechosas">{ALARM_STATUS_ES_PLURAL.confirmed}</ToggleGroupItem>
         <ToggleGroupItem value="rejected" aria-label="Mostrar rechazados">{ALARM_STATUS_ES_PLURAL.rejected}</ToggleGroupItem>

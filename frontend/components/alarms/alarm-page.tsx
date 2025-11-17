@@ -52,7 +52,7 @@ export default function AlarmsPage() {
     const role = typeof document !== 'undefined'
       ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
       : 'USER';
-    const [statusFilter, setStatusFilter] = useState<string>(role === 'USER' ? 'pending' : 'all');
+    const [statusFilter, setStatusFilter] = useState<string>('pending');
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
@@ -95,6 +95,10 @@ export default function AlarmsPage() {
 
     const [filteredCounts, setFilteredCounts] = useState<GlobalAlarmCounts>({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
 
+    const effectiveStatusFilter = role === 'USER'
+        ? (statusFilter === 'suspicious' ? 'suspicious' : 'pending')
+        : statusFilter;
+
     const fetchAlarms = useCallback(async () => { 
         setIsLoading(true); 
         setError(null); 
@@ -102,7 +106,7 @@ export default function AlarmsPage() {
             const params: GetAlarmsParams = { 
                 page: currentPage, 
                 pageSize: 12, 
-                status: (role === 'USER' && (statusFilter === 'all' || statusFilter === 'confirmed')) ? 'pending' : statusFilter, 
+                status: effectiveStatusFilter, 
                 search: debouncedSearchQuery, 
                 type: typeFilters, 
                 company: companyFilters, 
@@ -132,7 +136,7 @@ export default function AlarmsPage() {
         } finally { 
             setIsLoading(false); 
         } 
-    }, [currentPage, statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange, role]);
+    }, [currentPage, effectiveStatusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
 
     // --- ELIMINADO: useEffect y useCallback para fetchAnalysisCounts ---
 
@@ -190,7 +194,7 @@ export default function AlarmsPage() {
     const handleCardClick = (clickedAlarm: Alarm) => { 
         const navigableAlarms = alarms; 
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id); 
-        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: statusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate: dateRange?.from?.toISOString(), endDate: dateRange?.to?.toISOString(), pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
+        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: effectiveStatusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate: dateRange?.from?.toISOString(), endDate: dateRange?.to?.toISOString(), pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
         setIsDialogOpen(true); 
     };
 
@@ -500,9 +504,6 @@ export default function AlarmsPage() {
                 </div> 
                 <div> 
                     <ToggleGroup type="single" variant="outline" value={statusFilter} onValueChange={(value) => { if (value) setStatusFilter(value); }} className="flex flex-wrap justify-start">
-                        {role !== 'USER' && (
-                          <ToggleGroupItem value="all" className="flex items-center gap-2"><span>Todos</span><Badge variant="default">{filteredCounts.total}</Badge></ToggleGroupItem>
-                        )}
                         <ToggleGroupItem value="pending" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.pending}</span><Badge variant={ALARM_STATUS_VARIANT.pending}>{filteredCounts.pending}</Badge></ToggleGroupItem>
                         <ToggleGroupItem value="suspicious" className="flex items-center gap-2"><span>{ALARM_STATUS_ES_PLURAL.suspicious}</span><Badge variant={ALARM_STATUS_VARIANT.suspicious as any}>{filteredCounts.suspicious}</Badge></ToggleGroupItem>
                         {role !== 'USER' && (
