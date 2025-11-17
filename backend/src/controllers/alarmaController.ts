@@ -5,7 +5,7 @@ import { exec, execSync, ExecOptions } from 'child_process';
 import path from 'path';
 import { transformAlarmData } from '../utils/transformers';
 import { generateAlarmReportPDF, generateDriverAlarmsSummaryPDF } from '../utils/pdfGenerator';
-import { DB_QUERY_STATUS_MAP } from '../utils/statusHelpers';
+import { DB_QUERY_STATUS_MAP, getAlarmStatusForFrontend } from '../utils/statusHelpers';
 import streamBuffers from 'stream-buffers';
 import fs from 'fs';
 import { s3Uploader } from '../utils/s3Uploader';
@@ -227,6 +227,32 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
     return whereClause;
 };
 
+type StatusCountMap = Record<'pending' | 'suspicious' | 'confirmed' | 'rejected', number>;
+const createEmptyStatusCounts = (): StatusCountMap => ({
+    pending: 0,
+    suspicious: 0,
+    confirmed: 0,
+    rejected: 0,
+});
+
+const aggregateStatusCounts = async (whereClause?: Prisma.AlarmasHistoricoWhereInput) => {
+    const counts = createEmptyStatusCounts();
+    const groupedResults = await prisma.alarmasHistorico.groupBy({
+        by: ['estado'],
+        _count: { estado: true },
+        where: whereClause,
+    });
+
+    groupedResults.forEach(result => {
+        const normalizedStatus = getAlarmStatusForFrontend(result.estado);
+        counts[normalizedStatus] += result._count.estado;
+    });
+
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+    return { total, counts };
+};
+
 export const undoAlarmAction = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -292,26 +318,64 @@ export const getAllAlarms = async (req: Request, res: Response) => {
                 estado: { in: [...DB_QUERY_STATUS_MAP.pending, ...DB_QUERY_STATUS_MAP.suspicious] },
             };
         }
-        const alarmsFromDb = await prisma.alarmasHistorico.findMany({
-            skip,
-            take: pageSize,
-            orderBy: { alarmTime: 'desc' },
-            where: whereClause,
-            include: alarmIncludes,
+        const includeRejectedQueryRaw = Array.isArray(req.query.includeRejected) ? req.query.includeRejected[0] : req.query.includeRejected;
+        const includeRejectedFlag = typeof includeRejectedQueryRaw === 'string'
+            ? ['true', '1'].includes(includeRejectedQueryRaw.toLowerCase())
+            : Boolean(includeRejectedQueryRaw);
+
+        const normalizedStatusParam = ['pending', 'suspicious', 'confirmed', 'rejected'].includes(statusParam)
+            ? statusParam as keyof StatusCountMap
+            : null;
+
+        const countsWhereClause = buildWhereClause({
+            ...req.query,
+            status: 'all',
+            includeRejected: 'true',
         });
-        const totalAlarmsFiltered = await prisma.alarmasHistorico.count({ where: whereClause });
-        const [totalConfirmedGlobal, totalRejectedGlobal, totalSuspiciousGlobal, totalPendingGlobal, totalAllAlarmsGlobal] = await Promise.all([
-            prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.confirmed } } }),
-            prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.rejected } } }),
-            prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.suspicious } } }),
-            prisma.alarmasHistorico.count({ where: { estado: { in: DB_QUERY_STATUS_MAP.pending } } }),
-            prisma.alarmasHistorico.count(),
+
+        const [alarmsFromDb, filteredStatusSummary, globalStatusSummary] = await Promise.all([
+            prisma.alarmasHistorico.findMany({
+                skip,
+                take: pageSize,
+                orderBy: { alarmTime: 'desc' },
+                where: whereClause,
+                include: alarmIncludes,
+            }),
+            aggregateStatusCounts(countsWhereClause),
+            aggregateStatusCounts(),
         ]);
+        let statusesForList: Array<keyof StatusCountMap>;
+        if (normalizedStatusParam) {
+            statusesForList = [normalizedStatusParam];
+        } else if (role === 'USER' && (statusParam === 'all' || !statusParam)) {
+            statusesForList = ['pending', 'suspicious'];
+        } else {
+            statusesForList = ['pending', 'suspicious', 'confirmed'];
+            if (includeRejectedFlag) {
+                statusesForList.push('rejected');
+            }
+        }
+
+        const totalAlarmsFiltered = statusesForList.reduce((sum, currentStatus) => sum + filteredStatusSummary.counts[currentStatus], 0);
+        const filteredCountsPayload = {
+            total: totalAlarmsFiltered,
+            pending: filteredStatusSummary.counts.pending,
+            suspicious: filteredStatusSummary.counts.suspicious,
+            confirmed: role === 'USER' ? 0 : filteredStatusSummary.counts.confirmed,
+            rejected: role === 'USER' ? 0 : filteredStatusSummary.counts.rejected,
+        };
         const transformedAlarms = alarmsFromDb.map(transformAlarmData);
         res.status(200).json({
           alarms: transformedAlarms,
-          pagination: { totalAlarms: totalAlarmsFiltered, currentPage: page, pageSize, totalPages: Math.ceil(totalAlarmsFiltered / pageSize), hasNextPage: (page * pageSize) < totalAlarmsFiltered, hasPrevPage: page > 1 },
-          globalCounts: { total: totalAllAlarmsGlobal, pending: totalPendingGlobal, suspicious: totalSuspiciousGlobal, confirmed: totalConfirmedGlobal, rejected: totalRejectedGlobal },
+          pagination: { totalAlarms: totalAlarmsFiltered, currentPage: page, pageSize, totalPages: Math.max(1, Math.ceil(totalAlarmsFiltered / pageSize)), hasNextPage: (page * pageSize) < totalAlarmsFiltered, hasPrevPage: page > 1 },
+          globalCounts: {
+            total: globalStatusSummary.total,
+            pending: globalStatusSummary.counts.pending,
+            suspicious: globalStatusSummary.counts.suspicious,
+            confirmed: globalStatusSummary.counts.confirmed,
+            rejected: globalStatusSummary.counts.rejected,
+          },
+          filteredCounts: filteredCountsPayload,
         });
     } catch (error) {
         console.error("â›” [ERROR] Falla en getAllAlarms:", error);

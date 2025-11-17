@@ -54,7 +54,8 @@ export async function getAlarms(params?: GetAlarmsParams): Promise<GetAlarmsResp
     return {
       alarms: [],
       pagination: { totalAlarms: 0, currentPage: 1, pageSize: 12, totalPages: 0, hasNextPage: false, hasPrevPage: false },
-      globalCounts: { total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 }
+      globalCounts: { total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 },
+      filteredCounts: { total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 }
     };
   }
 }

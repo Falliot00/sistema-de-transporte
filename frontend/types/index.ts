@@ -78,6 +78,7 @@ export interface GetAlarmsResponse {
     alarms: Alarm[];
     pagination: PaginationInfo;
     globalCounts: GlobalAlarmCounts;
+    filteredCounts: GlobalAlarmCounts;
 }
 export interface GetAlarmsParams {
     page?: number;

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
-import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, getAlarmsCount, undoAlarm, assignDriver } from "@/lib/api";
+import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, undoAlarm, assignDriver } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
@@ -114,27 +114,14 @@ export default function AlarmsPage() {
             setPaginationInfo(data.pagination); 
             setGlobalAlarmCounts(data.globalCounts);
             
-            const baseParams = { 
-                search: debouncedSearchQuery, 
-                type: typeFilters, 
-                company: companyFilters, 
-                startDate: dateRange?.from?.toISOString(), 
-                endDate: dateRange?.to?.toISOString() 
-            };
-            
-            const [pendingCount, suspiciousCount, confirmedCount, rejectedCount] = await Promise.all([
-                getAlarmsCount({ ...baseParams, status: 'pending' }),
-                getAlarmsCount({ ...baseParams, status: 'suspicious' }),
-                role === 'USER' ? Promise.resolve({ count: 0 }) : getAlarmsCount({ ...baseParams, status: 'confirmed' }),
-                role === 'USER' ? Promise.resolve({ count: 0 }) : getAlarmsCount({ ...baseParams, status: 'rejected' })
-            ]);
+            const filteredCountsFromApi = data.filteredCounts ?? { total: data.pagination.totalAlarms, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 };
             
             setFilteredCounts({
                 total: data.pagination.totalAlarms,
-                pending: pendingCount.count,
-                suspicious: suspiciousCount.count,
-                confirmed: confirmedCount.count,
-                rejected: rejectedCount.count
+                pending: filteredCountsFromApi.pending,
+                suspicious: filteredCountsFromApi.suspicious,
+                confirmed: filteredCountsFromApi.confirmed,
+                rejected: filteredCountsFromApi.rejected
             });
         } catch (e) { 
             setError("Error de conexión: No se pudieron cargar las alarmas."); 
