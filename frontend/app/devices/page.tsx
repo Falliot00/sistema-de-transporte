@@ -113,7 +113,6 @@ export default function DevicesPage() {
                         className="pl-10 h-10 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        disabled={isLoading && allDevices.length === 0}
                     />
                 </div>
             </div>

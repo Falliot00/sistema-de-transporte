@@ -120,7 +120,6 @@ export default function DriversPage() {
                             className="pl-10 h-10"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            disabled={isLoading}
                         />
                     </div>
                     <AdvancedFilters
