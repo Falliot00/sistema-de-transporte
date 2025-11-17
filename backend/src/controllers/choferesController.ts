@@ -137,7 +137,6 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
         // Obtener las alarmas filtradas
         const alarmasFiltradasFromDb = await prisma.alarmasHistorico.findMany({
             where: alarmasWhereClause,
-            take: 10,
             orderBy: { alarmTime: 'desc' },
             include: alarmIncludesForDriverDetails
         });

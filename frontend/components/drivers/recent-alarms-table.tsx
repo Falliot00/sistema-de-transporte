@@ -92,7 +92,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                             </CardTitle>
                             <CardDescription>
-                                {isLoading ? 'Cargando alarmas filtradas...' : `Mostrando ${alarms.length} alarmas${alarms.length === 10 ? ' (máximo 10)' : ''}`}
+                                {isLoading ? 'Cargando alarmas filtradas...' : `Mostrando ${alarms.length} alarmas`}
                             </CardDescription>
                         </div>
                         
