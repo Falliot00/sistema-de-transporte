@@ -101,7 +101,7 @@ export const getSummary = async (req: Request, res: Response) => {
                 ${rawWhereStatement}
                 GROUP BY c.idEmpleado, c.apellido_nombre, c.foto HAVING COUNT(a.guid) > 0 ORDER BY confirmedAlarms DESC, totalAlarms DESC;`,
             prisma.$queryRaw`
-                SELECT TOP 10 d.nroInterno, d.patente, d.idDispositivo, COUNT(a.guid) as alarmCount
+                SELECT d.nroInterno, d.patente, d.idDispositivo, COUNT(a.guid) as alarmCount
                 FROM alarmas.dispositivos d 
                 JOIN alarmas.alarmasHistorico a ON d.idDispositivo = a.dispositivo
                 ${rawWhereStatement}
