@@ -24,6 +24,7 @@ import { PaginationControls } from "../ui/pagination-controls";
 import { alarmTypes } from "@/lib/mock-data";
 //import { DateRangePicker } from "../ui/date-range-picker";
 import { DateRange } from "react-day-picker";
+import { useRole } from "@/components/providers/role-provider";
 // --- ELIMINADO: Ya no usaremos este componente aquí ---
 // import { AnalysisFilters } from "./analysis-filters";
 
@@ -49,9 +50,7 @@ export default function AlarmsPage() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const role = typeof document !== 'undefined'
-      ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
-      : 'USER';
+    const { role } = useRole();
     const [statusFilter, setStatusFilter] = useState<string>('pending');
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);

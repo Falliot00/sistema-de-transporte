@@ -7,6 +7,7 @@ import { Loader2, Play, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getColorVariantForType } from "@/lib/utils";
 import Image from "next/image";
+import { useRole } from "@/components/providers/role-provider";
 
 interface AlarmAnalysisViewProps {
   alarm: Alarm;
@@ -33,9 +34,7 @@ export function AlarmAnalysisView({
     isUndoDisabled
     // --- FIN DE LA SOLUCIÓN ---
 }: AlarmAnalysisViewProps) {
-  const role = typeof document !== 'undefined'
-    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
-    : 'USER';
+  const { role } = useRole();
   const primaryMedia = alarm.media?.find(m => m.type === 'video') || alarm.media?.[0];
   const typeColorVariant = getColorVariantForType(alarm.type);
 

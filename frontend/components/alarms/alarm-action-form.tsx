@@ -10,6 +10,7 @@ import { Alarm } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { DriverSelector } from './driver-selector';
 import { AnomalySelector } from './anomaly-selector';
+import { useRole } from '@/components/providers/role-provider';
 
 interface AlarmActionFormProps {
   alarm: Alarm;
@@ -31,9 +32,7 @@ export function AlarmActionForm({
   initialDescription = "",
   showDriverSelector,
 }: AlarmActionFormProps) {
-  const role = typeof document !== 'undefined'
-    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
-    : 'USER';
+  const { role } = useRole();
   const [description, setDescription] = useState(initialDescription || alarm.descripcion || "");
   const [isDescOpen, setIsDescOpen] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null | undefined>(

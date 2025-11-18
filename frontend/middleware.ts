@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { decodeAuthToken } from '@/lib/token';
 
 const PUBLIC_PATHS = ['/login', '/_next', '/favicon.ico', '/logo-grupo-alliot.png'];
 const RESTRICTED_FOR_USER = ['/devices', '/drivers', '/dashboard'];
@@ -96,13 +97,6 @@ async function attemptSsoBootstrap(req: NextRequest): Promise<NextResponse | nul
       path: '/',
       maxAge: 60 * 60 * 8,
     });
-    nextResponse.cookies.set('role', data.user?.role || 'USER', {
-      httpOnly: false,
-      sameSite: 'lax',
-      secure: isProd,
-      path: '/',
-      maxAge: 60 * 60 * 2,
-    });
     return nextResponse;
   } catch (error) {
     console.error('[middleware] Error al intercambiar token SSO:', error);
@@ -118,7 +112,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get('token')?.value;
-  const role = req.cookies.get('role')?.value || 'USER';
+  let role = 'USER';
 
   if (!token) {
     const ssoResponse = await attemptSsoBootstrap(req);
@@ -130,6 +124,16 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
+
+  const payload = await decodeAuthToken(token);
+  if (!payload) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('redirect', pathname);
+    url.searchParams.set('error', 'Sesi\u00f3n inv\u00e1lida');
+    return NextResponse.redirect(url);
+  }
+  role = typeof payload.role === 'string' ? payload.role : 'USER';
 
   if (pathname === '/login') {
     const url = req.nextUrl.clone();

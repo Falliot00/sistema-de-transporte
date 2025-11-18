@@ -29,7 +29,6 @@ async function loginAction(formData: FormData) {
 
   const data = await res.json();
   const token: string = data.token;
-  const role: string = data.user?.role || 'USER';
 
   const secure = process.env.NODE_ENV === 'production';
   // En Next 15 cookies() es asíncrono en Server Actions
@@ -43,7 +42,6 @@ async function loginAction(formData: FormData) {
     maxAge: 60 * 60 * 8, // 8h
   });
   // Rol legible por el cliente para mostrar/hidear menús
-  jar.set('role', role, { httpOnly: false, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 2 });
 
   redirect('/');
 }

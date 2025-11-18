@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Bell, LineChart, Users, Server } from "lucide-react";
+import { useRole } from "@/components/providers/role-provider";
 
 interface MainNavProps {
   className?: string;
@@ -13,9 +14,7 @@ interface MainNavProps {
 
 export function MainNav({ className, orientation = "vertical" }: MainNavProps) {
   const pathname = usePathname();
-  const role = typeof document !== 'undefined'
-    ? (document.cookie.split('; ').find(c => c.startsWith('role='))?.split('=')[1] || 'USER')
-    : 'USER';
+  const { role } = useRole();
 
   // --- CAMBIO: Añadimos una propiedad `colorClass` a cada ruta ---
   const allRoutes = [

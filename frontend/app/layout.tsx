@@ -1,10 +1,13 @@
 // app/layout.tsx
 import './globals.css';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from './theme-provider';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
+import { RoleProvider } from '@/components/providers/role-provider';
+import { decodeAuthToken } from '@/lib/token';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,11 +27,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const jar = cookies();
+  const token = jar.get('token')?.value;
+  const payload = await decodeAuthToken(token);
+  const role = payload?.role ?? 'USER';
+  const username =
+    payload?.username ??
+    (typeof payload?.sub === 'string' ? payload?.sub : undefined);
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
@@ -38,9 +49,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <ShadcnToaster />
-          <SonnerToaster />
+          <RoleProvider value={{ role, username }}>
+            {children}
+            <ShadcnToaster />
+            <SonnerToaster />
+          </RoleProvider>
         </ThemeProvider>
       </body>
     </html>
