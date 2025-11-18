@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 
+const AUTHENTIK_LOGOUT_URL = process.env.NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL;
+
 export function LogoutButton({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
   const onClick = useCallback(async () => {
@@ -11,8 +13,8 @@ export function LogoutButton({ className }: { className?: string }) {
       setLoading(true);
       await fetch('/api/logout', { method: 'POST' });
     } finally {
-      // Redirige al login (full reload para limpiar estado)
-      window.location.href = '/login';
+      // Redirige al logout del proveedor SSO (o al inicio si no está configurado)
+      window.location.href = AUTHENTIK_LOGOUT_URL || '/';
     }
   }, []);
 
