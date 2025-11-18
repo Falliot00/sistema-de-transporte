@@ -32,7 +32,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const jar = cookies();
+  const jar = await cookies();
   const token = jar.get('token')?.value;
   const payload = await decodeAuthToken(token);
   const role = payload?.role ?? 'USER';
