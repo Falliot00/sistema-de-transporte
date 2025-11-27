@@ -15,6 +15,7 @@ import { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { getApiDateRange } from '@/lib/utils';
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 
@@ -36,9 +37,10 @@ export default function DriverDetailPage() {
     const loadDriverData = async () => {
         try {
             setIsLoadingAlarms(true);
+            const { startDate, endDate } = getApiDateRange(dateRange);
             const data = await getDriverDetails(id, {
-                startDate: dateRange?.from?.toISOString(),
-                endDate: dateRange?.to?.toISOString(),
+                startDate,
+                endDate,
                 type: typeFilters,
                 company: companyFilters
             });

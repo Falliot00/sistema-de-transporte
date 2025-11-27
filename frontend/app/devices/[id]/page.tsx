@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getAlarmStatusInfo, formatCorrectedTimestamp } from '@/lib/utils';
+import { getAlarmStatusInfo, formatCorrectedTimestamp, getApiDateRange } from '@/lib/utils';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -59,22 +59,23 @@ export default function DeviceDetailPage() {
     useEffect(() => {
         if (!device) return;
         
-        const loadAlarms = async () => {
-            try {
-                setIsLoadingAlarms(true);
-                
-                const searchQuery = device.nroInterno ? device.nroInterno.toString() : '';
-                
-                const response = await getAlarms({
-                    search: searchQuery,
-                    type: typeFilters.length > 0 ? typeFilters : undefined,
-                    company: companyFilters.length > 0 ? companyFilters : undefined,
-                    startDate: dateRange?.from?.toISOString(),
-                    endDate: dateRange?.to?.toISOString(),
-                    status: statusFilter !== 'all' ? statusFilter : undefined,
-                    pageSize: 100,
-                    page: 1
-                });
+                const loadAlarms = async () => {
+                    try {
+                        setIsLoadingAlarms(true);
+                        
+                        const searchQuery = device.nroInterno ? device.nroInterno.toString() : '';
+                        const { startDate, endDate } = getApiDateRange(dateRange);
+                        
+                        const response = await getAlarms({
+                            search: searchQuery,
+                            type: typeFilters.length > 0 ? typeFilters : undefined,
+                            company: companyFilters.length > 0 ? companyFilters : undefined,
+                            startDate,
+                            endDate,
+                            status: statusFilter !== 'all' ? statusFilter : undefined,
+                            pageSize: 100,
+                            page: 1
+                        });
                 
                 const filteredAlarms = response.alarms.filter(alarm => {
                     if (alarm.device?.serialNumber === device.idDispositivo.toString()) {

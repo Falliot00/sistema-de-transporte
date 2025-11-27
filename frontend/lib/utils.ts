@@ -110,3 +110,35 @@ export function formatCorrectedTimestamp(
   
   return date.toLocaleString('es-AR', options);
 }
+
+const toLocalDayBoundary = (date: Date, boundary: 'start' | 'end'): Date => {
+  const normalized = new Date(date);
+  if (boundary === 'start') {
+    normalized.setHours(0, 0, 0, 0);
+  } else {
+    normalized.setHours(23, 59, 59, 999);
+  }
+  return normalized;
+};
+
+const toUtcPreservingLocalTime = (date: Date): string => {
+  const offsetMinutes = date.getTimezoneOffset();
+  const utcTimestamp = new Date(date.getTime() - offsetMinutes * 60 * 1000);
+  return utcTimestamp.toISOString();
+};
+
+export const getApiDateRange = (dateRange?: { from?: Date; to?: Date }) => {
+  if (!dateRange) {
+    return { startDate: undefined, endDate: undefined };
+  }
+
+  const startDate = dateRange.from
+    ? toUtcPreservingLocalTime(toLocalDayBoundary(dateRange.from, 'start'))
+    : undefined;
+
+  const endDate = dateRange.to
+    ? toUtcPreservingLocalTime(toLocalDayBoundary(dateRange.to, 'end'))
+    : undefined;
+
+  return { startDate, endDate };
+};

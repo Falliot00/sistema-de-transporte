@@ -7,6 +7,7 @@ import { PageLayout } from "@/components/layout/page-layout";
 import { KPICard } from "@/components/shared/kpi-card";
 import { DashboardSummary } from "@/types";
 import { getDashboardSummary } from '@/lib/api';
+import { getApiDateRange } from '@/lib/utils';
 //import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRange } from 'react-day-picker';
@@ -51,10 +52,11 @@ export default function DashboardPage() {
   const fetchSummary = useCallback(async () => {
     setIsLoading(true);
     try {
+        const { startDate, endDate } = getApiDateRange(dateRange);
         const data = await getDashboardSummary({
             // --- CAMBIO: Las fechas ahora pueden ser undefined, y la API las ignorará ---
-            startDate: dateRange?.from?.toISOString(),
-            endDate: dateRange?.to?.toISOString(),
+            startDate,
+            endDate,
             type: typeFilters,
             company: companyFilters,
         });

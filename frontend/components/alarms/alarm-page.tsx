@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
 import { AlarmAnalysisView } from "./alarm-analysis-view";
 //import { AlarmActionForm } from "./alarm-action-form";
-import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT } from "@/lib/utils";
+import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT, getApiDateRange } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AdvancedFilters } from "@/components/shared/advanced-filters";
 import { KPICard } from "@/components/shared/kpi-card";
@@ -57,6 +57,7 @@ export default function AlarmsPage() {
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const { startDate, endDate } = getApiDateRange(dateRange);
 
     // --- ELIMINADOS: Estados de filtros de análisis redundantes ---
     // const [analysisFilters, setAnalysisFilters] = ...
@@ -109,8 +110,8 @@ export default function AlarmsPage() {
                 search: debouncedSearchQuery, 
                 type: typeFilters, 
                 company: companyFilters, 
-                startDate: dateRange?.from?.toISOString(), 
-                endDate: dateRange?.to?.toISOString(), 
+                startDate, 
+                endDate, 
             }; 
             const data = await getAlarms(params); 
             setAlarms(data.alarms); 
@@ -135,7 +136,7 @@ export default function AlarmsPage() {
         } finally { 
             setIsLoading(false); 
         } 
-    }, [currentPage, effectiveStatusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
+    }, [currentPage, effectiveStatusFilter, debouncedSearchQuery, typeFilters, companyFilters, startDate, endDate]);
 
     // --- ELIMINADO: useEffect y useCallback para fetchAnalysisCounts ---
 
@@ -160,8 +161,8 @@ export default function AlarmsPage() {
                 search: debouncedSearchQuery,
                 type: typeFilters, 
                 company: companyFilters, 
-                startDate: dateRange?.from?.toISOString(), 
-                endDate: dateRange?.to?.toISOString(), 
+                startDate, 
+                endDate, 
             };
             
             let allAlarms: Alarm[] = [];
@@ -193,7 +194,7 @@ export default function AlarmsPage() {
     const handleCardClick = (clickedAlarm: Alarm) => { 
         const navigableAlarms = alarms; 
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id); 
-        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: effectiveStatusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate: dateRange?.from?.toISOString(), endDate: dateRange?.to?.toISOString(), pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
+        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: effectiveStatusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate, endDate, pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
         setIsDialogOpen(true); 
     };
 
@@ -284,8 +285,8 @@ export default function AlarmsPage() {
                 search: debouncedSearchQuery,
                 type: typeFilters, 
                 company: companyFilters, 
-                startDate: dateRange?.from?.toISOString(), 
-                endDate: dateRange?.to?.toISOString(), 
+                startDate, 
+                endDate, 
             };
             const newAlarms: Alarm[] = [];
             let currentHasNext: boolean = hasNextPageAnalysis;
