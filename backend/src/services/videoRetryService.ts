@@ -23,6 +23,9 @@ interface VideoRetryTracker {
 // Variable en memoria para rastrear los reintentos
 let retryTracker: VideoRetryTracker = {};
 
+// Lock para prevenir ejecuciones concurrentes
+let isProcessingRetries = false;
+
 // Ruta del archivo JSON para persistencia
 const TRACKER_FILE_PATH = path.join(__dirname, '..', '..', 'video-retry-tracker.json');
 
@@ -268,7 +271,14 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
  * Busca alarmas sospechosas sin video y reinicia la descarga
  */
 const retryFailedVideoDownloads = async () => {
+    // Verificar si ya hay una ejecución en proceso
+    if (isProcessingRetries) {
+        console.log('[⚠️] Ya hay una ejecución de reintentos en proceso. Omitiendo esta ejecución.');
+        return;
+    }
+
     try {
+        isProcessingRetries = true;
         console.log('[🔄] Iniciando búsqueda de alarmas sospechosas sin video...');
         
         // Limpiar tracking antiguo
@@ -350,6 +360,9 @@ const retryFailedVideoDownloads = async () => {
         
     } catch (error) {
         console.error('[✗] Error al buscar y reintentar descargas de video:', error);
+    } finally {
+        isProcessingRetries = false;
+        console.log('[🔓] Lock de ejecución liberado');
     }
 };
 
@@ -389,6 +402,7 @@ export const manualRetryCheck = async () => {
 export const getRetryStats = () => {
     const stats = {
         totalTracked: Object.keys(retryTracker).length,
+        isProcessing: isProcessingRetries,
         byRetryCount: {} as { [count: number]: number },
         alarms: Object.entries(retryTracker).map(([guid, info]) => ({
             guid,
