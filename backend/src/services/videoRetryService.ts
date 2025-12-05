@@ -342,8 +342,8 @@ const retryFailedVideoDownloads = async () => {
                 alarmTime: alarm.alarmTime
             });
             
-            // Pequeña pausa entre ejecuciones para no sobrecargar el sistema
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Pausa de 60 segundos entre ejecuciones para no sobrecargar el sistema
+            await new Promise(resolve => setTimeout(resolve, 60000));
         }
         
         console.log(`[✓] Se iniciaron ${alarmsToRetry.length} reintento(s) de descarga de video.`);
@@ -365,14 +365,14 @@ export const startVideoRetryService = () => {
     // Ejecutar inmediatamente al iniciar (opcional)
     // retryFailedVideoDownloads();
     
-    // Programar la tarea para ejecutarse cada 30 minutos
-    // Formato cron: '*/30 * * * *' = cada 30 minutos
-    cron.schedule('*/30 * * * *', async () => {
+    // Programar la tarea para ejecutarse cada 60 minutos (1 hora)
+    // Formato cron: '0 * * * *' = cada hora en punto
+    cron.schedule('0 * * * *', async () => {
         console.log('[⏰] Ejecutando tarea programada de reintentos de video...');
         await retryFailedVideoDownloads();
     });
     
-    console.log('[✓] Servicio de reintentos automáticos configurado (cada 30 minutos)');
+    console.log('[✓] Servicio de reintentos automáticos configurado (cada 60 minutos)');
 };
 
 /**
