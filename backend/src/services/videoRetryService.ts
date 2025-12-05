@@ -354,7 +354,7 @@ const retryFailedVideoDownloads = async () => {
 };
 
 /**
- * Inicia el servicio de reintentos automáticos cada 30 minutos
+ * Inicia el servicio de reintentos automáticos cada 60 minutos
  */
 export const startVideoRetryService = () => {
     console.log('[🚀] Iniciando servicio de reintentos automáticos de descarga de videos...');
@@ -362,8 +362,9 @@ export const startVideoRetryService = () => {
     // Cargar el tracker de reintentos desde el archivo
     loadRetryTracker();
     
-    // Ejecutar inmediatamente al iniciar (opcional)
-    // retryFailedVideoDownloads();
+    // Ejecutar inmediatamente al iniciar el servidor
+    console.log('[▶️] Ejecutando chequeo inicial de reintentos al iniciar servidor...');
+    retryFailedVideoDownloads();
     
     // Programar la tarea para ejecutarse cada 60 minutos (1 hora)
     // Formato cron: '0 * * * *' = cada hora en punto
