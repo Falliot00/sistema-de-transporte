@@ -9,6 +9,7 @@ import dispositivosRouter from './routes/dispositivos';
 import anomaliasRouter from './routes/anomalias';
 import { seedUsersIfNeeded } from '../scripts/seedUsers';
 import authRouter from './routes/auth';
+import { startVideoRetryService } from './services/videoRetryService';
 
 const app = express();
 
@@ -38,6 +39,13 @@ async function bootstrap() {
     await seedUsersIfNeeded();
   } catch (err) {
     console.error('[bootstrap] Error al sembrar usuarios:', err);
+  }
+
+  // Iniciar el servicio de reintentos automáticos de video
+  try {
+    startVideoRetryService();
+  } catch (err) {
+    console.error('[bootstrap] Error al iniciar el servicio de reintentos de video:', err);
   }
 
   app.listen(config.port, () => {
