@@ -370,7 +370,9 @@ const retryFailedVideoDownloads = async () => {
  * Inicia el servicio de reintentos automáticos cada 60 minutos
  */
 export const startVideoRetryService = () => {
-    console.log('[🚀] Iniciando servicio de reintentos automáticos de descarga de videos...');
+
+    console.log('[🚀] Servicio de reintentos de video DESACTIVADO (comentado)');
+    /*console.log('[🚀] Iniciando servicio de reintentos automáticos de descarga de videos...');
     
     // Cargar el tracker de reintentos desde el archivo
     loadRetryTracker();
@@ -386,7 +388,7 @@ export const startVideoRetryService = () => {
         await retryFailedVideoDownloads();
     });
     
-    console.log('[✓] Servicio de reintentos automáticos configurado (cada 60 minutos)');
+    console.log('[✓] Servicio de reintentos automáticos configurado (cada 60 minutos)');*/
 };
 
 /**
