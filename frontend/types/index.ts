@@ -173,33 +173,6 @@ export interface DeviceDetails extends DeviceListItem {
 
 // --- TIPOS PARA EL DASHBOARD ---
 
-export interface DashboardKPIs {
-    totalAlarms: number;
-    confirmationRate: string;
-    avgAlarmsPerDriver: string;
-    avgAlarmsPerDevice: string;
-}
-
-export interface AlarmsByDay {
-    name: string;
-    Total: number;
-    Confirmadas: number;
-    Pendientes: number;
-}
-
-export interface AlarmsByType {
-    name: string;
-    value: number;
-    fill: string;
-}
-
-export interface AlarmStatusProgress {
-    title: string;
-    value: number;
-    total: number;
-    color?: string;
-}
-
 export interface HourlyDistribution {
     hour: string;
     alarmas: number;
@@ -215,14 +188,53 @@ export interface DriverRanking {
     efficiencyScore: number;
 }
 
+export interface VolumenPorDia {
+    name: string;
+    Total: number;
+}
+
+export interface AlarmsDayProcesoA {
+    name: string;
+    Pendientes: number;
+    Rechazadas: number;
+}
+
+export interface ProcesoAData {
+    sospechadas: number;
+    rechazadas: number;
+    pendientes: number;
+    volumenPorDia: VolumenPorDia[];
+    alarmasPorDia: AlarmsDayProcesoA[];
+    distribucionHoraria: HourlyDistribution[];
+}
+
+export interface VolumenSospechosasPorDia {
+    name: string;
+    Sospechosas: number;
+}
+
+export interface AlarmsDayProcesoB {
+    name: string;
+    Sospechosas: number;
+    Rechazadas: number;
+}
+
+export interface ProcesoBData {
+    confirmadas: number;
+    rechazadas: number;
+    sospechosasSinProcesar: number;
+    tasaConfirmacion: string;
+    volumenSospechosasPorDia: VolumenSospechosasPorDia[];
+    alarmasPorDia: AlarmsDayProcesoB[];
+}
+
 export interface DashboardSummary {
-    kpis: DashboardKPIs;
-    alarmsByDay: AlarmsByDay[];
-    alarmsByType: AlarmsByType[];
-    alarmStatusProgress: AlarmStatusProgress[];
-    hourlyDistribution: HourlyDistribution[];
+    totalAlarms: number;
+    oldestDate: string | null;
+    newestDate: string | null;
+    procesoA: ProcesoAData;
+    procesoB: ProcesoBData;
     driverRanking: DriverRanking[];
-    topDevices: Device[];
 }
 
 export interface Anomaly {

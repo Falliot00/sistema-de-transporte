@@ -180,3 +180,31 @@ model InformeAlarma {
   @@schema("alarmas")
   @@map("informeAlarma")
 }
+
+// --- MODELO: Tabla de Log de Alarmas (transiciones de estado) ---
+model LogAlarmas {
+  logId            Int       @id @default(autoincrement())
+  guid             String?   @db.VarChar(50)
+  dispositivo      String?   @db.VarChar(20)
+  idInterno        String?   @db.VarChar(20)
+  alarmType        String?   @db.VarChar(100)
+  velocidad        Float?
+  lng              String?   @db.VarChar(20)
+  lat              String?   @db.VarChar(20)
+  ubi              String?   @db.VarChar(50)
+  alarmTime        DateTime? @db.DateTime
+  idEmpresa        Int?
+  imagen           String?   @db.VarChar(255)
+  video            String?   @db.VarChar(255)
+  estado_old       String?   @db.VarChar(50)
+  estado_new       String?   @db.VarChar(50)
+  descripcion_old  String?   @db.VarChar(Max)
+  descripcion_new  String?   @db.VarChar(Max)
+  chofer_old       String?   @db.VarChar(100)
+  chofer_new       String?   @db.VarChar(100)
+  changed_at       DateTime  @db.DateTime2
+  changed_by       String    @db.NVarChar(128)
+
+  @@schema("alarmas")
+  @@map("logAlarmas")
+}

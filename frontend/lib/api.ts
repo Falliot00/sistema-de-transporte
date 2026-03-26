@@ -220,24 +220,30 @@ export async function getDashboardSummary(params: {
       throw new Error(`Error ${response.status}: ${errorData.message || response.statusText}`);
     }
     
-    const data = await response.json();
-    const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-    const alarmsByTypeWithFill = data.alarmsByType.map((item: { name: string; value: number }, index: number) => ({
-      ...item,
-      fill: colors[index % colors.length]
-    }));
-    
-    return { ...data, alarmsByType: alarmsByTypeWithFill };
+    return await response.json();
   } catch (error) {
     console.error("Error en getDashboardSummary:", error);
     return {
-      kpis: { totalAlarms: 0, confirmationRate: "0.0", avgAlarmsPerDriver: "0.0", avgAlarmsPerDevice: "0.0" },
-      alarmsByDay: [],
-      alarmsByType: [],
-      alarmStatusProgress: [],
-      hourlyDistribution: [],
+      totalAlarms: 0,
+      oldestDate: null,
+      newestDate: null,
+      procesoA: {
+        sospechadas: 0,
+        rechazadas: 0,
+        pendientes: 0,
+        volumenPorDia: [],
+        alarmasPorDia: [],
+        distribucionHoraria: [],
+      },
+      procesoB: {
+        confirmadas: 0,
+        rechazadas: 0,
+        sospechosasSinProcesar: 0,
+        tasaConfirmacion: '0.0',
+        volumenSospechosasPorDia: [],
+        alarmasPorDia: [],
+      },
       driverRanking: [],
-      topDevices: [],
     };
   }
 }
