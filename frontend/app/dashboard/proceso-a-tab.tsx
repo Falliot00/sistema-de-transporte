@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart, Line } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ProcesoAData } from "@/types";
 import { AlertTriangle, XCircle, Clock } from "lucide-react";
+import { calculateLinearTrend } from "@/app/dashboard/charts/trend-utils";
 
 interface ProcesoATabProps {
   data: ProcesoAData;
@@ -14,14 +16,30 @@ const SOSPECHOSAS_COLOR = "#3b82f6";
 const PENDIENTES_COLOR = "#eab308";
 const RECHAZADAS_COLOR = "#ef4444";
 
+type ProcesoATrendKey = "Total" | "Sospechosas" | "Pendientes" | "Rechazadas";
+
+interface LegendEntryClick {
+  dataKey?: string | number | ((obj: unknown) => unknown);
+}
+
+const PROCESO_A_TREND_LABELS: Record<ProcesoATrendKey, string> = {
+  Total: "Tendencia total",
+  Sospechosas: "Tendencia sospechosas",
+  Pendientes: "Tendencia pendientes",
+  Rechazadas: "Tendencia rechazadas",
+};
+
 const volumenConfig = {
   Total: { label: "Total", color: "hsl(var(--chart-1))" },
+  Tendencia: { label: "Tendencia", color: "hsl(var(--foreground))" },
 } satisfies ChartConfig;
 
 const alarmasDayConfig = {
+  Total: { label: "Total", color: "hsl(var(--chart-1))" },
   Sospechosas: { label: "Sospechosas", color: SOSPECHOSAS_COLOR },
   Pendientes: { label: "Pendientes", color: PENDIENTES_COLOR },
   Rechazadas: { label: "Rechazadas", color: RECHAZADAS_COLOR },
+  TendenciaGeneral: { label: "Tendencia", color: "hsl(var(--foreground))" },
 } satisfies ChartConfig;
 
 const alarmasDayPercentConfig = {
@@ -35,28 +53,94 @@ const hourlyConfig = {
 } satisfies ChartConfig;
 
 export function ProcesoATab({ data }: ProcesoATabProps) {
-  const alarmasPorDiaPercent = (data.alarmasPorDia || []).map((item) => {
-    const sospechosas = Number(item.Sospechosas) || 0;
-    const pendientes = Number(item.Pendientes) || 0;
-    const rechazadas = Number(item.Rechazadas) || 0;
-    const total = sospechosas + pendientes + rechazadas;
+  const [selectedTrendKey, setSelectedTrendKey] = useState<ProcesoATrendKey>("Total");
 
-    if (total === 0) {
+  const trendColorByKey: Record<ProcesoATrendKey, string> = {
+    Total: "var(--color-Total)",
+    Sospechosas: "var(--color-Sospechosas)",
+    Pendientes: "var(--color-Pendientes)",
+    Rechazadas: "var(--color-Rechazadas)",
+  };
+
+  const volumenPorDiaConTendencia = useMemo(() => {
+    const volumenData = data.volumenPorDia || [];
+    const trend = calculateLinearTrend(volumenData.map((item) => Number(item.Total) || 0));
+
+    return volumenData.map((item, index) => ({
+      ...item,
+      Tendencia: trend[index] ?? 0,
+    }));
+  }, [data.volumenPorDia]);
+
+  const alarmasPorDiaConTendencia = useMemo(() => {
+    const baseRows = (data.alarmasPorDia || []).map((item) => {
+      const sospechosas = Number(item.Sospechosas) || 0;
+      const pendientes = Number(item.Pendientes) || 0;
+      const rechazadas = Number(item.Rechazadas) || 0;
+
       return {
-        name: item.name,
-        Sospechosas: 0,
-        Pendientes: 0,
-        Rechazadas: 0,
+        ...item,
+        Sospechosas: sospechosas,
+        Pendientes: pendientes,
+        Rechazadas: rechazadas,
+        Total: sospechosas + pendientes + rechazadas,
       };
+    });
+
+    const trendByKey: Record<ProcesoATrendKey, number[]> = {
+      Total: calculateLinearTrend(baseRows.map((row) => row.Total)),
+      Sospechosas: calculateLinearTrend(baseRows.map((row) => row.Sospechosas)),
+      Pendientes: calculateLinearTrend(baseRows.map((row) => row.Pendientes)),
+      Rechazadas: calculateLinearTrend(baseRows.map((row) => row.Rechazadas)),
+    };
+
+    return baseRows.map((row, index) => ({
+      ...row,
+      TendenciaGeneral: trendByKey[selectedTrendKey][index] ?? 0,
+    }));
+  }, [data.alarmasPorDia, selectedTrendKey]);
+
+  const alarmasPorDiaPercent = useMemo(
+    () =>
+      (data.alarmasPorDia || []).map((item) => {
+        const sospechosas = Number(item.Sospechosas) || 0;
+        const pendientes = Number(item.Pendientes) || 0;
+        const rechazadas = Number(item.Rechazadas) || 0;
+        const total = sospechosas + pendientes + rechazadas;
+
+        if (total === 0) {
+          return {
+            name: item.name,
+            Sospechosas: 0,
+            Pendientes: 0,
+            Rechazadas: 0,
+          };
+        }
+
+        return {
+          name: item.name,
+          Sospechosas: Number(((sospechosas / total) * 100).toFixed(1)),
+          Pendientes: Number(((pendientes / total) * 100).toFixed(1)),
+          Rechazadas: Number(((rechazadas / total) * 100).toFixed(1)),
+        };
+      }),
+    [data.alarmasPorDia]
+  );
+
+  const handleTrendLegendClick = (entry: LegendEntryClick) => {
+    if (typeof entry.dataKey !== "string") {
+      return;
     }
 
-    return {
-      name: item.name,
-      Sospechosas: Number(((sospechosas / total) * 100).toFixed(1)),
-      Pendientes: Number(((pendientes / total) * 100).toFixed(1)),
-      Rechazadas: Number(((rechazadas / total) * 100).toFixed(1)),
-    };
-  });
+    if (entry.dataKey === "Sospechosas" || entry.dataKey === "Pendientes" || entry.dataKey === "Rechazadas") {
+      setSelectedTrendKey(entry.dataKey);
+      return;
+    }
+
+    if (entry.dataKey === "TendenciaGeneral") {
+      setSelectedTrendKey("Total");
+    }
+  };
 
   return (
     <div className="space-y-6 mt-4">
@@ -105,13 +189,22 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>
           ) : (
             <ChartContainer config={volumenConfig} className="h-[350px] w-full">
-              <BarChart data={data.volumenPorDia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+              <BarChart data={volumenPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: "hsl(var(--muted))", radius: 4 }} content={<ChartTooltipContent />} />
                 <Legend />
                 <Bar dataKey="Total" fill="var(--color-Total)" radius={[4, 4, 0, 0]} />
+                <Line
+                  type="linear"
+                  dataKey="Tendencia"
+                  name="Tendencia total"
+                  stroke="var(--color-Tendencia)"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
               </BarChart>
             </ChartContainer>
           )}
@@ -121,22 +214,31 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Alarmas por Dia - Proceso A</CardTitle>
-          <CardDescription>Sospechosas, Pendientes y Rechazadas por el Proceso A.</CardDescription>
+          <CardDescription>Sospechosas, Pendientes y Rechazadas por el Proceso A. Hace clic en una etiqueta para cambiar la tendencia.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           {data.alarmasPorDia.length === 0 ? (
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>
           ) : (
             <ChartContainer config={alarmasDayConfig} className="h-[350px] w-full">
-              <BarChart data={data.alarmasPorDia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+              <BarChart data={alarmasPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: "hsl(var(--muted))", radius: 4 }} content={<ChartTooltipContent />} />
-                <Legend />
+                <Legend onClick={handleTrendLegendClick} />
                 <Bar dataKey="Sospechosas" stackId="a" fill="var(--color-Sospechosas)" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="Pendientes" stackId="a" fill="var(--color-Pendientes)" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="Rechazadas" stackId="a" fill="var(--color-Rechazadas)" radius={[4, 4, 0, 0]} />
+                <Line
+                  type="linear"
+                  dataKey="TendenciaGeneral"
+                  name={PROCESO_A_TREND_LABELS[selectedTrendKey]}
+                  stroke={trendColorByKey[selectedTrendKey]}
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
               </BarChart>
             </ChartContainer>
           )}
