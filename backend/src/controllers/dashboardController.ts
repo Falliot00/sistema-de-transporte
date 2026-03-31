@@ -332,6 +332,9 @@ export const getSummary = async (req: Request, res: Response) => {
             FROM alarmsByDriver abd
             INNER JOIN dimCentral.empleados c ON c.idEmpleado = abd.choferId
             LEFT JOIN reportsByDriver rbd ON rbd.choferId = abd.choferId
+            WHERE c.sector IN ('CHOFERES', 'TALLER (varios)', 'TALLER (Jefes)')
+              AND c.estado = 'A'
+              AND c.LiquidacionEstado = 'A'
             ORDER BY abd.confirmedAlarms DESC, abd.totalAlarms DESC
         `;
 
