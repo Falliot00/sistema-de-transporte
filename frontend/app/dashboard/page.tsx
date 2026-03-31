@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { DashboardSummary } from "@/types";
 import { getAnomalias, getDashboardSummary } from '@/lib/api';
@@ -48,6 +48,7 @@ export default function DashboardPage() {
   const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("procesoA");
+  const latestRequestRef = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchSummary = useCallback(async () => {
+    const requestId = ++latestRequestRef.current;
     setIsLoading(true);
     try {
         const { startDate, endDate } = getApiDateRange(dateRange);
@@ -84,11 +86,16 @@ export default function DashboardPage() {
             company: companyFilters,
             anomaly: anomalyFilters,
         });
+        if (requestId !== latestRequestRef.current) {
+          return;
+        }
         setSummaryData(data);
     } catch (error) {
         console.error("Failed to fetch dashboard summary:", error);
     } finally {
-        setIsLoading(false);
+        if (requestId === latestRequestRef.current) {
+          setIsLoading(false);
+        }
     }
   }, [dateRange, typeFilters, companyFilters, anomalyFilters]);
 

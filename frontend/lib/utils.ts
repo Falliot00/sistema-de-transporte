@@ -132,12 +132,14 @@ export const getApiDateRange = (dateRange?: { from?: Date; to?: Date }) => {
     return { startDate: undefined, endDate: undefined };
   }
 
+  const effectiveEndDate = dateRange.to ?? dateRange.from;
+
   const startDate = dateRange.from
     ? toUtcPreservingLocalTime(toLocalDayBoundary(dateRange.from, 'start'))
     : undefined;
 
-  const endDate = dateRange.to
-    ? toUtcPreservingLocalTime(toLocalDayBoundary(dateRange.to, 'end'))
+  const endDate = effectiveEndDate
+    ? toUtcPreservingLocalTime(toLocalDayBoundary(effectiveEndDate, 'end'))
     : undefined;
 
   return { startDate, endDate };
