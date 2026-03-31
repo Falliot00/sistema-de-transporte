@@ -4,18 +4,35 @@
 import { DriverRanking } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, AlertTriangle, CheckCircle, Percent } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, FileText, Percent } from "lucide-react";
 import Link from "next/link";
 
 interface DriverRankingListProps {
   drivers: DriverRanking[];
 }
 
+const getConfirmationRateBadgeClass = (rate: number): string => {
+  const normalizedRate = Math.max(0, Math.min(100, Number.isFinite(rate) ? rate : 0));
+
+  if (normalizedRate <= 25) {
+    return "border-transparent bg-green-600 text-white";
+  }
+
+  if (normalizedRate <= 50) {
+    return "border-transparent bg-yellow-400 text-black";
+  }
+
+  if (normalizedRate <= 75) {
+    return "border-transparent bg-orange-500 text-white";
+  }
+
+  return "border-transparent bg-red-600 text-white";
+};
+
 export function DriverRankingList({ drivers }: DriverRankingListProps) {
   if (!drivers || drivers.length === 0) {
-    return <p className="text-muted-foreground text-center py-8">No hay choferes con alarmas en el período seleccionado.</p>;
+    return <p className="text-muted-foreground text-center py-8">No hay choferes con alarmas en el periodo seleccionado.</p>;
   }
 
   return (
@@ -33,33 +50,39 @@ export function DriverRankingList({ drivers }: DriverRankingListProps) {
                 <p className="text-sm text-muted-foreground">ID: {driver.id}</p>
               </div>
             </Link>
-            
-            {/* --- REQUERIMIENTO 6: Actualizamos la información mostrada --- */}
+
             <div className="space-y-3 text-sm">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="flex items-center gap-1.5 text-muted-foreground"><ShieldCheck className="h-4 w-4 text-green-500"/> Eficiencia</span>
-                    <span className="font-semibold">{driver.efficiencyScore}%</span>
-                  </div>
-                  <Progress value={driver.efficiencyScore} indicatorClassName="bg-green-500" className="h-2"/>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><Percent className="h-4 w-4 text-blue-500" /> Tasa Confirmacion</span>
+                <Badge variant="outline" className={getConfirmationRateBadgeClass(driver.confirmationRate)}>
+                  {driver.confirmationRate}%
+                </Badge>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-muted-foreground"><AlertTriangle className="h-4 w-4"/> Alarmas Totales</span>
-                  <Badge variant="outline">{driver.totalAlarms}</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-muted-foreground"><CheckCircle className="h-4 w-4 text-green-500"/> Alarmas Confirmadas</span>
-                  <Badge variant="success">{driver.confirmedAlarms}</Badge>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><AlertTriangle className="h-4 w-4" /> Alarmas Totales</span>
+                <Badge variant="outline">{driver.totalAlarms}</Badge>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-muted-foreground"><Percent className="h-4 w-4 text-blue-500"/> Tasa Confirmación</span>
-                  <Badge variant={driver.confirmationRate > 50 ? "destructive" : "default"}>
-                    {driver.confirmationRate}%
-                  </Badge>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><CheckCircle className="h-4 w-4 text-green-500" /> Alarmas Confirmadas</span>
+                <Badge variant="success">{driver.confirmedAlarms}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4 text-yellow-600" /> Confirmadas Pendientes de Informe</span>
+                <Badge variant="warning">{driver.confirmedNotInformedAlarms}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><CheckCircle className="h-4 w-4 text-blue-500" /> Confirmadas Informadas</span>
+                <Badge variant="info">{driver.confirmedInformedAlarms}</Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground"><FileText className="h-4 w-4 text-primary" /> Informes Generados</span>
+                <Badge variant="secondary">{driver.generatedReports}</Badge>
+              </div>
             </div>
           </CardContent>
         </Card>

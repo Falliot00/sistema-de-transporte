@@ -186,7 +186,9 @@ export interface DriverRanking {
     totalAlarms: number;
     confirmedAlarms: number;
     confirmationRate: number;
-    efficiencyScore: number;
+    confirmedNotInformedAlarms: number;
+    confirmedInformedAlarms: number;
+    generatedReports: number;
 }
 
 export interface VolumenPorDia {

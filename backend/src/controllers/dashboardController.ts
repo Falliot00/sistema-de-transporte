@@ -291,14 +291,48 @@ export const getSummary = async (req: Request, res: Response) => {
         // ===================== CHOFERES =====================
 
         const driverRankingPromise = prisma.$queryRaw<any[]>`
-            SELECT c.idEmpleado, c.apellido_nombre, c.foto, COUNT(a.guid) as totalAlarms, 
-                   SUM(CASE WHEN a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) THEN 1 ELSE 0 END) as confirmedAlarms
-            FROM dimCentral.empleados c 
-            JOIN alarmas.alarmasHistorico a ON c.idEmpleado = a.chofer
-            ${whereClauseA}
-            GROUP BY c.idEmpleado, c.apellido_nombre, c.foto 
-            HAVING COUNT(a.guid) > 0 
-            ORDER BY confirmedAlarms DESC, totalAlarms DESC
+            WITH filteredAlarms AS (
+                SELECT
+                    a.guid,
+                    a.chofer,
+                    a.estado,
+                    ISNULL(a.informada, 0) AS informada
+                FROM alarmas.alarmasHistorico a
+                ${whereClauseA}
+            ),
+            alarmsByDriver AS (
+                SELECT
+                    fa.chofer AS choferId,
+                    COUNT(*) AS totalAlarms,
+                    SUM(CASE WHEN fa.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) THEN 1 ELSE 0 END) AS confirmedAlarms,
+                    SUM(CASE WHEN fa.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND fa.informada = 0 THEN 1 ELSE 0 END) AS confirmedNotInformedAlarms,
+                    SUM(CASE WHEN fa.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) AND fa.informada = 1 THEN 1 ELSE 0 END) AS confirmedInformedAlarms
+                FROM filteredAlarms fa
+                WHERE fa.chofer IS NOT NULL
+                GROUP BY fa.chofer
+            ),
+            reportsByDriver AS (
+                SELECT
+                    fa.chofer AS choferId,
+                    COUNT(DISTINCT ia.idInforme) AS generatedReports
+                FROM filteredAlarms fa
+                INNER JOIN alarmas.informeAlarma ia ON ia.idAlarma = fa.guid
+                WHERE fa.chofer IS NOT NULL
+                GROUP BY fa.chofer
+            )
+            SELECT
+                c.idEmpleado,
+                c.apellido_nombre,
+                c.foto,
+                abd.totalAlarms,
+                abd.confirmedAlarms,
+                abd.confirmedNotInformedAlarms,
+                abd.confirmedInformedAlarms,
+                COALESCE(rbd.generatedReports, 0) AS generatedReports
+            FROM alarmsByDriver abd
+            INNER JOIN dimCentral.empleados c ON c.idEmpleado = abd.choferId
+            LEFT JOIN reportsByDriver rbd ON rbd.choferId = abd.choferId
+            ORDER BY abd.confirmedAlarms DESC, abd.totalAlarms DESC
         `;
 
         // ===================== EXECUTE ALL =====================
@@ -401,7 +435,9 @@ export const getSummary = async (req: Request, res: Response) => {
                 totalAlarms: total,
                 confirmedAlarms: confirmed,
                 confirmationRate,
-                efficiencyScore: 100 - confirmationRate,
+                confirmedNotInformedAlarms: Number(driver.confirmedNotInformedAlarms) || 0,
+                confirmedInformedAlarms: Number(driver.confirmedInformedAlarms) || 0,
+                generatedReports: Number(driver.generatedReports) || 0,
             };
         });
 
