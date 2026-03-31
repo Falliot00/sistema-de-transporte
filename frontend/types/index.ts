@@ -198,6 +198,7 @@ export interface VolumenPorDia {
 
 export interface AlarmsDayProcesoA {
     name: string;
+    Sospechosas: number;
     Pendientes: number;
     Rechazadas: number;
 }

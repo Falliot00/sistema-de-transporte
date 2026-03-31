@@ -167,7 +167,7 @@ export const getSummary = async (req: Request, res: Response) => {
             ORDER BY date ASC
         `;
 
-        // Alarmas por dia para Proceso A: Pendientes(sin procesar) + Rechazadas_A
+        // Alarmas por dia para Proceso A: Sospechosas + Pendientes(sin procesar) + Rechazadas_A
         const alarmasPorDiaAPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
@@ -383,6 +383,7 @@ export const getSummary = async (req: Request, res: Response) => {
             })),
             alarmasPorDia: (alarmasPorDiaA || []).map((d: any) => ({
                 name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+                Sospechosas: Number(d.sospechosas) || 0,
                 Pendientes: Number(d.pendientes) || 0,
                 Rechazadas: Number(d.rechazadas) || 0,
             })),
