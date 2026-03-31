@@ -63,7 +63,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
           <CardContent>
             <div className="text-3xl font-bold">{data.pendientes.toLocaleString('es-AR')}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Alarmas que quedaron en estado Pendiente
+              Alarmas sin transición en Proceso A (ni Sospechosa ni Rechazada)
             </p>
           </CardContent>
         </Card>
@@ -97,7 +97,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Alarmas por Día — Proceso A</CardTitle>
-          <CardDescription>Pendientes y Rechazadas por el Proceso A (de Pendiente a Rechazada).</CardDescription>
+          <CardDescription>Pendientes sin procesar y Rechazadas por el Proceso A.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           {data.alarmasPorDia.length === 0 ? (

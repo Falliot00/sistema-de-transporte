@@ -40,23 +40,25 @@ export const getSummary = async (req: Request, res: Response) => {
         `;
 
         // ===================== PROCESO A =====================
-        // Uses logAlarmas joined with alarmasHistorico for date filtering
-        // Proceso A: transitions FROM Pendiente
+        // Base: alarmasHistorico (1 alarma = 1 guid), con LEFT JOIN a logAlarmas.
+        // Pendientes se calcula como "sin procesar por A":
+        // sin transicion a Sospechosa ni rechazo directo desde Pendiente.
 
         const procesoAMetricsPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
-                    la.guid,
-                    la.estado_new,
-                    la.estado_old
-                FROM alarmas.logAlarmas la
-                INNER JOIN alarmas.alarmasHistorico ah ON ah.guid = la.guid
+                    ah.guid,
+                    MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS esSospechada,
+                    MAX(CASE WHEN la.estado_old = 'Pendiente' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS esRechazada
+                FROM alarmas.alarmasHistorico ah
+                LEFT JOIN alarmas.logAlarmas la ON ah.guid = la.guid
                 WHERE 1=1 ${dateConditionAH}
+                GROUP BY ah.guid
             )
             SELECT
-                SUM(CASE WHEN estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS sospechadas,
-                SUM(CASE WHEN estado_old = 'Pendiente' AND estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS rechazadas,
-                SUM(CASE WHEN estado_new = 'Pendiente' THEN 1 ELSE 0 END) AS pendientes
+                COALESCE(SUM(esSospechada), 0) AS sospechadas,
+                COALESCE(SUM(esRechazada), 0) AS rechazadas,
+                COALESCE(SUM(CASE WHEN esSospechada = 0 AND esRechazada = 0 THEN 1 ELSE 0 END), 0) AS pendientes
             FROM cambios
         `;
 
@@ -71,22 +73,26 @@ export const getSummary = async (req: Request, res: Response) => {
             ORDER BY date ASC
         `;
 
-        // Alarmas por dia para Proceso A: Pendientes + Rechazadas_A
+        // Alarmas por dia para Proceso A: Pendientes(sin procesar) + Rechazadas_A
         const alarmasPorDiaAPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
                     CAST(ah.alarmTime AS DATE) AS fecha,
-                    la.guid,
-                    la.estado_new,
-                    la.estado_old
-                FROM alarmas.logAlarmas la
-                INNER JOIN alarmas.alarmasHistorico ah ON ah.guid = la.guid
+                    ah.guid,
+                    MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS esSospechada,
+                    MAX(CASE WHEN la.estado_old = 'Pendiente' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS esRechazada
+                FROM alarmas.alarmasHistorico ah
+                LEFT JOIN alarmas.logAlarmas la ON ah.guid = la.guid
                 WHERE 1=1 ${dateConditionAH}
+                GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
                 fecha as date,
-                SUM(CASE WHEN estado_new = 'Pendiente' THEN 1 ELSE 0 END) AS pendientes,
-                SUM(CASE WHEN estado_old = 'Pendiente' AND estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS rechazadas
+                COUNT(*) AS cantidad,
+                COALESCE(SUM(CASE WHEN esSospechada = 1 OR esRechazada = 1 THEN 1 ELSE 0 END), 0) AS procesadas,
+                COALESCE(SUM(CASE WHEN esSospechada = 0 AND esRechazada = 0 THEN 1 ELSE 0 END), 0) AS pendientes,
+                COALESCE(SUM(esSospechada), 0) AS sospechosas,
+                COALESCE(SUM(esRechazada), 0) AS rechazadas
             FROM cambios
             GROUP BY fecha
             ORDER BY fecha ASC
@@ -101,22 +107,27 @@ export const getSummary = async (req: Request, res: Response) => {
         `;
 
         // ===================== PROCESO B =====================
-        // Proceso B: transitions FROM Sospechosa
+        // Proceso B: base en transiciones desde/hacia Sospechosa, deduplicadas por guid.
 
         const procesoBMetricsPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
-                    la.guid,
-                    la.estado_new,
-                    la.estado_old
-                FROM alarmas.logAlarmas la
-                INNER JOIN alarmas.alarmasHistorico ah ON ah.guid = la.guid
+                    ah.guid,
+                    MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS fueSospechosa,
+                    MAX(CASE WHEN la.estado_old = 'Sospechosa' THEN 1 ELSE 0 END) AS fueProcesadaDesdeSospechosa,
+                    MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Confirmada' THEN 1 ELSE 0 END) AS fueConfirmada,
+                    MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS fueRechazada
+                FROM alarmas.alarmasHistorico ah
+                INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
                 WHERE 1=1 ${dateConditionAH}
+                GROUP BY ah.guid
             )
             SELECT
-                SUM(CASE WHEN estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS totalSospechosas,
-                SUM(CASE WHEN estado_old = 'Sospechosa' AND estado_new = 'Confirmada' THEN 1 ELSE 0 END) AS confirmadas,
-                SUM(CASE WHEN estado_old = 'Sospechosa' AND estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS rechazadas
+                COALESCE(SUM(fueSospechosa), 0) AS totalSospechosas,
+                COALESCE(SUM(fueProcesadaDesdeSospechosa), 0) AS sospechosasProcesadas,
+                COALESCE(SUM(CASE WHEN fueSospechosa = 1 AND fueProcesadaDesdeSospechosa = 0 THEN 1 ELSE 0 END), 0) AS sospechosasSinProcesar,
+                COALESCE(SUM(fueConfirmada), 0) AS confirmadas,
+                COALESCE(SUM(fueRechazada), 0) AS rechazadas
             FROM cambios
         `;
 
@@ -125,15 +136,16 @@ export const getSummary = async (req: Request, res: Response) => {
             WITH cambios AS (
                 SELECT
                     CAST(ah.alarmTime AS DATE) AS fecha,
-                    la.guid,
-                    la.estado_new
-                FROM alarmas.logAlarmas la
-                INNER JOIN alarmas.alarmasHistorico ah ON ah.guid = la.guid
+                    ah.guid,
+                    MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS fueSospechosa
+                FROM alarmas.alarmasHistorico ah
+                INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
                 WHERE 1=1 ${dateConditionAH}
+                GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
                 fecha as date,
-                SUM(CASE WHEN estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS sospechosas
+                COALESCE(SUM(fueSospechosa), 0) AS sospechosas
             FROM cambios
             GROUP BY fecha
             ORDER BY fecha ASC
@@ -144,17 +156,18 @@ export const getSummary = async (req: Request, res: Response) => {
             WITH cambios AS (
                 SELECT
                     CAST(ah.alarmTime AS DATE) AS fecha,
-                    la.guid,
-                    la.estado_new,
-                    la.estado_old
-                FROM alarmas.logAlarmas la
-                INNER JOIN alarmas.alarmasHistorico ah ON ah.guid = la.guid
+                    ah.guid,
+                    MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS fueSospechosa,
+                    MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS fueRechazada
+                FROM alarmas.alarmasHistorico ah
+                INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
                 WHERE 1=1 ${dateConditionAH}
+                GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
                 fecha as date,
-                SUM(CASE WHEN estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS sospechosas,
-                SUM(CASE WHEN estado_old = 'Sospechosa' AND estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS rechazadas
+                COALESCE(SUM(fueSospechosa), 0) AS sospechosas,
+                COALESCE(SUM(fueRechazada), 0) AS rechazadas
             FROM cambios
             GROUP BY fecha
             ORDER BY fecha ASC
@@ -235,11 +248,11 @@ export const getSummary = async (req: Request, res: Response) => {
         };
 
         // Proceso B
-        const pB = procesoBMetrics[0] || { totalSospechosas: 0, confirmadas: 0, rechazadas: 0 };
+        const pB = procesoBMetrics[0] || { totalSospechosas: 0, sospechosasSinProcesar: 0, confirmadas: 0, rechazadas: 0 };
         const totalSospechosas = Number(pB.totalSospechosas) || 0;
         const confirmadasB = Number(pB.confirmadas) || 0;
         const rechazadasB = Number(pB.rechazadas) || 0;
-        const sospechosasSinProcesar = totalSospechosas - confirmadasB - rechazadasB;
+        const sospechosasSinProcesar = Number(pB.sospechosasSinProcesar) || 0;
         const tasaConfirmacion = totalSospechosas > 0 ? (confirmadasB / totalSospechosas) * 100 : 0;
 
         const procesoB = {
