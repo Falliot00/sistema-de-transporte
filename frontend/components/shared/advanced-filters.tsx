@@ -44,13 +44,13 @@ export function AdvancedFilters({ filterSections, dateRange, onDateChange, onCle
   // ya que siempre hay uno seleccionado. Esto es una mejora de UX.
 
   return (
-    <div className="flex gap-2">
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
       {onDateChange && (
         <DateRangePicker date={dateRange} onDateChange={onDateChange} disabled={disabled} />
       )}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="h-10 w-[120px] justify-between" disabled={disabled}>
+          <Button variant="outline" className="h-10 w-full justify-between sm:w-[120px]" disabled={disabled}>
             <div className="flex items-center">
               <Filter className="mr-2 h-4 w-4" />
               <span>Filtros</span>
