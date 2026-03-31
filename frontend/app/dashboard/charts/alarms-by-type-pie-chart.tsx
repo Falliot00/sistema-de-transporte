@@ -16,6 +16,8 @@ interface TreemapContentProps {
   height?: number;
   name?: string;
   value?: number;
+  resolvedFill?: string;
+  colorByName?: Map<string, string>;
   payload?: {
     fill?: string;
     name?: string;
@@ -31,8 +33,8 @@ function truncateLabel(label: string, maxChars: number): string {
   return `${label.slice(0, Math.max(4, maxChars - 1)).trim()}...`;
 }
 
-function TreemapCellContent({ x = 0, y = 0, width = 0, height = 0, name = "", value = 0, payload }: TreemapContentProps) {
-  const fill = payload?.fill || "#2563eb";
+function TreemapCellContent({ x = 0, y = 0, width = 0, height = 0, name = "", value = 0, payload, resolvedFill, colorByName }: TreemapContentProps) {
+  const fill = resolvedFill || colorByName?.get(name) || payload?.fill || "#2563eb";
 
   if (width <= 0 || height <= 0) {
     return null;
@@ -69,6 +71,24 @@ function generateDistinctColor(index: number, total: number): string {
   return `hsl(${hue.toFixed(2)} ${Math.min(86, saturation)}% ${lightness}%)`;
 }
 
+function normalizeAnomalyName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+const FIXED_ANOMALY_COLORS: Record<string, string> = {
+  "uso celular": "#b91c1c",
+  "sin cinturon": "#16a34a",
+  "pasajero en lugar indebido": "#2563eb",
+  "exceso de velocidad": "#a21caf",
+  "deteccion de fatiga": "#ca8a04",
+  "distracciones durante la conduccion": "#f97316",
+  "fumar durante la conduccion": "#92400e",
+};
+
 export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
   const safeData = useMemo(() => data ?? [], [data]);
   const total = useMemo(() => safeData.reduce((sum, item) => sum + item.value, 0), [safeData]);
@@ -77,12 +97,39 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
     [safeData]
   );
   const coloredData = useMemo(
-    () =>
-      sortedData.map((item, index) => ({
-        ...item,
-        fill: item.fill || generateDistinctColor(index, sortedData.length),
-      })),
+    () => {
+      const usedColors = new Set<string>();
+
+      return sortedData.map((item, index) => {
+        const normalizedName = normalizeAnomalyName(item.name);
+        const fixedColor = FIXED_ANOMALY_COLORS[normalizedName];
+        let fill = fixedColor || item.fill;
+
+        if (!fill) {
+          let offset = 0;
+          let candidate = generateDistinctColor(index, sortedData.length);
+
+          while (usedColors.has(candidate) && offset < sortedData.length + 8) {
+            offset += 1;
+            candidate = generateDistinctColor(index + offset, sortedData.length + offset);
+          }
+
+          fill = candidate;
+        }
+
+        usedColors.add(fill);
+
+        return {
+          ...item,
+          fill,
+        };
+      });
+    },
     [sortedData]
+  );
+  const colorByName = useMemo(
+    () => new Map(coloredData.map((item) => [item.name, item.fill])),
+    [coloredData]
   );
 
   const chartConfig = useMemo(
@@ -101,7 +148,13 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
   return (
     <div className="space-y-4">
       <ChartContainer config={chartConfig} className="h-[380px] w-full">
-        <Treemap data={coloredData} dataKey="value" nameKey="name" isAnimationActive={false} content={<TreemapCellContent />}>
+        <Treemap
+          data={coloredData}
+          dataKey="value"
+          nameKey="name"
+          isAnimationActive={false}
+          content={<TreemapCellContent colorByName={colorByName} />}
+        >
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload || payload.length === 0) {
