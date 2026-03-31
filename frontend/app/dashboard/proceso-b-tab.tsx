@@ -20,13 +20,13 @@ const volumenSospechosasConfig = {
 } satisfies ChartConfig;
 
 const alarmasDayBConfig = {
-  Sospechosas: { label: "Sospechosas", color: SOSPECHOSAS_COLOR },
+  Sospechosas: { label: "Sospechosas pendientes", color: SOSPECHOSAS_COLOR },
   Confirmadas: { label: "Confirmadas", color: CONFIRMADAS_COLOR },
   Rechazadas: { label: "Rechazadas", color: RECHAZADAS_COLOR },
 } satisfies ChartConfig;
 
 const alarmasDayBPercentConfig = {
-  Sospechosas: { label: "Sospechosas", color: SOSPECHOSAS_COLOR },
+  Sospechosas: { label: "Sospechosas pendientes", color: SOSPECHOSAS_COLOR },
   Confirmadas: { label: "Confirmadas", color: CONFIRMADAS_COLOR },
   Rechazadas: { label: "Rechazadas", color: RECHAZADAS_COLOR },
 } satisfies ChartConfig;
@@ -148,7 +148,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Alarmas por Dia - Proceso B</CardTitle>
-          <CardDescription>Sospechosas, Confirmadas y Rechazadas por el Proceso B.</CardDescription>
+          <CardDescription>Sospechosas pendientes por evaluar, Confirmadas y Rechazadas por el Proceso B.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           {data.alarmasPorDia.length === 0 ? (
@@ -173,7 +173,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Alarmas por Dia - Proceso B (Barras 100% apiladas)</CardTitle>
-          <CardDescription>Distribucion porcentual diaria de Sospechosas, Confirmadas y Rechazadas.</CardDescription>
+          <CardDescription>Distribucion porcentual diaria de Sospechosas pendientes, Confirmadas y Rechazadas.</CardDescription>
         </CardHeader>
         <CardContent className="pl-2">
           {alarmasPorDiaPercent.length === 0 ? (

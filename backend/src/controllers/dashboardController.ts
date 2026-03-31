@@ -245,7 +245,10 @@ export const getSummary = async (req: Request, res: Response) => {
             ORDER BY fecha ASC
         `;
 
-        // Alarmas por dia para Proceso B: Sospechosas + Confirmadas + Rechazadas_B
+        // Alarmas por dia para Proceso B:
+        // Sospechosas (pendientes por evaluar) + Confirmadas + Rechazadas_B.
+        // Se usa clasificacion excluyente para que:
+        // pendientes + confirmadas + rechazadas = total de sospechosas.
         const alarmasPorDiaBPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
@@ -261,9 +264,9 @@ export const getSummary = async (req: Request, res: Response) => {
             )
             SELECT
                 fecha as date,
-                COALESCE(SUM(fueSospechosa), 0) AS sospechosas,
-                COALESCE(SUM(fueConfirmada), 0) AS confirmadas,
-                COALESCE(SUM(fueRechazada), 0) AS rechazadas
+                COALESCE(SUM(CASE WHEN fueSospechosa = 1 AND fueConfirmada = 0 AND fueRechazada = 0 THEN 1 ELSE 0 END), 0) AS sospechosas,
+                COALESCE(SUM(CASE WHEN fueSospechosa = 1 AND fueConfirmada = 1 THEN 1 ELSE 0 END), 0) AS confirmadas,
+                COALESCE(SUM(CASE WHEN fueSospechosa = 1 AND fueConfirmada = 0 AND fueRechazada = 1 THEN 1 ELSE 0 END), 0) AS rechazadas
             FROM cambios
             GROUP BY fecha
             ORDER BY fecha ASC
