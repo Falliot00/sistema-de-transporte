@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart, Line } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart, Line, ComposedChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ProcesoAData } from "@/types";
 import { AlertTriangle, XCircle, Clock } from "lucide-react";
@@ -18,10 +18,6 @@ const RECHAZADAS_COLOR = "#ef4444";
 
 type ProcesoATrendKey = "Total" | "Sospechosas" | "Pendientes" | "Rechazadas";
 
-interface LegendEntryClick {
-  dataKey?: string | number | ((obj: unknown) => unknown);
-}
-
 const PROCESO_A_TREND_LABELS: Record<ProcesoATrendKey, string> = {
   Total: "Tendencia total",
   Sospechosas: "Tendencia sospechosas",
@@ -31,7 +27,7 @@ const PROCESO_A_TREND_LABELS: Record<ProcesoATrendKey, string> = {
 
 const volumenConfig = {
   Total: { label: "Total", color: "hsl(var(--chart-1))" },
-  Tendencia: { label: "Tendencia", color: "hsl(var(--foreground))" },
+  Tendencia: { label: "Tendencia", color: "#111827" },
 } satisfies ChartConfig;
 
 const alarmasDayConfig = {
@@ -39,7 +35,7 @@ const alarmasDayConfig = {
   Sospechosas: { label: "Sospechosas", color: SOSPECHOSAS_COLOR },
   Pendientes: { label: "Pendientes", color: PENDIENTES_COLOR },
   Rechazadas: { label: "Rechazadas", color: RECHAZADAS_COLOR },
-  TendenciaGeneral: { label: "Tendencia", color: "hsl(var(--foreground))" },
+  TendenciaGeneral: { label: "Tendencia", color: "#111827" },
 } satisfies ChartConfig;
 
 const alarmasDayPercentConfig = {
@@ -56,10 +52,10 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
   const [selectedTrendKey, setSelectedTrendKey] = useState<ProcesoATrendKey>("Total");
 
   const trendColorByKey: Record<ProcesoATrendKey, string> = {
-    Total: "var(--color-Total)",
-    Sospechosas: "var(--color-Sospechosas)",
-    Pendientes: "var(--color-Pendientes)",
-    Rechazadas: "var(--color-Rechazadas)",
+    Total: "#111827",
+    Sospechosas: "#1d4ed8",
+    Pendientes: "#a16207",
+    Rechazadas: "#b91c1c",
   };
 
   const volumenPorDiaConTendencia = useMemo(() => {
@@ -127,20 +123,42 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
     [data.alarmasPorDia]
   );
 
-  const handleTrendLegendClick = (entry: LegendEntryClick) => {
-    if (typeof entry.dataKey !== "string") {
-      return;
-    }
-
-    if (entry.dataKey === "Sospechosas" || entry.dataKey === "Pendientes" || entry.dataKey === "Rechazadas") {
-      setSelectedTrendKey(entry.dataKey);
-      return;
-    }
-
-    if (entry.dataKey === "TendenciaGeneral") {
-      setSelectedTrendKey("Total");
-    }
-  };
+  const renderInteractiveTrendLegend = () => (
+    <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs">
+      <button
+        type="button"
+        onClick={() => setSelectedTrendKey("Sospechosas")}
+        className={`inline-flex items-center gap-1.5 ${selectedTrendKey === "Sospechosas" ? "font-semibold" : "opacity-70 hover:opacity-100"}`}
+      >
+        <span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: "var(--color-Sospechosas)" }} />
+        Sospechosas
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedTrendKey("Pendientes")}
+        className={`inline-flex items-center gap-1.5 ${selectedTrendKey === "Pendientes" ? "font-semibold" : "opacity-70 hover:opacity-100"}`}
+      >
+        <span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: "var(--color-Pendientes)" }} />
+        Pendientes
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedTrendKey("Rechazadas")}
+        className={`inline-flex items-center gap-1.5 ${selectedTrendKey === "Rechazadas" ? "font-semibold" : "opacity-70 hover:opacity-100"}`}
+      >
+        <span className="h-2.5 w-2.5 rounded-[2px]" style={{ backgroundColor: "var(--color-Rechazadas)" }} />
+        Rechazadas
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedTrendKey("Total")}
+        className={`inline-flex items-center gap-1.5 ${selectedTrendKey === "Total" ? "font-semibold" : "opacity-70 hover:opacity-100"}`}
+      >
+        <span className="h-[2px] w-3 rounded-full" style={{ backgroundColor: trendColorByKey[selectedTrendKey] }} />
+        {PROCESO_A_TREND_LABELS[selectedTrendKey]}
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6 mt-4">
@@ -189,7 +207,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>
           ) : (
             <ChartContainer config={volumenConfig} className="h-[350px] w-full">
-              <BarChart data={volumenPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+              <ComposedChart data={volumenPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -205,7 +223,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
                   dot={false}
                   activeDot={{ r: 4 }}
                 />
-              </BarChart>
+              </ComposedChart>
             </ChartContainer>
           )}
         </CardContent>
@@ -221,25 +239,26 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>
           ) : (
             <ChartContainer config={alarmasDayConfig} className="h-[350px] w-full">
-              <BarChart data={alarmasPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+              <ComposedChart data={alarmasPorDiaConTendencia} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip cursor={{ fill: "hsl(var(--muted))", radius: 4 }} content={<ChartTooltipContent />} />
-                <Legend onClick={handleTrendLegendClick} />
+                <Legend content={renderInteractiveTrendLegend} />
                 <Bar dataKey="Sospechosas" stackId="a" fill="var(--color-Sospechosas)" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="Pendientes" stackId="a" fill="var(--color-Pendientes)" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="Rechazadas" stackId="a" fill="var(--color-Rechazadas)" radius={[4, 4, 0, 0]} />
                 <Line
-                  type="linear"
+                  type="monotone"
                   dataKey="TendenciaGeneral"
                   name={PROCESO_A_TREND_LABELS[selectedTrendKey]}
                   stroke={trendColorByKey[selectedTrendKey]}
                   strokeWidth={2.5}
+                  strokeDasharray="6 4"
                   dot={false}
                   activeDot={{ r: 4 }}
                 />
-              </BarChart>
+              </ComposedChart>
             </ChartContainer>
           )}
         </CardContent>

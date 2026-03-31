@@ -6,7 +6,7 @@ import { Tooltip, Treemap } from "recharts";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 interface AlarmsByTypePieChartProps {
-  data: Array<{ name: string; value: number; fill: string }>;
+  data: Array<{ name: string; value: number; fill?: string }>;
 }
 
 interface TreemapContentProps {
@@ -60,28 +60,48 @@ function TreemapCellContent({ x = 0, y = 0, width = 0, height = 0, name = "", va
   );
 }
 
+function generateDistinctColor(index: number, total: number): string {
+  const segment = 360 / Math.max(total, 1);
+  const hue = (index * segment) % 360;
+  const saturation = 70 + (index % 3) * 6;
+  const lightness = 42 + (index % 2) * 8;
+
+  return `hsl(${hue.toFixed(2)} ${Math.min(86, saturation)}% ${lightness}%)`;
+}
+
 export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
   const safeData = useMemo(() => data ?? [], [data]);
   const total = useMemo(() => safeData.reduce((sum, item) => sum + item.value, 0), [safeData]);
-  const sortedData = useMemo(() => [...safeData].sort((a, b) => b.value - a.value), [safeData]);
-
-  const chartConfig = useMemo(
+  const sortedData = useMemo(
+    () => [...safeData].sort((a, b) => (b.value === a.value ? a.name.localeCompare(b.name) : b.value - a.value)),
+    [safeData]
+  );
+  const coloredData = useMemo(
     () =>
-      sortedData.reduce((acc, item) => {
-        acc[item.name] = { label: item.name, color: item.fill };
-        return acc;
-      }, {} as ChartConfig),
+      sortedData.map((item, index) => ({
+        ...item,
+        fill: item.fill || generateDistinctColor(index, sortedData.length),
+      })),
     [sortedData]
   );
 
-  if (sortedData.length === 0) {
+  const chartConfig = useMemo(
+    () =>
+      coloredData.reduce((acc, item) => {
+        acc[item.name] = { label: item.name, color: item.fill };
+        return acc;
+      }, {} as ChartConfig),
+    [coloredData]
+  );
+
+  if (coloredData.length === 0) {
     return <div className="flex items-center justify-center h-[350px] text-muted-foreground">No hay datos disponibles.</div>;
   }
 
   return (
     <div className="space-y-4">
       <ChartContainer config={chartConfig} className="h-[380px] w-full">
-        <Treemap data={sortedData} dataKey="value" nameKey="name" isAnimationActive={false} content={<TreemapCellContent />}>
+        <Treemap data={coloredData} dataKey="value" nameKey="name" isAnimationActive={false} content={<TreemapCellContent />}>
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload || payload.length === 0) {
@@ -110,7 +130,7 @@ export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {
       </ChartContainer>
 
       <div className="grid gap-2 md:grid-cols-2">
-        {sortedData.map((item) => {
+        {coloredData.map((item) => {
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
 
           return (
