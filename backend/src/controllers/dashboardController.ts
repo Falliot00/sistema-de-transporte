@@ -245,13 +245,14 @@ export const getSummary = async (req: Request, res: Response) => {
             ORDER BY fecha ASC
         `;
 
-        // Alarmas por dia para Proceso B: Sospechosas + Rechazadas_B
+        // Alarmas por dia para Proceso B: Sospechosas + Confirmadas + Rechazadas_B
         const alarmasPorDiaBPromise = prisma.$queryRaw<any[]>`
             WITH cambios AS (
                 SELECT
                     CAST(ah.alarmTime AS DATE) AS fecha,
                     ah.guid,
                     MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS fueSospechosa,
+                    MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Confirmada' THEN 1 ELSE 0 END) AS fueConfirmada,
                     MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS fueRechazada
                 FROM alarmas.alarmasHistorico ah
                 INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
@@ -261,10 +262,30 @@ export const getSummary = async (req: Request, res: Response) => {
             SELECT
                 fecha as date,
                 COALESCE(SUM(fueSospechosa), 0) AS sospechosas,
+                COALESCE(SUM(fueConfirmada), 0) AS confirmadas,
                 COALESCE(SUM(fueRechazada), 0) AS rechazadas
             FROM cambios
             GROUP BY fecha
             ORDER BY fecha ASC
+        `;
+
+        // Distribucion por tipo de anomalia para confirmadas de Proceso B
+        const distribucionAnomaliasProcesoBPromise = prisma.$queryRaw<any[]>`
+            WITH confirmadas AS (
+                SELECT DISTINCT ah.guid, ah.idAnomalia
+                FROM alarmas.alarmasHistorico ah
+                INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
+                ${whereClauseAH}
+                AND la.estado_old = 'Sospechosa'
+                AND la.estado_new = 'Confirmada'
+            )
+            SELECT
+                COALESCE(NULLIF(LTRIM(RTRIM(a.nomAnomalia)), ''), 'Sin anomalia') AS anomalia,
+                COUNT(*) AS total
+            FROM confirmadas c
+            LEFT JOIN alarmas.anomalia a ON c.idAnomalia = a.idAnomalia
+            GROUP BY COALESCE(NULLIF(LTRIM(RTRIM(a.nomAnomalia)), ''), 'Sin anomalia')
+            ORDER BY total DESC, anomalia ASC
         `;
 
         // ===================== CHOFERES =====================
@@ -291,6 +312,7 @@ export const getSummary = async (req: Request, res: Response) => {
             procesoBMetrics,
             volumenSospechosasPorDia,
             alarmasPorDiaB,
+            distribucionAnomaliasProcesoB,
             driverRanking
         ] = await Promise.all([
             globalDataPromise,
@@ -301,6 +323,7 @@ export const getSummary = async (req: Request, res: Response) => {
             procesoBMetricsPromise,
             volumenSospechosasPorDiaPromise,
             alarmasPorDiaBPromise,
+            distribucionAnomaliasProcesoBPromise,
             driverRankingPromise
         ]);
 
@@ -357,7 +380,12 @@ export const getSummary = async (req: Request, res: Response) => {
             alarmasPorDia: (alarmasPorDiaB || []).map((d: any) => ({
                 name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
                 Sospechosas: Number(d.sospechosas) || 0,
+                Confirmadas: Number(d.confirmadas) || 0,
                 Rechazadas: Number(d.rechazadas) || 0,
+            })),
+            distribucionPorAnomalia: (distribucionAnomaliasProcesoB || []).map((item: any) => ({
+                name: item.anomalia || 'Sin anomalia',
+                value: Number(item.total) || 0,
             })),
         };
 

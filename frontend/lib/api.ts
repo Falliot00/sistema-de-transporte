@@ -244,6 +244,7 @@ export async function getDashboardSummary(params: {
         tasaConfirmacion: '0.0',
         volumenSospechosasPorDia: [],
         alarmasPorDia: [],
+        distribucionPorAnomalia: [],
       },
       driverRanking: [],
     };

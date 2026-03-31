@@ -217,7 +217,13 @@ export interface VolumenSospechosasPorDia {
 export interface AlarmsDayProcesoB {
     name: string;
     Sospechosas: number;
+    Confirmadas: number;
     Rechazadas: number;
+}
+
+export interface AnomalyDistributionProcesoB {
+    name: string;
+    value: number;
 }
 
 export interface ProcesoBData {
@@ -227,6 +233,7 @@ export interface ProcesoBData {
     tasaConfirmacion: string;
     volumenSospechosasPorDia: VolumenSospechosasPorDia[];
     alarmasPorDia: AlarmsDayProcesoB[];
+    distribucionPorAnomalia: AnomalyDistributionProcesoB[];
 }
 
 export interface DashboardSummary {
