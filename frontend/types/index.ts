@@ -86,6 +86,7 @@ export interface GetAlarmsParams {
     status?: string;
     search?: string;
     type?: string[];
+    anomaly?: string[];
     startDate?: string;
     endDate?: string;
     company?: string[];

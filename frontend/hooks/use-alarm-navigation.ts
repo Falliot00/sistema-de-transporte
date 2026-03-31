@@ -16,6 +16,7 @@ interface InitializeParams {
     status?: string;
     search?: string;
     type?: string[];
+    anomaly?: string[];
     company?: string[];
     startDate?: string;
     endDate?: string;

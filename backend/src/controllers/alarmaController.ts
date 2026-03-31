@@ -183,7 +183,7 @@ const triggerVideoScript = (alarm: { dispositivo: number | null, alarmTime: Date
 };
 
 const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput => {
-    const { status, search, type, company, startDate, endDate, includeRejected } = queryParams;
+    const { status, search, type, company, anomaly, startDate, endDate, includeRejected } = queryParams;
     let whereClause: Prisma.AlarmasHistoricoWhereInput = {};
 
     const normalizedStatus = Array.isArray(status) ? status[0] : status;
@@ -223,6 +223,14 @@ const buildWhereClause = (queryParams: any): Prisma.AlarmasHistoricoWhereInput =
                 in: lowerCaseCompanies 
             } 
         };
+    }
+
+    const anomalyFilters = Array.isArray(anomaly) ? anomaly : (anomaly ? [anomaly] : []);
+    const anomalyIds = anomalyFilters
+        .map(filter => Number(filter))
+        .filter(id => Number.isInteger(id));
+    if (anomalyIds.length > 0) {
+        whereClause.idAnomalia = { in: anomalyIds };
     }
     return whereClause;
 };

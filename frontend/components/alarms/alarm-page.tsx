@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
-import { getAlarms, reviewAlarm, confirmAlarm, reEvaluateAlarm, undoAlarm, assignDriver } from "@/lib/api";
+import { assignDriver, confirmAlarm, getAlarms, getAnomalias, reEvaluateAlarm, reviewAlarm, undoAlarm } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
@@ -17,7 +17,7 @@ import { AlarmAnalysisView } from "./alarm-analysis-view";
 //import { AlarmActionForm } from "./alarm-action-form";
 import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT, getApiDateRange } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { AdvancedFilters } from "@/components/shared/advanced-filters";
+import { AdvancedFilters, FilterOption } from "@/components/shared/advanced-filters";
 import { KPICard } from "@/components/shared/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "../ui/pagination-controls";
@@ -56,6 +56,8 @@ export default function AlarmsPage() {
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    const [anomalyFilters, setAnomalyFilters] = useState<string[]>([]);
+    const [anomalyOptions, setAnomalyOptions] = useState<FilterOption[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const { startDate, endDate } = getApiDateRange(dateRange);
 
@@ -95,6 +97,30 @@ export default function AlarmsPage() {
 
     const [filteredCounts, setFilteredCounts] = useState<GlobalAlarmCounts>({ total: 0, pending: 0, suspicious: 0, confirmed: 0, rejected: 0 });
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadAnomalies = async () => {
+            const anomalies = await getAnomalias();
+            if (!isMounted) return;
+
+            const options = anomalies
+                .filter((anomaly) => anomaly.idAnomalia != null)
+                .map((anomaly) => ({
+                    value: String(anomaly.idAnomalia),
+                    label: anomaly.nomAnomalia?.trim() || `Anomalia ${anomaly.idAnomalia}`,
+                }));
+
+            setAnomalyOptions(options);
+        };
+
+        loadAnomalies();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const effectiveStatusFilter = role === 'USER'
         ? (statusFilter === 'suspicious' ? 'suspicious' : 'pending')
         : statusFilter;
@@ -109,6 +135,7 @@ export default function AlarmsPage() {
                 status: effectiveStatusFilter, 
                 search: debouncedSearchQuery, 
                 type: typeFilters, 
+                anomaly: anomalyFilters,
                 company: companyFilters, 
                 startDate, 
                 endDate, 
@@ -136,12 +163,12 @@ export default function AlarmsPage() {
         } finally { 
             setIsLoading(false); 
         } 
-    }, [currentPage, effectiveStatusFilter, debouncedSearchQuery, typeFilters, companyFilters, startDate, endDate]);
+    }, [currentPage, effectiveStatusFilter, debouncedSearchQuery, typeFilters, anomalyFilters, companyFilters, startDate, endDate]);
 
     // --- ELIMINADO: useEffect y useCallback para fetchAnalysisCounts ---
 
     useEffect(() => { fetchAlarms(); }, [fetchAlarms]);
-    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, companyFilters, dateRange]);
+    useEffect(() => { setCurrentPage(1); }, [statusFilter, debouncedSearchQuery, typeFilters, anomalyFilters, companyFilters, dateRange]);
 
     const handleStartAnalysis = async (status: 'pending' | 'suspicious') => {
         const count = status === 'pending' ? filteredCounts.pending : filteredCounts.suspicious;
@@ -160,6 +187,7 @@ export default function AlarmsPage() {
                 pageSize: ANALYSIS_PAGE_SIZE, 
                 search: debouncedSearchQuery,
                 type: typeFilters, 
+                anomaly: anomalyFilters,
                 company: companyFilters, 
                 startDate, 
                 endDate, 
@@ -194,7 +222,7 @@ export default function AlarmsPage() {
     const handleCardClick = (clickedAlarm: Alarm) => { 
         const navigableAlarms = alarms; 
         const index = navigableAlarms.findIndex(a => a.id === clickedAlarm.id); 
-        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: effectiveStatusFilter, search: debouncedSearchQuery, type: typeFilters, company: companyFilters, startDate, endDate, pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
+        initializeNavigation(navigableAlarms, index > -1 ? index : 0, { status: effectiveStatusFilter, search: debouncedSearchQuery, type: typeFilters, anomaly: anomalyFilters, company: companyFilters, startDate, endDate, pageSize: 12, hasMorePages: !!paginationInfo?.hasNextPage, currentPage: currentPage, totalAlarms: paginationInfo?.totalAlarms || alarms.length });
         setIsDialogOpen(true); 
     };
 
@@ -284,6 +312,7 @@ export default function AlarmsPage() {
                 pageSize: ANALYSIS_PAGE_SIZE, 
                 search: debouncedSearchQuery,
                 type: typeFilters, 
+                anomaly: anomalyFilters,
                 company: companyFilters, 
                 startDate, 
                 endDate, 
@@ -432,6 +461,7 @@ export default function AlarmsPage() {
     const handleClearFilters = () => {
         setTypeFilters([]);
         setCompanyFilters([]);
+        setAnomalyFilters([]);
         setDateRange(undefined);
     };
 
@@ -462,6 +492,12 @@ export default function AlarmsPage() {
                                               items: AVAILABLE_COMPANIES,
                                               selectedItems: companyFilters,
                                               onSelectionChange: setCompanyFilters
+                                          },
+                                          {
+                                              title: 'Por Anomalia',
+                                              items: anomalyOptions,
+                                              selectedItems: anomalyFilters,
+                                              onSelectionChange: setAnomalyFilters
                                           }
                                       ]}
                                   />

@@ -11,9 +11,16 @@ import { Separator } from "@/components/ui/separator";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 
+export interface FilterOption {
+  label: string;
+  value: string;
+}
+
+type FilterItem = string | FilterOption;
+
 interface FilterSectionProps {
   title: string;
-  items: string[];
+  items: FilterItem[];
   selectedItems: string[];
   onSelectionChange: (newSelection: string[]) => void;
 }
@@ -28,6 +35,8 @@ interface AdvancedFiltersProps {
 }
 
 export function AdvancedFilters({ filterSections, dateRange, onDateChange, onClear, disabled = false }: AdvancedFiltersProps) {
+  const getItemValue = (item: FilterItem) => (typeof item === "string" ? item : item.value);
+  const getItemLabel = (item: FilterItem) => (typeof item === "string" ? item : item.label);
   
   const handleItemChange = (sectionIndex: number, item: string) => {
     const section = filterSections[sectionIndex];
@@ -85,13 +94,13 @@ export function AdvancedFilters({ filterSections, dateRange, onDateChange, onCle
                   <h5 className="font-semibold text-sm mb-2">{section.title}</h5>
                   <div className="grid gap-2 max-h-40 overflow-y-auto pr-2">
                       {section.items.map((item) => (
-                          <div key={item} className="flex items-center space-x-2">
+                          <div key={getItemValue(item)} className="flex items-center space-x-2">
                               <Checkbox 
-                                id={`filter-${sectionIndex}-${item}`} 
-                                checked={section.selectedItems.includes(item)} 
-                                onCheckedChange={() => handleItemChange(sectionIndex, item)} 
+                                id={`filter-${sectionIndex}-${getItemValue(item)}`} 
+                                checked={section.selectedItems.includes(getItemValue(item))} 
+                                onCheckedChange={() => handleItemChange(sectionIndex, getItemValue(item))} 
                               />
-                              <Label htmlFor={`filter-${sectionIndex}-${item}`} className="font-normal cursor-pointer flex-grow">{item}</Label>
+                              <Label htmlFor={`filter-${sectionIndex}-${getItemValue(item)}`} className="font-normal cursor-pointer flex-grow">{getItemLabel(item)}</Label>
                           </div>
                       ))}
                   </div>

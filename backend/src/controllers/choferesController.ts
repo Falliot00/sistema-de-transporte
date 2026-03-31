@@ -72,7 +72,7 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
     const driverId = parseInt(id, 10);
 
     // Obtener parámetros de filtro de la query
-    const { startDate, endDate, type, company, status } = req.query;
+    const { startDate, endDate, type, company, anomaly, status } = req.query;
 
     if (isNaN(driverId)) {
         return res.status(400).json({ message: 'El ID del chofer debe ser un número.' });
@@ -127,6 +127,15 @@ export const getDriverByIdWithStats = async (req: Request, res: Response) => {
             alarmasWhereClause.empresaInfo = { 
                 nombreMin: { in: lowerCaseCompanies } 
             };
+        }
+
+        // Aplicar filtros de anomalia
+        const anomalyFilters = Array.isArray(anomaly)
+            ? anomaly.map(a => Number(a))
+            : (anomaly ? [Number(anomaly)] : []);
+        const validAnomalyFilters = anomalyFilters.filter(a => Number.isInteger(a));
+        if (validAnomalyFilters.length > 0) {
+            alarmasWhereClause.idAnomalia = { in: validAnomalyFilters };
         }
 
         // Aplicar filtros de estado

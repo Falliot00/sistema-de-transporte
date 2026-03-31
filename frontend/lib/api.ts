@@ -180,6 +180,7 @@ export async function getDriverDetails(
         endDate?: string; 
         type?: string[]; 
         company?: string[];
+        anomaly?: string[];
         status?: string;
     }
 ): Promise<Driver> {
@@ -209,7 +210,8 @@ export async function getDashboardSummary(params: {
   startDate?: string, 
   endDate?: string, 
   type?: string[], 
-  company?: string[] 
+  company?: string[],
+  anomaly?: string[]
 }): Promise<DashboardSummary> {
   try {
     const query = buildQueryString(params);

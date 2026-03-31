@@ -6,15 +6,82 @@ const prisma = new PrismaClient();
 
 const CONFIRMED_STATUSES = ['Confirmada', 'confirmed'];
 
+const normalizeStringFilters = (value: unknown): string[] => {
+    if (value === undefined || value === null) {
+        return [];
+    }
+
+    const values = Array.isArray(value) ? value : [value];
+
+    return values
+        .map((item) => String(item).trim())
+        .filter((item) => item !== '' && item !== 'undefined');
+};
+
+const normalizeNumericFilters = (value: unknown): number[] => {
+    const parsedValues = normalizeStringFilters(value)
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item));
+
+    return Array.from(new Set(parsedValues));
+};
+
+interface AlarmWhereClauseOptions {
+    alias?: 'ah' | 'a';
+    start: Date | null;
+    end: Date | null;
+    typeFilters: string[];
+    companyFilters: string[];
+    anomalyFilters: number[];
+}
+
+const buildAlarmWhereClause = ({
+    alias,
+    start,
+    end,
+    typeFilters,
+    companyFilters,
+    anomalyFilters,
+}: AlarmWhereClauseOptions): Prisma.Sql => {
+    const column = (name: string) => Prisma.raw(alias ? `${alias}.${name}` : name);
+    const conditions: Prisma.Sql[] = [Prisma.sql`1=1`];
+
+    if (start && end) {
+        conditions.push(Prisma.sql`${column('alarmTime')} >= ${start} AND ${column('alarmTime')} <= ${end}`);
+    }
+
+    if (typeFilters.length > 0) {
+        conditions.push(
+            Prisma.sql`${column('alarmType')} IN (
+                SELECT ta.type
+                FROM alarmas.typeAlarms ta
+                WHERE ta.alarm IN (${Prisma.join(typeFilters)})
+            )`
+        );
+    }
+
+    if (companyFilters.length > 0) {
+        conditions.push(
+            Prisma.sql`EXISTS (
+                SELECT 1
+                FROM dimCentral.empresa e
+                WHERE e.idEmp = ${column('idEmpresa')}
+                  AND LOWER(COALESCE(e.EmpresaMin, e.Empresa)) IN (${Prisma.join(companyFilters)})
+            )`
+        );
+    }
+
+    if (anomalyFilters.length > 0) {
+        conditions.push(Prisma.sql`${column('idAnomalia')} IN (${Prisma.join(anomalyFilters)})`);
+    }
+
+    return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
+};
+
 export const getSummary = async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, type, company, anomaly } = req.query;
 
     try {
-        // --- Build date filter conditions ---
-        let dateConditionAH = Prisma.empty;   // for alarmasHistorico alias 'ah'
-        let dateConditionNoAlias = Prisma.empty; // for alarmasHistorico without alias
-        let dateConditionA = Prisma.empty;     // for alias 'a'
-
         let start: Date | null = null;
         let end: Date | null = null;
 
@@ -22,10 +89,37 @@ export const getSummary = async (req: Request, res: Response) => {
             start = new Date(startDate as string);
             end = new Date(endDate as string);
             end.setUTCHours(23, 59, 59, 999);
-            dateConditionAH = Prisma.sql`AND ah.alarmTime >= ${start} AND ah.alarmTime <= ${end}`;
-            dateConditionNoAlias = Prisma.sql`WHERE alarmTime >= ${start} AND alarmTime <= ${end}`;
-            dateConditionA = Prisma.sql`WHERE a.alarmTime >= ${start} AND a.alarmTime <= ${end}`;
         }
+
+        const typeFilters = normalizeStringFilters(type);
+        const companyFilters = normalizeStringFilters(company).map((companyName) => companyName.toLowerCase());
+        const anomalyFilters = normalizeNumericFilters(anomaly);
+
+        const whereClauseAH = buildAlarmWhereClause({
+            alias: 'ah',
+            start,
+            end,
+            typeFilters,
+            companyFilters,
+            anomalyFilters,
+        });
+
+        const whereClauseNoAlias = buildAlarmWhereClause({
+            start,
+            end,
+            typeFilters,
+            companyFilters,
+            anomalyFilters,
+        });
+
+        const whereClauseA = buildAlarmWhereClause({
+            alias: 'a',
+            start,
+            end,
+            typeFilters,
+            companyFilters,
+            anomalyFilters,
+        });
 
         // ===================== GLOBAL DATA =====================
 
@@ -36,7 +130,7 @@ export const getSummary = async (req: Request, res: Response) => {
                 MIN(alarmTime) as oldestDate,
                 MAX(alarmTime) as newestDate
             FROM alarmas.alarmasHistorico
-            ${dateConditionNoAlias}
+            ${whereClauseNoAlias}
         `;
 
         // ===================== PROCESO A =====================
@@ -52,7 +146,7 @@ export const getSummary = async (req: Request, res: Response) => {
                     MAX(CASE WHEN la.estado_old = 'Pendiente' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS esRechazada
                 FROM alarmas.alarmasHistorico ah
                 LEFT JOIN alarmas.logAlarmas la ON ah.guid = la.guid
-                WHERE 1=1 ${dateConditionAH}
+                ${whereClauseAH}
                 GROUP BY ah.guid
             )
             SELECT
@@ -68,7 +162,7 @@ export const getSummary = async (req: Request, res: Response) => {
                 CAST(alarmTime AS DATE) as date,
                 COUNT(*) as total
             FROM alarmas.alarmasHistorico
-            ${dateConditionNoAlias}
+            ${whereClauseNoAlias}
             GROUP BY CAST(alarmTime AS DATE)
             ORDER BY date ASC
         `;
@@ -83,7 +177,7 @@ export const getSummary = async (req: Request, res: Response) => {
                     MAX(CASE WHEN la.estado_old = 'Pendiente' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS esRechazada
                 FROM alarmas.alarmasHistorico ah
                 LEFT JOIN alarmas.logAlarmas la ON ah.guid = la.guid
-                WHERE 1=1 ${dateConditionAH}
+                ${whereClauseAH}
                 GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
@@ -102,7 +196,7 @@ export const getSummary = async (req: Request, res: Response) => {
         const distribucionHorariaPromise = prisma.$queryRaw<any[]>`
             SELECT DATEPART(hour, alarmTime) as hour, COUNT(*) as count 
             FROM alarmas.alarmasHistorico
-            ${dateConditionNoAlias}
+            ${whereClauseNoAlias}
             GROUP BY DATEPART(hour, alarmTime) ORDER BY hour ASC
         `;
 
@@ -119,7 +213,7 @@ export const getSummary = async (req: Request, res: Response) => {
                     MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS fueRechazada
                 FROM alarmas.alarmasHistorico ah
                 INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
-                WHERE 1=1 ${dateConditionAH}
+                ${whereClauseAH}
                 GROUP BY ah.guid
             )
             SELECT
@@ -140,7 +234,7 @@ export const getSummary = async (req: Request, res: Response) => {
                     MAX(CASE WHEN la.estado_new = 'Sospechosa' THEN 1 ELSE 0 END) AS fueSospechosa
                 FROM alarmas.alarmasHistorico ah
                 INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
-                WHERE 1=1 ${dateConditionAH}
+                ${whereClauseAH}
                 GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
@@ -161,7 +255,7 @@ export const getSummary = async (req: Request, res: Response) => {
                     MAX(CASE WHEN la.estado_old = 'Sospechosa' AND la.estado_new = 'Rechazada' THEN 1 ELSE 0 END) AS fueRechazada
                 FROM alarmas.alarmasHistorico ah
                 INNER JOIN alarmas.logAlarmas la ON ah.guid = la.guid
-                WHERE 1=1 ${dateConditionAH}
+                ${whereClauseAH}
                 GROUP BY CAST(ah.alarmTime AS DATE), ah.guid
             )
             SELECT
@@ -175,16 +269,12 @@ export const getSummary = async (req: Request, res: Response) => {
 
         // ===================== CHOFERES =====================
 
-        const rawWhereStatement = start && end
-            ? Prisma.sql`WHERE a.alarmTime >= ${start} AND a.alarmTime <= ${end}`
-            : Prisma.empty;
-
         const driverRankingPromise = prisma.$queryRaw<any[]>`
             SELECT c.idEmpleado, c.apellido_nombre, c.foto, COUNT(a.guid) as totalAlarms, 
                    SUM(CASE WHEN a.estado IN (${Prisma.join(CONFIRMED_STATUSES)}) THEN 1 ELSE 0 END) as confirmedAlarms
             FROM dimCentral.empleados c 
             JOIN alarmas.alarmasHistorico a ON c.idEmpleado = a.chofer
-            ${rawWhereStatement}
+            ${whereClauseA}
             GROUP BY c.idEmpleado, c.apellido_nombre, c.foto 
             HAVING COUNT(a.guid) > 0 
             ORDER BY confirmedAlarms DESC, totalAlarms DESC

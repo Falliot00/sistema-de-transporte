@@ -2,13 +2,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { getDispositivoDetails, getAlarms } from "@/lib/api";
+import { getAlarms, getAnomalias, getDispositivoDetails } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { DeviceDetails as DeviceDetailsType, Alarm } from "@/types";
 import { Home, Server, Hash, Wifi, Filter, Bell, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { DeviceStatsCards } from "./device-stats-cards";
 import { AlarmsByWeekdayChart } from "./alarms-by-weekday-chart";
-import { AdvancedFilters } from '@/components/shared/advanced-filters';
+import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
 import { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +35,33 @@ export default function DeviceDetailPage() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    const [anomalyFilters, setAnomalyFilters] = useState<string[]>([]);
+    const [anomalyOptions, setAnomalyOptions] = useState<FilterOption[]>([]);
     const [statusFilter, setStatusFilter] = useState<string>("all");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadAnomalies = async () => {
+            const anomalies = await getAnomalias();
+            if (!isMounted) return;
+
+            const options = anomalies
+                .filter((anomaly) => anomaly.idAnomalia != null)
+                .map((anomaly) => ({
+                    value: String(anomaly.idAnomalia),
+                    label: anomaly.nomAnomalia?.trim() || `Anomalia ${anomaly.idAnomalia}`,
+                }));
+
+            setAnomalyOptions(options);
+        };
+
+        loadAnomalies();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Cargar detalles del dispositivo
     useEffect(() => {
@@ -70,6 +96,7 @@ export default function DeviceDetailPage() {
                             search: searchQuery,
                             type: typeFilters.length > 0 ? typeFilters : undefined,
                             company: companyFilters.length > 0 ? companyFilters : undefined,
+                            anomaly: anomalyFilters.length > 0 ? anomalyFilters : undefined,
                             startDate,
                             endDate,
                             status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -97,7 +124,7 @@ export default function DeviceDetailPage() {
         };
         
         loadAlarms();
-    }, [device, dateRange, typeFilters, companyFilters, statusFilter]);
+    }, [device, dateRange, typeFilters, companyFilters, anomalyFilters, statusFilter]);
 
     // Contar alarmas por estado
     const alarmCounts = useMemo(() => {
@@ -139,6 +166,7 @@ export default function DeviceDetailPage() {
     const handleClearFilters = () => {
         setTypeFilters([]);
         setCompanyFilters([]);
+        setAnomalyFilters([]);
         setDateRange(undefined);
         setStatusFilter("all");
     };
@@ -203,6 +231,12 @@ export default function DeviceDetailPage() {
                                 items: AVAILABLE_COMPANIES,
                                 selectedItems: companyFilters,
                                 onSelectionChange: setCompanyFilters
+                            },
+                            {
+                                title: 'Por Anomalia',
+                                items: anomalyOptions,
+                                selectedItems: anomalyFilters,
+                                onSelectionChange: setAnomalyFilters
                             }
                         ]}
                     />

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getDriverDetails } from "@/lib/api";
+import { getAnomalias, getDriverDetails } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DriverStats } from "./driver-stats";
@@ -10,7 +10,7 @@ import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
 import { GeneratedReportsTable } from "@/components/drivers/generated-reports-table";
 import { Briefcase, CalendarDays, Contact, Home } from "lucide-react";
 import { Driver as DriverType } from "@/types";
-import { AdvancedFilters } from '@/components/shared/advanced-filters';
+import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
 import { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +32,32 @@ export default function DriverDetailPage() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+    const [anomalyFilters, setAnomalyFilters] = useState<string[]>([]);
+    const [anomalyOptions, setAnomalyOptions] = useState<FilterOption[]>([]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadAnomalies = async () => {
+            const anomalies = await getAnomalias();
+            if (!isMounted) return;
+
+            const options = anomalies
+                .filter((anomaly) => anomaly.idAnomalia != null)
+                .map((anomaly) => ({
+                    value: String(anomaly.idAnomalia),
+                    label: anomaly.nomAnomalia?.trim() || `Anomalia ${anomaly.idAnomalia}`,
+                }));
+
+            setAnomalyOptions(options);
+        };
+
+        loadAnomalies();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Función para cargar datos del chofer con filtros
     const loadDriverData = async () => {
@@ -42,7 +68,8 @@ export default function DriverDetailPage() {
                 startDate,
                 endDate,
                 type: typeFilters,
-                company: companyFilters
+                company: companyFilters,
+                anomaly: anomalyFilters,
             });
             setDriver(data);
         } catch (error: any) {
@@ -69,11 +96,12 @@ export default function DriverDetailPage() {
             loadDriverData();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange, typeFilters, companyFilters]);
+    }, [dateRange, typeFilters, companyFilters, anomalyFilters]);
 
     const handleClearFilters = () => {
         setTypeFilters([]);
         setCompanyFilters([]);
+        setAnomalyFilters([]);
         setDateRange(undefined);
     };
 
@@ -149,6 +177,12 @@ export default function DriverDetailPage() {
                                 items: AVAILABLE_COMPANIES,
                                 selectedItems: companyFilters,
                                 onSelectionChange: setCompanyFilters
+                            },
+                            {
+                                title: 'Por Anomalia',
+                                items: anomalyOptions,
+                                selectedItems: anomalyFilters,
+                                onSelectionChange: setAnomalyFilters
                             }
                         ]}
                     />

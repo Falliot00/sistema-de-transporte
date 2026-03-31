@@ -5,12 +5,12 @@ import dynamic from 'next/dynamic';
 import { useState, useEffect, useCallback } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { DashboardSummary } from "@/types";
-import { getDashboardSummary } from '@/lib/api';
+import { getAnomalias, getDashboardSummary } from '@/lib/api';
 import { getApiDateRange, formatCorrectedTimestamp } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRange } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AdvancedFilters } from '@/components/shared/advanced-filters';
+import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
 import { alarmTypes } from '@/lib/mock-data';
 
 const DashboardTabSkeleton = () => (
@@ -42,10 +42,36 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [companyFilters, setCompanyFilters] = useState<string[]>([]);
+  const [anomalyFilters, setAnomalyFilters] = useState<string[]>([]);
+  const [anomalyOptions, setAnomalyOptions] = useState<FilterOption[]>([]);
   
   const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("procesoA");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAnomalies = async () => {
+      const anomalies = await getAnomalias();
+      if (!isMounted) return;
+
+      const options = anomalies
+        .filter((anomaly) => anomaly.idAnomalia != null)
+        .map((anomaly) => ({
+          value: String(anomaly.idAnomalia),
+          label: anomaly.nomAnomalia?.trim() || `Anomalia ${anomaly.idAnomalia}`,
+        }));
+
+      setAnomalyOptions(options);
+    };
+
+    loadAnomalies();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const fetchSummary = useCallback(async () => {
     setIsLoading(true);
@@ -56,6 +82,7 @@ export default function DashboardPage() {
             endDate,
             type: typeFilters,
             company: companyFilters,
+            anomaly: anomalyFilters,
         });
         setSummaryData(data);
     } catch (error) {
@@ -63,7 +90,7 @@ export default function DashboardPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [dateRange, typeFilters, companyFilters]);
+  }, [dateRange, typeFilters, companyFilters, anomalyFilters]);
 
   useEffect(() => { 
     fetchSummary(); 
@@ -86,6 +113,7 @@ export default function DashboardPage() {
   const handleClearFilters = () => {
       setTypeFilters([]);
       setCompanyFilters([]);
+      setAnomalyFilters([]);
       setDateRange(undefined);
   };
 
@@ -124,6 +152,12 @@ export default function DashboardPage() {
                           items: AVAILABLE_COMPANIES,
                           selectedItems: companyFilters,
                           onSelectionChange: setCompanyFilters
+                      },
+                      {
+                          title: 'Por Anomalia',
+                          items: anomalyOptions,
+                          selectedItems: anomalyFilters,
+                          onSelectionChange: setAnomalyFilters
                       }
                   ]}
               />
