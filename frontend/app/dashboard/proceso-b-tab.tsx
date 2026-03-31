@@ -193,11 +193,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--muted))", radius: 4 }}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) => `${Number(value).toFixed(1)}%`}
-                    />
-                  }
+                  content={<ChartTooltipContent />}
                 />
                 <Legend />
                 <Bar dataKey="Sospechosas" stackId="a" fill="var(--color-Sospechosas)" radius={[0, 0, 0, 0]} />
