@@ -1,15 +1,16 @@
 // frontend/components/drivers/recent-alarms-table.tsx
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alarm } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAlarmStatusInfo, formatCorrectedTimestamp } from "@/lib/utils";
-import { History, Eye, Download, Loader2, FileText } from "lucide-react"; 
+import { History, Eye, Download, Loader2, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlarmDetails } from '@/components/alarms/alarm-details';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,60 +22,96 @@ interface RecentAlarmsTableProps {
     onReportGenerated?: () => void | Promise<void>;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+type AlarmStatusFilter =
+    | "all"
+    | "confirmed"
+    | "rejected"
+    | "reported"
+    | "confirmed_not_reported"
+    | "suspicious";
+
+const STATUS_FILTER_OPTIONS: Array<{ value: AlarmStatusFilter; label: string }> = [
+    { value: "all", label: "Todas" },
+    { value: "confirmed", label: "Confirmada" },
+    { value: "rejected", label: "Rechazada" },
+    { value: "reported", label: "Informada" },
+    { value: "confirmed_not_reported", label: "Confirmadas sin informar" },
+    { value: "suspicious", label: "Sospechosa" },
+];
 
 export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated }: RecentAlarmsTableProps) {
     const [selectedAlarm, setSelectedAlarm] = useState<Alarm | null>(null);
     const [selectedAlarmIds, setSelectedAlarmIds] = useState<string[]>([]);
     const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<AlarmStatusFilter>("all");
 
-    // Filtrar alarmas confirmadas que no han sido informadas para los checkboxes
-    const reportableAlarms = alarms.filter(alarm => 
-        alarm.status === 'confirmed' && alarm.informada === false
-    );
+    const filteredAlarms = useMemo(() => {
+        return alarms.filter((alarm) => {
+            switch (statusFilter) {
+                case "confirmed":
+                    return alarm.status === "confirmed";
+                case "rejected":
+                    return alarm.status === "rejected";
+                case "reported":
+                    return alarm.informada === true;
+                case "confirmed_not_reported":
+                    return alarm.status === "confirmed" && alarm.informada === false;
+                case "suspicious":
+                    return alarm.status === "suspicious";
+                case "all":
+                default:
+                    return true;
+            }
+        });
+    }, [alarms, statusFilter]);
 
-    // Manejar selección/deselección de alarmas
+    // Alarmas confirmadas sin informar disponibles para generar informes.
+    const reportableAlarms = useMemo(() => {
+        return filteredAlarms.filter((alarm) => alarm.status === 'confirmed' && alarm.informada === false);
+    }, [filteredAlarms]);
+
+    useEffect(() => {
+        const visibleReportableIds = new Set(reportableAlarms.map((alarm) => alarm.id));
+        setSelectedAlarmIds((prev) => prev.filter((id) => visibleReportableIds.has(id)));
+    }, [reportableAlarms]);
+
+    const selectedFilterLabel =
+        STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label ?? "Todas";
+
     const handleAlarmSelection = (alarmId: string, checked: boolean) => {
         if (checked) {
-            setSelectedAlarmIds(prev => [...prev, alarmId]);
+            setSelectedAlarmIds((prev) => [...prev, alarmId]);
         } else {
-            setSelectedAlarmIds(prev => prev.filter(id => id !== alarmId));
+            setSelectedAlarmIds((prev) => prev.filter((id) => id !== alarmId));
         }
     };
 
-    // Manejar selección de todas las alarmas reportables
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedAlarmIds(reportableAlarms.map(alarm => alarm.id));
+            setSelectedAlarmIds(reportableAlarms.map((alarm) => alarm.id));
         } else {
             setSelectedAlarmIds([]);
         }
     };
 
-    // Generar informe
     const handleGenerateReport = async () => {
         if (selectedAlarmIds.length === 0) return;
-        
+
         setIsGeneratingReport(true);
         try {
             const result = await generateAlarmReport(selectedAlarmIds);
-            //console.log('Informe generado:', result);
-            
-            // Abrir automáticamente el PDF en una nueva pestaña si se generó exitosamente
+
             if (result?.informe?.url) {
                 window.open(result.informe.url, '_blank');
             }
-            
-            // Aquí podrías mostrar un toast de éxito
+
             setSelectedAlarmIds([]);
-            
-            // Llamar al callback para refrescar los datos
+
             if (onReportGenerated) {
                 await onReportGenerated();
             }
         } catch (error) {
             console.error('Error generating report:', error);
-            // Aquí podrías mostrar un toast de error
         } finally {
             setIsGeneratingReport(false);
         }
@@ -84,29 +121,49 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
         <>
             <Card className="h-full">
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2">
                                 <History className="h-6 w-6 text-primary" />
-                                Alarmas Recientes
+                                Alarmas Asignadas
                                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                             </CardTitle>
                             <CardDescription>
-                                {isLoading ? 'Cargando alarmas filtradas...' : `Mostrando ${alarms.length} alarmas`}
+                                {isLoading
+                                    ? 'Cargando alarmas filtradas...'
+                                    : statusFilter === "all"
+                                        ? `Mostrando ${filteredAlarms.length} alarmas`
+                                        : `Mostrando ${filteredAlarms.length} alarmas (${selectedFilterLabel})`}
                             </CardDescription>
                         </div>
-                        
-                        {/* Botón de generar informe */}
-                        {reportableAlarms.length > 0 && (
-                            <Button 
-                                onClick={handleGenerateReport}
-                                disabled={selectedAlarmIds.length === 0 || isGeneratingReport}
-                                className="flex items-center gap-2"
-                            >
-                                <FileText className="h-4 w-4" />
-                                {isGeneratingReport ? 'Generando...' : `Generar Informe ${selectedAlarmIds.length > 0 ? `(${selectedAlarmIds.length})` : ''}`}
-                            </Button>
-                        )}
+
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AlarmStatusFilter)}>
+                                <SelectTrigger className="w-full sm:w-[240px]">
+                                    <SelectValue placeholder="Filtrar por estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {STATUS_FILTER_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            {reportableAlarms.length > 0 && (
+                                <Button
+                                    onClick={handleGenerateReport}
+                                    disabled={selectedAlarmIds.length === 0 || isGeneratingReport}
+                                    className="flex items-center gap-2"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    {isGeneratingReport
+                                        ? 'Generando...'
+                                        : `Generar Informe ${selectedAlarmIds.length > 0 ? `(${selectedAlarmIds.length})` : ''}`}
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -116,7 +173,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                 <Skeleton key={i} className="h-12 w-full" />
                             ))}
                         </div>
-                    ) : alarms && alarms.length > 0 ? (
+                    ) : filteredAlarms.length > 0 ? (
                         <div className="border rounded-md">
                             <Table>
                                 <TableHeader>
@@ -130,17 +187,17 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                                 />
                                             </TableHead>
                                         )}
-                                        <TableHead>Tipo de Anomalía</TableHead>
+                                        <TableHead>Tipo de Anomalia</TableHead>
                                         <TableHead>Fecha</TableHead>
                                         <TableHead className="text-center">Estado</TableHead>
-                                        <TableHead className="text-center w-[120px]">Acciones</TableHead> 
+                                        <TableHead className="text-center w-[120px]">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {alarms.map((alarm) => {
+                                    {filteredAlarms.map((alarm) => {
                                         const statusInfo = getAlarmStatusInfo(alarm.status);
                                         const isReportable = alarm.status === 'confirmed' && alarm.informada === false;
-                                        
+
                                         return (
                                             <TableRow key={alarm.id}>
                                                 {reportableAlarms.length > 0 && (
@@ -176,7 +233,6 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                                                             <Eye className="h-4 w-4" />
                                                             <span className="sr-only">Ver detalles</span>
                                                         </Button>
-                                                        {/* Descargar PDF vía proxy para agregar Authorization */}
                                                         <a href={`/proxy/alarmas/${alarm.id}/reporte`} download title="Descargar Informe PDF">
                                                             <Button variant="ghost" size="icon">
                                                                 <Download className="h-4 w-4" />
@@ -194,7 +250,7 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/50 rounded-lg h-48">
                             <p className="font-semibold">No se encontraron alarmas con los filtros seleccionados.</p>
-                            <p className="text-sm text-muted-foreground mt-2">Intenta ajustar los filtros para ver más resultados.</p>
+                            <p className="text-sm text-muted-foreground mt-2">Intenta ajustar los filtros para ver mas resultados.</p>
                         </div>
                     )}
                 </CardContent>
@@ -203,16 +259,16 @@ export function RecentAlarmsTable({ alarms, isLoading = false, onReportGenerated
             <Dialog open={!!selectedAlarm} onOpenChange={(isOpen) => !isOpen && setSelectedAlarm(null)}>
                 <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                     {selectedAlarm && (
-                         <>
+                        <>
                             <DialogHeader className="p-6 pb-2 sr-only">
-                               <DialogTitle>Detalles de Alarma de Chofer</DialogTitle>
-                               <DialogDescription>
-                                   Mostrando detalles para la alarma de tipo {selectedAlarm.type} del chofer.
-                               </DialogDescription>
-                           </DialogHeader>
-                           <div className="p-6 pt-0 overflow-y-auto flex-grow">
-                              <AlarmDetails alarm={selectedAlarm} onDriverReassign={undefined} />
-                           </div>
+                                <DialogTitle>Detalles de Alarma de Chofer</DialogTitle>
+                                <DialogDescription>
+                                    Mostrando detalles para la alarma de tipo {selectedAlarm.type} del chofer.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="p-6 pt-0 overflow-y-auto flex-grow">
+                                <AlarmDetails alarm={selectedAlarm} onDriverReassign={undefined} />
+                            </div>
                         </>
                     )}
                 </DialogContent>

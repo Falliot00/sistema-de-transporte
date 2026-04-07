@@ -1,39 +1,41 @@
 // frontend/app/drivers/[id]/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getAnomalias, getDriverDetails } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DriverStats } from "./driver-stats";
 import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
 import { GeneratedReportsTable } from "@/components/drivers/generated-reports-table";
-import { Briefcase, CalendarDays, Contact, Home } from "lucide-react";
+import { DriverPerformanceTab } from "./driver-performance-tab";
+import { Briefcase, CalendarDays, Contact } from "lucide-react";
 import { Driver as DriverType } from "@/types";
 import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
 import { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiDateRange } from '@/lib/utils';
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
+const DRIVER_DETAIL_TAB_KEY = "driverDetailActiveTab";
 
 export default function DriverDetailPage() {
     const params = useParams();
     const id = params.id as string;
-    
+
     const [driver, setDriver] = useState<DriverType | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingAlarms, setIsLoadingAlarms] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
-    // Estados de filtros
+
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [typeFilters, setTypeFilters] = useState<string[]>([]);
     const [companyFilters, setCompanyFilters] = useState<string[]>([]);
     const [anomalyFilters, setAnomalyFilters] = useState<string[]>([]);
     const [anomalyOptions, setAnomalyOptions] = useState<FilterOption[]>([]);
+    const [activeTab, setActiveTab] = useState<string>("alarmas");
 
     useEffect(() => {
         let isMounted = true;
@@ -59,7 +61,18 @@ export default function DriverDetailPage() {
         };
     }, []);
 
-    // Función para cargar datos del chofer con filtros
+    useEffect(() => {
+        const savedTab = localStorage.getItem(DRIVER_DETAIL_TAB_KEY);
+        if (savedTab && ["alarmas", "informes", "desempeno"].includes(savedTab)) {
+            setActiveTab(savedTab);
+        }
+    }, []);
+
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
+        localStorage.setItem(DRIVER_DETAIL_TAB_KEY, value);
+    };
+
     const loadDriverData = async () => {
         try {
             setIsLoadingAlarms(true);
@@ -72,8 +85,8 @@ export default function DriverDetailPage() {
                 anomaly: anomalyFilters,
             });
             setDriver(data);
-        } catch (error: any) {
-            if (error.status === 404) {
+        } catch (loadError: any) {
+            if (loadError.status === 404) {
                 notFound();
             }
             setError("No se pudieron cargar los detalles del chofer.");
@@ -83,14 +96,12 @@ export default function DriverDetailPage() {
         }
     };
 
-    // Carga inicial
     useEffect(() => {
         setIsLoading(true);
         loadDriverData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
-    // Recargar cuando cambien los filtros
     useEffect(() => {
         if (!isLoading && driver) {
             loadDriverData();
@@ -118,7 +129,7 @@ export default function DriverDetailPage() {
     }
 
     const fullName = driver.apellido_nombre || "Chofer sin nombre";
-    
+
     const getInitials = (name: string) => {
         if (!name) return "??";
         const parts = name.split(' ');
@@ -141,6 +152,7 @@ export default function DriverDetailPage() {
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
+
             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div className="flex items-center gap-6">
                     <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-md">
@@ -158,7 +170,7 @@ export default function DriverDetailPage() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="space-y-4 p-4 border bg-card rounded-lg">
                     <AdvancedFilters
                         dateRange={dateRange}
@@ -170,49 +182,62 @@ export default function DriverDetailPage() {
                                 title: 'Por Tipo de Alarma',
                                 items: alarmTypes,
                                 selectedItems: typeFilters,
-                                onSelectionChange: setTypeFilters
+                                onSelectionChange: setTypeFilters,
                             },
                             {
                                 title: 'Por Empresa',
                                 items: AVAILABLE_COMPANIES,
                                 selectedItems: companyFilters,
-                                onSelectionChange: setCompanyFilters
+                                onSelectionChange: setCompanyFilters,
                             },
                             {
                                 title: 'Por Anomalia',
                                 items: anomalyOptions,
                                 selectedItems: anomalyFilters,
-                                onSelectionChange: setAnomalyFilters
-                            }
+                                onSelectionChange: setAnomalyFilters,
+                            },
                         ]}
                     />
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
-                    <DriverStats stats={driver.stats} />
+
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <div className="space-y-4 p-4 border bg-card rounded-lg">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="alarmas">Alarmas asignadas</TabsTrigger>
+                        <TabsTrigger value="informes">Informes generados</TabsTrigger>
+                        <TabsTrigger value="desempeno">Desempeno</TabsTrigger>
+                    </TabsList>
                 </div>
-                <div className="lg:col-span-2">
-                    <RecentAlarmsTable 
-                        alarms={driver.alarmas || []} 
+
+                <TabsContent value="alarmas" className="mt-0">
+                    <RecentAlarmsTable
+                        alarms={driver.alarmas || []}
                         isLoading={isLoadingAlarms}
                         onReportGenerated={loadDriverData}
                     />
-                </div>
-            </div>
-            
-            <div className="w-full">
-                <GeneratedReportsTable 
-                    reports={driver.informes || []} 
-                    isLoading={isLoadingAlarms}
-                />
-            </div>
+                </TabsContent>
+
+                <TabsContent value="informes" className="mt-0">
+                    <GeneratedReportsTable
+                        reports={driver.informes || []}
+                        isLoading={isLoadingAlarms}
+                    />
+                </TabsContent>
+
+                <TabsContent value="desempeno" className="mt-0">
+                    <DriverPerformanceTab
+                        alarms={driver.alarmas || []}
+                        reports={driver.informes || []}
+                        isLoading={isLoadingAlarms}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
 
-function InfoRow({ icon, value }: { icon: React.ReactNode, value: string }) {
+function InfoRow({ icon, value }: { icon: React.ReactNode; value: string }) {
     return (
         <div className="flex items-center gap-2">
             {icon}
@@ -231,15 +256,12 @@ function DriverDetailLoading() {
                     <Skeleton className="h-5 w-80" />
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1">
-                    <Skeleton className="h-80 w-full rounded-lg" />
-                </div>
-                <div className="lg:col-span-2">
-                    <Skeleton className="h-96 w-full rounded-lg" />
-                </div>
+
+            <div className="space-y-4 p-4 border bg-card rounded-lg">
+                <Skeleton className="h-10 w-full" />
             </div>
+
+            <Skeleton className="h-[520px] w-full rounded-lg" />
         </div>
     );
 }
