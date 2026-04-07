@@ -157,10 +157,13 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             reportCountByDay.set(key, (reportCountByDay.get(key) ?? 0) + 1);
         });
 
-        const allKeys = new Set<string>([
-            ...alarmCountByDay.keys(),
-            ...reportCountByDay.keys(),
-        ]);
+        const allKeys = new Set<string>();
+        alarmCountByDay.forEach((_, key) => {
+            allKeys.add(key);
+        });
+        reportCountByDay.forEach((_, key) => {
+            allKeys.add(key);
+        });
 
         if (allKeys.size === 0) {
             return [];
