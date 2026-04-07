@@ -427,8 +427,8 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                         key={segment.key}
                                         x1={segment.x1}
                                         x2={segment.x2}
-                                        fill="hsl(var(--muted))"
-                                        fillOpacity={0.18}
+                                        fill="#e4ebf0"
+                                        fillOpacity={0.5}
                                         strokeOpacity={0}
                                     />
                                 ))}
