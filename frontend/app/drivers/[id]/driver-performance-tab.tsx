@@ -8,7 +8,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { Bar, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ReferenceArea, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import {
     AlertTriangle,
     Bell,
@@ -31,7 +31,7 @@ interface DriverPerformanceTabProps {
 
 const chartConfig = {
     alarmas: {
-        label: "Alarmas",
+        label: "Confirmadas por dia",
         color: "hsl(var(--chart-1))",
     },
     tendencia: {
@@ -89,6 +89,12 @@ function parseDayKey(dayKey: string): Date {
     return new Date(year, month - 1, day);
 }
 
+function addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
 function parseAlarmDayDate(timestamp?: string): Date | null {
     return parseDateOnly(timestamp) ?? parseLocalDateTime(timestamp);
 }
@@ -130,6 +136,13 @@ type TrendBadge = {
     variant: "default" | "secondary" | "destructive";
 };
 
+type BackgroundSegment = {
+    key: string;
+    x1: string;
+    x2: string;
+    isGray: boolean;
+};
+
 function TrendTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
     if (!active || !payload || payload.length === 0) return null;
 
@@ -139,7 +152,7 @@ function TrendTooltip({ active, payload }: { active?: boolean; payload?: any[] }
     return (
         <div className="rounded-lg border bg-background p-3 text-xs shadow-md">
             <p className="font-semibold mb-1">{point.fullDate}</p>
-            <p>Alarmas: <span className="font-medium">{point.alarmas}</span></p>
+            <p>Alarmas confirmadas: <span className="font-medium">{point.alarmas}</span></p>
             <p>Tendencia: <span className="font-medium">{point.tendencia.toFixed(1)}</span></p>
             <p>Informes generados: <span className="font-medium">{point.reportes}</span></p>
         </div>
@@ -172,14 +185,18 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
     }, [alarms, reports]);
 
     const trendData = useMemo<TrendDatum[]>(() => {
-        const alarmCountByDay = new Map<string, number>();
+        const allAlarmCountByDay = new Map<string, number>();
+        const confirmedAlarmCountByDay = new Map<string, number>();
         const reportCountByDay = new Map<string, number>();
 
         alarms.forEach((alarm) => {
             const date = parseAlarmDayDate(alarm.timestamp);
             if (!date) return;
             const key = toDayKey(date);
-            alarmCountByDay.set(key, (alarmCountByDay.get(key) ?? 0) + 1);
+            allAlarmCountByDay.set(key, (allAlarmCountByDay.get(key) ?? 0) + 1);
+            if (alarm.status === "confirmed") {
+                confirmedAlarmCountByDay.set(key, (confirmedAlarmCountByDay.get(key) ?? 0) + 1);
+            }
         });
 
         reports.forEach((report) => {
@@ -189,7 +206,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             reportCountByDay.set(key, (reportCountByDay.get(key) ?? 0) + 1);
         });
 
-        const alarmKeys = Array.from(alarmCountByDay.keys()).sort();
+        const alarmKeys = Array.from(allAlarmCountByDay.keys()).sort();
 
         if (alarmKeys.length === 0) {
             return [];
@@ -197,21 +214,14 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
 
         // La serie inicia exactamente en la primera alarma filtrada del chofer.
         const startDate = parseDayKey(alarmKeys[0]);
-        let endDate = parseDayKey(alarmKeys[alarmKeys.length - 1]);
-
-        reportCountByDay.forEach((_, reportKey) => {
-            const reportDate = parseDayKey(reportKey);
-            if (reportDate >= startDate && reportDate > endDate) {
-                endDate = reportDate;
-            }
-        });
+        const endDate = parseDayKey(alarmKeys[alarmKeys.length - 1]);
 
         const baseData: Omit<TrendDatum, "tendencia">[] = [];
 
         for (let cursor = new Date(startDate); cursor <= endDate; cursor.setDate(cursor.getDate() + 1)) {
             const day = new Date(cursor);
             const dayKey = toDayKey(day);
-            const alarmas = alarmCountByDay.get(dayKey) ?? 0;
+            const alarmas = confirmedAlarmCountByDay.get(dayKey) ?? 0;
             const reportes = reportCountByDay.get(dayKey) ?? 0;
             const markerBase = alarmas > 0 ? alarmas : 0;
 
@@ -232,6 +242,45 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             tendencia: trendValues[index] ?? item.alarmas,
         }));
     }, [alarms, reports]);
+
+    const chartBackgroundSegments = useMemo<BackgroundSegment[]>(() => {
+        if (trendData.length === 0) {
+            return [];
+        }
+
+        const startKey = trendData[0].dayKey;
+        const endKey = trendData[trendData.length - 1].dayKey;
+        const reportBoundaryKeys = trendData
+            .filter((point) => point.reportes > 0)
+            .map((point) => point.dayKey);
+
+        const boundaries = Array.from(new Set([startKey, ...reportBoundaryKeys])).sort();
+        if (boundaries.length === 0) {
+            return [];
+        }
+
+        const segments: BackgroundSegment[] = [];
+
+        boundaries.forEach((segmentStart, index) => {
+            const nextStart = boundaries[index + 1];
+            const segmentEnd = nextStart
+                ? toDayKey(addDays(parseDayKey(nextStart), -1))
+                : endKey;
+
+            if (parseDayKey(segmentStart).getTime() > parseDayKey(segmentEnd).getTime()) {
+                return;
+            }
+
+            segments.push({
+                key: `bg-${segmentStart}-${segmentEnd}`,
+                x1: segmentStart,
+                x2: segmentEnd,
+                isGray: index % 2 === 1,
+            });
+        });
+
+        return segments.filter((segment) => segment.isGray);
+    }, [trendData]);
 
     const trendBadge = useMemo<TrendBadge>(() => {
         if (trendData.length < 2) {
@@ -316,7 +365,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                     iconClassName="text-blue-600"
                 />
                 <KPICard
-                    title="Pendientes de informe"
+                    title="Alarmas pendientes de informe"
                     value={metrics.pendingReportAlarms}
                     icon={<Clock className="h-5 w-5" />}
                     iconClassName="text-orange-600"
@@ -341,7 +390,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                     <div>
                         <CardTitle>Tendencia de alarmas por chofer</CardTitle>
                         <CardDescription>
-                            Barras por alarmas diarias, linea de tendencia y marcas para fechas de informes generados.
+                            Barras por alarmas confirmadas diarias, linea de tendencia y marcas para fechas de informes generados.
                         </CardDescription>
                     </div>
                     <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">
@@ -373,6 +422,16 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                 />
                                 <Tooltip content={<TrendTooltip />} />
                                 <Legend />
+                                {chartBackgroundSegments.map((segment) => (
+                                    <ReferenceArea
+                                        key={segment.key}
+                                        x1={segment.x1}
+                                        x2={segment.x2}
+                                        fill="hsl(var(--muted))"
+                                        fillOpacity={0.18}
+                                        strokeOpacity={0}
+                                    />
+                                ))}
                                 {trendData
                                     .filter((point) => point.reportes > 0)
                                     .map((point) => (
@@ -386,7 +445,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                     ))}
                                 <Bar
                                     dataKey="alarmas"
-                                    name="Alarmas por dia"
+                                    name="Alarmas confirmadas por dia"
                                     fill="var(--color-alarmas)"
                                     radius={[4, 4, 0, 0]}
                                 />
