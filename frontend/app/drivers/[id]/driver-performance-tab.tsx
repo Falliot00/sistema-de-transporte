@@ -8,7 +8,7 @@ import { KPICard } from "@/components/shared/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { CartesianGrid, Legend, Line, LineChart, Scatter, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import {
     AlertTriangle,
     Bell,
@@ -44,7 +44,30 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-function parseLocalDate(value?: string): Date | null {
+function parseDateOnly(value?: string): Date | null {
+    if (!value) return null;
+
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(year, month - 1, day);
+
+    if (
+        Number.isNaN(date.getTime()) ||
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+    ) {
+        return null;
+    }
+
+    return date;
+}
+
+function parseLocalDateTime(value?: string): Date | null {
     if (!value) return null;
     const normalized = value.endsWith("Z") ? value.slice(0, -1) : value;
     const date = new Date(normalized);
@@ -66,20 +89,29 @@ function parseDayKey(dayKey: string): Date {
     return new Date(year, month - 1, day);
 }
 
+function parseAlarmDayDate(timestamp?: string): Date | null {
+    return parseDateOnly(timestamp) ?? parseLocalDateTime(timestamp);
+}
+
 function buildReportDate(report: DriverReport): Date | null {
+    // Priorizamos fecha para evitar parseos ambiguos de "hora" que pueden llevar a epoch.
+    const fromFecha = parseDateOnly(report.fecha) ?? parseLocalDateTime(report.fecha);
+    if (fromFecha) {
+        return fromFecha;
+    }
+
     if (report.hora && report.hora.includes("T")) {
-        return parseLocalDate(report.hora);
+        return parseDateOnly(report.hora) ?? parseLocalDateTime(report.hora);
     }
 
-    if (report.fecha && report.hora && /^\d{2}:\d{2}:\d{2}/.test(report.hora)) {
-        const combined = `${report.fecha.split("T")[0]}T${report.hora}`;
-        const combinedDate = parseLocalDate(combined);
-        if (combinedDate) {
-            return combinedDate;
-        }
-    }
+    return null;
+}
 
-    return parseLocalDate(report.fecha);
+function formatDayLabel(dayKey: string, short = false): string {
+    const date = parseDayKey(dayKey);
+    return date.toLocaleDateString("es-AR", short
+        ? { day: "2-digit", month: "2-digit", year: "2-digit" }
+        : { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 type TrendDatum = {
@@ -101,7 +133,7 @@ type TrendBadge = {
 function TrendTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
     if (!active || !payload || payload.length === 0) return null;
 
-    const point = payload[0]?.payload as TrendDatum | undefined;
+    const point = payload.find((item) => item?.payload)?.payload as TrendDatum | undefined;
     if (!point) return null;
 
     return (
@@ -144,7 +176,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
         const reportCountByDay = new Map<string, number>();
 
         alarms.forEach((alarm) => {
-            const date = parseLocalDate(alarm.timestamp);
+            const date = parseAlarmDayDate(alarm.timestamp);
             if (!date) return;
             const key = toDayKey(date);
             alarmCountByDay.set(key, (alarmCountByDay.get(key) ?? 0) + 1);
@@ -157,21 +189,22 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             reportCountByDay.set(key, (reportCountByDay.get(key) ?? 0) + 1);
         });
 
-        const allKeys = new Set<string>();
-        alarmCountByDay.forEach((_, key) => {
-            allKeys.add(key);
-        });
-        reportCountByDay.forEach((_, key) => {
-            allKeys.add(key);
-        });
+        const alarmKeys = Array.from(alarmCountByDay.keys()).sort();
 
-        if (allKeys.size === 0) {
+        if (alarmKeys.length === 0) {
             return [];
         }
 
-        const sortedKeys = Array.from(allKeys).sort();
-        const startDate = parseDayKey(sortedKeys[0]);
-        const endDate = parseDayKey(sortedKeys[sortedKeys.length - 1]);
+        // La serie inicia exactamente en la primera alarma filtrada del chofer.
+        const startDate = parseDayKey(alarmKeys[0]);
+        let endDate = parseDayKey(alarmKeys[alarmKeys.length - 1]);
+
+        reportCountByDay.forEach((_, reportKey) => {
+            const reportDate = parseDayKey(reportKey);
+            if (reportDate >= startDate && reportDate > endDate) {
+                endDate = reportDate;
+            }
+        });
 
         const baseData: Omit<TrendDatum, "tendencia">[] = [];
 
@@ -180,14 +213,15 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             const dayKey = toDayKey(day);
             const alarmas = alarmCountByDay.get(dayKey) ?? 0;
             const reportes = reportCountByDay.get(dayKey) ?? 0;
+            const markerBase = alarmas > 0 ? alarmas : 0;
 
             baseData.push({
                 dayKey,
-                label: day.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" }),
-                fullDate: day.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }),
+                label: formatDayLabel(dayKey, true),
+                fullDate: formatDayLabel(dayKey),
                 alarmas,
                 reportes,
-                marcadorInforme: reportes > 0 ? alarmas : null,
+                marcadorInforme: reportes > 0 ? markerBase + 0.15 : null,
             });
         }
 
@@ -307,7 +341,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                     <div>
                         <CardTitle>Tendencia de alarmas por chofer</CardTitle>
                         <CardDescription>
-                            Se marcan con punto azul las fechas en las que se generaron informes para observar cambios de conducta.
+                            Barras por alarmas diarias, linea de tendencia y marcas para fechas de informes generados.
                         </CardDescription>
                     </div>
                     <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">
@@ -322,25 +356,39 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                         </div>
                     ) : (
                         <ChartContainer config={chartConfig} className="h-[360px] w-full">
-                            <LineChart data={trendData} margin={{ top: 8, right: 16, left: -16, bottom: 8 }}>
+                            <ComposedChart data={trendData} margin={{ top: 8, right: 16, left: -16, bottom: 8 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis
-                                    dataKey="label"
+                                    dataKey="dayKey"
+                                    tickFormatter={(value) => formatDayLabel(value as string, true)}
                                     tickLine={false}
                                     axisLine={false}
                                     minTickGap={24}
                                 />
-                                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+                                <YAxis
+                                    allowDecimals={false}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    domain={[0, (maxValue: number) => Math.max(1, Math.ceil(maxValue + 1))]}
+                                />
                                 <Tooltip content={<TrendTooltip />} />
                                 <Legend />
-                                <Line
-                                    type="monotone"
+                                {trendData
+                                    .filter((point) => point.reportes > 0)
+                                    .map((point) => (
+                                        <ReferenceLine
+                                            key={`report-line-${point.dayKey}`}
+                                            x={point.dayKey}
+                                            stroke="var(--color-marcadorInforme)"
+                                            strokeOpacity={0.35}
+                                            strokeDasharray="4 4"
+                                        />
+                                    ))}
+                                <Bar
                                     dataKey="alarmas"
-                                    name="Alarmas"
-                                    stroke="var(--color-alarmas)"
-                                    strokeWidth={2}
-                                    dot={{ r: 3 }}
-                                    activeDot={{ r: 5 }}
+                                    name="Alarmas por dia"
+                                    fill="var(--color-alarmas)"
+                                    radius={[4, 4, 0, 0]}
                                 />
                                 <Line
                                     type="monotone"
@@ -351,12 +399,17 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                     strokeDasharray="6 4"
                                     dot={false}
                                 />
-                                <Scatter
+                                <Line
+                                    type="linear"
                                     dataKey="marcadorInforme"
-                                    name="Informe generado"
-                                    fill="var(--color-marcadorInforme)"
+                                    name="Fecha con informe"
+                                    stroke="var(--color-marcadorInforme)"
+                                    strokeOpacity={0}
+                                    connectNulls={false}
+                                    dot={{ r: 4, fill: "var(--color-marcadorInforme)" }}
+                                    activeDot={{ r: 6, fill: "var(--color-marcadorInforme)" }}
                                 />
-                            </LineChart>
+                            </ComposedChart>
                         </ChartContainer>
                     )}
                 </CardContent>
