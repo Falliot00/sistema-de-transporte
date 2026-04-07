@@ -428,7 +428,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                         x1={segment.x1}
                                         x2={segment.x2}
                                         fill="#e4ebf0"
-                                        fillOpacity={0.5}
+                                        fillOpacity={0.8}
                                         strokeOpacity={0}
                                     />
                                 ))}
@@ -438,8 +438,9 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                         <ReferenceLine
                                             key={`report-line-${point.dayKey}`}
                                             x={point.dayKey}
-                                            stroke="var(--color-marcadorInforme)"
-                                            strokeOpacity={0.35}
+                                            stroke="#e4ebf0"
+                                            strokeOpacity={1}
+                                            strokeWidth={2}
                                             strokeDasharray="4 4"
                                         />
                                     ))}
