@@ -89,12 +89,6 @@ function parseDayKey(dayKey: string): Date {
     return new Date(year, month - 1, day);
 }
 
-function addDays(date: Date, days: number): Date {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-}
-
 function parseAlarmDayDate(timestamp?: string): Date | null {
     return parseDateOnly(timestamp) ?? parseLocalDateTime(timestamp);
 }
@@ -185,7 +179,6 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
     }, [alarms, reports]);
 
     const trendData = useMemo<TrendDatum[]>(() => {
-        const allAlarmCountByDay = new Map<string, number>();
         const confirmedAlarmCountByDay = new Map<string, number>();
         const reportCountByDay = new Map<string, number>();
 
@@ -193,7 +186,6 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             const date = parseAlarmDayDate(alarm.timestamp);
             if (!date) return;
             const key = toDayKey(date);
-            allAlarmCountByDay.set(key, (allAlarmCountByDay.get(key) ?? 0) + 1);
             if (alarm.status === "confirmed") {
                 confirmedAlarmCountByDay.set(key, (confirmedAlarmCountByDay.get(key) ?? 0) + 1);
             }
@@ -206,15 +198,17 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             reportCountByDay.set(key, (reportCountByDay.get(key) ?? 0) + 1);
         });
 
-        const alarmKeys = Array.from(allAlarmCountByDay.keys()).sort();
+        const confirmedAlarmKeys = Array.from(confirmedAlarmCountByDay.keys()).sort();
 
-        if (alarmKeys.length === 0) {
+        if (confirmedAlarmKeys.length === 0) {
             return [];
         }
 
-        // La serie inicia exactamente en la primera alarma filtrada del chofer.
-        const startDate = parseDayKey(alarmKeys[0]);
-        const endDate = parseDayKey(alarmKeys[alarmKeys.length - 1]);
+        // La serie inicia en la primera alarma confirmada filtrada del chofer.
+        const startDate = parseDayKey(confirmedAlarmKeys[0]);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = startDate > today ? startDate : today;
 
         const baseData: Omit<TrendDatum, "tendencia">[] = [];
 
@@ -264,7 +258,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
         boundaries.forEach((segmentStart, index) => {
             const nextStart = boundaries[index + 1];
             const segmentEnd = nextStart
-                ? toDayKey(addDays(parseDayKey(nextStart), -1))
+                ? nextStart
                 : endKey;
 
             if (parseDayKey(segmentStart).getTime() > parseDayKey(segmentEnd).getTime()) {
@@ -438,10 +432,10 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                                         <ReferenceLine
                                             key={`report-line-${point.dayKey}`}
                                             x={point.dayKey}
-                                            stroke="#e4ebf0"
+                                            stroke="var(--color-marcadorInforme)"
                                             strokeOpacity={1}
                                             strokeWidth={2}
-                                            strokeDasharray="4 4"
+                                            strokeDasharray="6 4"
                                         />
                                     ))}
                                 <Bar
