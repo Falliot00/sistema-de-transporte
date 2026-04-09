@@ -32,6 +32,7 @@ export interface Alarm {
     status: AlarmStatus;
     rawStatus?: string;
     type: AlarmType;
+    typeId?: number | null;
     timestamp: string;
     videoProcessing?: boolean;
     speed?: number;

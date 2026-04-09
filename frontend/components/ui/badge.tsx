@@ -36,6 +36,12 @@ const badgeVariants = cva(
         purple: "border-transparent bg-purple-600 text-purple-50 hover:bg-purple-600/80 dark:bg-purple-800 dark:text-purple-100",
         tealDark: "border-transparent bg-teal-600 text-teal-50 hover:bg-teal-600/80 dark:bg-teal-800 dark:text-teal-100",
         rose: "border-transparent bg-rose-600 text-rose-50 hover:bg-rose-600/80 dark:bg-rose-800 dark:text-rose-100",
+        lensBrown: "border-transparent bg-[#c87e74] text-zinc-950 hover:bg-[#c87e74]/80",
+        headPink: "border-transparent bg-[#ffa7c5] text-zinc-950 hover:bg-[#ffa7c5]/80",
+        fatigueViolet: "border-transparent bg-[#953a93] text-white hover:bg-[#953a93]/80",
+        cellphoneRed: "border-transparent bg-[#ff534e] text-white hover:bg-[#ff534e]/80",
+        smokeGray: "border-transparent bg-[#adadad] text-zinc-950 hover:bg-[#adadad]/80",
+        distractionBlue: "border-transparent bg-[#361ae6] text-white hover:bg-[#361ae6]/80",
       },
     },
     defaultVariants: {

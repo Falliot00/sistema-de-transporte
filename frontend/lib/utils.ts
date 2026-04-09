@@ -50,27 +50,59 @@ export function getAlarmStatusInfo(status: Alarm['status']) {
   };
 }
 
-export type AlarmTypeVariant = 
-  | 'sky' | 'emerald' | 'amber' 
+export type AlarmTypeVariant =
+  | 'sky' | 'emerald' | 'amber'
   | 'purple' | 'tealDark' | 'rose'
-  | 'brown' | 'deepBlue' | 'deepViolet' | 'darkRed' | 'orangeBlack' | 'muted';
-
+  | 'brown' | 'deepBlue' | 'deepViolet' | 'darkRed' | 'orangeBlack' | 'muted'
+  | 'lensBrown' | 'headPink' | 'fatigueViolet' | 'cellphoneRed' | 'smokeGray' | 'distractionBlue';
 
 const FALLBACK_TYPE_VARIANTS: AlarmTypeVariant[] = [
   'sky', 'emerald', 'amber', 'purple', 'tealDark', 'rose'
 ];
 
-const SPECIFIC_TYPE_COLORS: { [key: string]: AlarmTypeVariant } = {
-  'Sin cinturón': 'deepBlue',
-  'Detección de fatiga': 'deepViolet',
-  'Distracción del conductor': 'brown',
-  'Comportamiento anormal': 'orangeBlack',
-  'Cabeza baja': 'rose',
+const ALARM_TYPE_VARIANT_BY_ID: Record<number, AlarmTypeVariant> = {
+  403: 'lensBrown',
+  453: 'lensBrown',
+  603: 'lensBrown',
+  653: 'lensBrown',
+  460: 'headPink',
+  618: 'fatigueViolet',
+  619: 'fatigueViolet',
+  620: 'cellphoneRed',
+  622: 'smokeGray',
+  624: 'distractionBlue',
+  626: 'distractionBlue',
 };
 
-export function getColorVariantForType(type: string): AlarmTypeVariant {
-  if (type in SPECIFIC_TYPE_COLORS) {
-    return SPECIFIC_TYPE_COLORS[type];
+const normalizeAlarmType = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const SPECIFIC_TYPE_COLORS_BY_NAME: Record<string, AlarmTypeVariant> = {
+  'desviacion de lente1': 'lensBrown',
+  'desviacion de la lente2': 'lensBrown',
+  'cabeza baja': 'headPink',
+  'deteccion de fatiga1': 'fatigueViolet',
+  'deteccion de fatiga2': 'fatigueViolet',
+  'deteccion de fatiga': 'fatigueViolet',
+  'uso de celular': 'cellphoneRed',
+  'fumar': 'smokeGray',
+  'distraccion del conductor1': 'distractionBlue',
+  'distraccion del conductor2': 'distractionBlue',
+  'distraccion del conductor': 'distractionBlue',
+};
+
+export function getColorVariantForType(type: string, typeId?: number | null): AlarmTypeVariant {
+  if (typeof typeId === 'number' && typeId in ALARM_TYPE_VARIANT_BY_ID) {
+    return ALARM_TYPE_VARIANT_BY_ID[typeId];
+  }
+
+  const normalizedType = normalizeAlarmType(type || '');
+  if (normalizedType in SPECIFIC_TYPE_COLORS_BY_NAME) {
+    return SPECIFIC_TYPE_COLORS_BY_NAME[normalizedType];
   }
 
   if (!type) return 'sky';
@@ -101,13 +133,13 @@ export function formatCorrectedTimestamp(
 
   // Si el string termina en 'Z' (indicador de UTC), lo eliminamos.
   const localDateString = dateString.endsWith('Z') ? dateString.slice(0, -1) : dateString;
-  
+
   const date = new Date(localDateString);
-  
+
   if (isNaN(date.getTime())) {
     return "Fecha inválida";
   }
-  
+
   return date.toLocaleString('es-AR', options);
 }
 

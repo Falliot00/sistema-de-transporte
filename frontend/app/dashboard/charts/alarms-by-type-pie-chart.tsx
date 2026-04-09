@@ -80,13 +80,18 @@ function normalizeAnomalyName(name: string): string {
 }
 
 const FIXED_ANOMALY_COLORS: Record<string, string> = {
-  "uso celular": "#b91c1c",
-  "sin cinturon": "#16a34a",
-  "pasajero en lugar indebido": "#2563eb",
-  "exceso de velocidad": "#a21caf",
-  "deteccion de fatiga": "#ca8a04",
-  "distracciones durante la conduccion": "#f97316",
-  "fumar durante la conduccion": "#92400e",
+  "desviacion de lente1": "#c87e74",
+  "desviacion de la lente2": "#c87e74",
+  "cabeza baja": "#ffa7c5",
+  "deteccion de fatiga1": "#953a93",
+  "deteccion de fatiga2": "#953a93",
+  "uso de celular": "#ff534e",
+  "fumar": "#adadad",
+  "distraccion del conductor1": "#361ae6",
+  "distraccion del conductor2": "#361ae6",
+  // Compatibilidad para datos históricos sin sufijos numéricos.
+  "deteccion de fatiga": "#953a93",
+  "distraccion del conductor": "#361ae6",
 };
 
 export function AlarmsByTypePieChart({ data }: AlarmsByTypePieChartProps) {

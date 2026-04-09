@@ -36,7 +36,7 @@ export function AlarmAnalysisView({
 }: AlarmAnalysisViewProps) {
   const { role } = useRole();
   const primaryMedia = alarm.media?.find(m => m.type === 'video') || alarm.media?.[0];
-  const typeColorVariant = getColorVariantForType(alarm.type);
+  const typeColorVariant = getColorVariantForType(alarm.type, alarm.typeId);
 
   // Determinar qué botones mostrar según el rol y estado de la alarma
   const showActions = role === 'USER' ? alarm.status === 'pending' : true;

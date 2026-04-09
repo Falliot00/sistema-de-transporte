@@ -34,6 +34,7 @@ export const transformAlarmData = (alarm: any) => {
         status: getAlarmStatusForFrontend(alarm.estado),
         rawStatus: alarm.estado,
         type: alarm.typeAlarm?.alarm || 'Tipo Desconocido',
+        typeId: alarm.alarmTypeId ?? alarm.typeAlarm?.type ?? null,
         timestamp: alarm.alarmTime,
         videoProcessing: (alarm.estado === 'Sospechosa' && !alarm.video),
         speed: alarm.velocidad,

@@ -13,7 +13,7 @@ interface AlarmCardProps {
 
 export function AlarmCard({ alarm, onClick }: AlarmCardProps) {
   const statusInfo = getAlarmStatusInfo(alarm.status);
-  const typeColorVariant = getColorVariantForType(alarm.type);
+  const typeColorVariant = getColorVariantForType(alarm.type, alarm.typeId);
   const statusBorderClass = ALARM_STATUS_BORDER_COLORS[alarm.status];
 
   // --- LÓGICA DE CHOFER MEJORADA ---

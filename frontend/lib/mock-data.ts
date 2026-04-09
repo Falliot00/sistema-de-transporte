@@ -2,16 +2,20 @@
 
 // Solo se importan los tipos que son necesarios para las constantes o funciones que se mantienen.
 // Alarm, KPI, Driver, Device no son necesarios si no se generan mocks.
-import { AlarmType } from '@/types'; 
+import { AlarmType } from '@/types';
 
 // EXPORTAR alarmTypes para su uso en AdvancedFilters
 // Esta lista estática define todos los tipos de alarma posibles para los filtros.
 export const alarmTypes: AlarmType[] = [
-  'Distracción del conductor', 
-  'Sin cinturón', 
-  'Cabeza baja', 
-  'Detección de fatiga', 
-  'Comportamiento anormal'
+  'Desviación de lente1',
+  'Desviación de la lente2',
+  'Cabeza baja',
+  'Detección de fatiga1',
+  'Detección de fatiga2',
+  'Uso de celular',
+  'Fumar',
+  'Distracción del conductor1',
+  'Distracción del conductor2',
 ];
 
 // Todo el código que generaba datos mock ficticios, KPIs, conductores, vehículos,
