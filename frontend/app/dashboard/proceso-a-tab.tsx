@@ -162,6 +162,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
 
   return (
     <div className="space-y-6 mt-4">
+      <h2 className="sr-only">Metricas del proceso A</h2>
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

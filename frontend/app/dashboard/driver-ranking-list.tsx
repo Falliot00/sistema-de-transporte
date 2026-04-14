@@ -16,18 +16,18 @@ const getConfirmationRateBadgeClass = (rate: number): string => {
   const normalizedRate = Math.max(0, Math.min(100, Number.isFinite(rate) ? rate : 0));
 
   if (normalizedRate <= 25) {
-    return "border-transparent bg-green-600 text-white";
+    return "border-transparent bg-green-700 text-white";
   }
 
   if (normalizedRate <= 50) {
-    return "border-transparent bg-yellow-400 text-black";
+    return "border-transparent bg-yellow-400 text-zinc-950";
   }
 
   if (normalizedRate <= 75) {
-    return "border-transparent bg-orange-500 text-white";
+    return "border-transparent bg-orange-600 text-zinc-950";
   }
 
-  return "border-transparent bg-red-600 text-white";
+  return "border-transparent bg-red-700 text-white";
 };
 
 export function DriverRankingList({ drivers }: DriverRankingListProps) {

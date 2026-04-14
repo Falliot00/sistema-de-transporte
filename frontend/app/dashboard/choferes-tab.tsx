@@ -37,6 +37,7 @@ export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
   if (drivers.length === 0) {
     return (
       <div className="space-y-6 mt-4">
+        <h2 className="sr-only">Metricas de choferes</h2>
         <Card>
           <CardHeader>
             <CardTitle>Ranking y Metricas de Choferes</CardTitle>
@@ -60,6 +61,7 @@ export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
 
   return (
     <div className="space-y-6 mt-4">
+      <h2 className="sr-only">Metricas de choferes</h2>
       <Card>
         <CardHeader>
           <CardTitle>Ranking y Metricas de Choferes</CardTitle>
@@ -77,7 +79,10 @@ export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
               />
             </div>
             <Select value={sortOrder} onValueChange={setSortOrder}>
-              <SelectTrigger className="w-full sm:w-[260px]">
+              <SelectTrigger
+                className="w-full sm:w-[260px]"
+                aria-label="Ordenar ranking de choferes"
+              >
                 <SelectValue placeholder="Ordenar por..." />
               </SelectTrigger>
               <SelectContent>

@@ -1,7 +1,6 @@
 // frontend/app/dashboard/page.tsx
 "use client";
 
-import dynamic from 'next/dynamic';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { DashboardSummary } from "@/types";
@@ -9,29 +8,36 @@ import { getAnomalias, getDashboardSummary } from '@/lib/api';
 import { getApiDateRange, formatCorrectedTimestamp } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRange } from 'react-day-picker';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
 import { alarmTypes } from '@/lib/mock-data';
-
-const DashboardTabSkeleton = () => (
-    <div className="space-y-6 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Skeleton className="h-28" />
-            <Skeleton className="h-28" />
-            <Skeleton className="h-28" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6">
-            <Skeleton className="lg:col-span-4 h-[350px]" />
-            <Skeleton className="lg:col-span-3 h-[350px]" />
-        </div>
-    </div>
-);
-
-const ProcesoATab = dynamic(() => import('@/app/dashboard/proceso-a-tab').then(mod => mod.ProcesoATab), { ssr: false, loading: () => <DashboardTabSkeleton /> });
-const ProcesoBTab = dynamic(() => import('@/app/dashboard/proceso-b-tab').then(mod => mod.ProcesoBTab), { ssr: false, loading: () => <DashboardTabSkeleton /> });
-const ChoferesTab = dynamic(() => import('@/app/dashboard/choferes-tab').then(mod => mod.ChoferesTab), { ssr: false, loading: () => <DashboardTabSkeleton /> });
+import { ProcesoATab } from '@/app/dashboard/proceso-a-tab';
+import { ProcesoBTab } from '@/app/dashboard/proceso-b-tab';
+import { ChoferesTab } from '@/app/dashboard/choferes-tab';
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
+const EMPTY_DASHBOARD_SUMMARY: DashboardSummary = {
+  totalAlarms: 0,
+  oldestDate: null,
+  newestDate: null,
+  procesoA: {
+    sospechadas: 0,
+    rechazadas: 0,
+    pendientes: 0,
+    volumenPorDia: [],
+    alarmasPorDia: [],
+    distribucionHoraria: [],
+  },
+  procesoB: {
+    confirmadas: 0,
+    rechazadas: 0,
+    sospechosasSinProcesar: 0,
+    tasaConfirmacion: "0",
+    volumenSospechosasPorDia: [],
+    alarmasPorDia: [],
+    distribucionPorAnomalia: [],
+  },
+  driverRanking: [],
+};
 
 function formatSubtitleDate(isoDate: string | null): string {
   if (!isoDate) return '—';
@@ -132,6 +138,7 @@ export default function DashboardPage() {
     const hasta = formatSubtitleDate(summaryData.newestDate);
     return `Total de alarmas: ${total.toLocaleString('es-AR')} (desde el ${desde} hasta ${hasta})`;
   })();
+  const resolvedSummary = summaryData ?? EMPTY_DASHBOARD_SUMMARY;
 
   return (
     <PageLayout>
@@ -181,24 +188,18 @@ export default function DashboardPage() {
           </div>
 
           <TabsContent value="procesoA" className="mt-0">
-            {isLoading || !summaryData ? <DashboardTabSkeleton /> : (
-                <ProcesoATab data={summaryData.procesoA} />
-            )}
+            <ProcesoATab data={resolvedSummary.procesoA} />
           </TabsContent>
           
           <TabsContent value="procesoB" className="mt-0">
-            {isLoading || !summaryData ? <DashboardTabSkeleton /> : (
-                <ProcesoBTab data={summaryData.procesoB} />
-            )}
+            <ProcesoBTab data={resolvedSummary.procesoB} />
           </TabsContent>
 
           <TabsContent value="choferes" className="mt-0">
-            {isLoading || !summaryData ? <DashboardTabSkeleton /> : (
-                <ChoferesTab 
-                  drivers={summaryData.driverRanking} 
-                  dateRange={dateRange || undefined}
-                />
-            )}
+            <ChoferesTab
+              drivers={resolvedSummary.driverRanking}
+              dateRange={dateRange || undefined}
+            />
           </TabsContent>
         </Tabs>
       </div>

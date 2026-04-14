@@ -168,6 +168,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
 
   return (
     <div className="space-y-6 mt-4">
+      <h2 className="sr-only">Metricas del proceso B</h2>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
