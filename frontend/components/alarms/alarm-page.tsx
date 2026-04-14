@@ -2,18 +2,17 @@
 'use client'
 
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { Alarm, PaginationInfo, GlobalAlarmCounts, GetAlarmsParams } from "@/types";
 import { assignDriver, confirmAlarm, getAlarms, getAnomalias, reEvaluateAlarm, reviewAlarm, undoAlarm } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAlarmNavigation } from "@/hooks/use-alarm-navigation";
 import { AlarmCard } from "./alarm-card";
-import { AlarmDetails } from "./alarm-details";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
-import { AlarmAnalysisView } from "./alarm-analysis-view";
+import { PlayCircle, Search, Bell, Clock, CheckCircle, XCircle, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 //import { AlarmActionForm } from "./alarm-action-form";
 import { ALARM_STATUS_ES_PLURAL, ALARM_STATUS_VARIANT, getApiDateRange } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -40,6 +39,12 @@ function useDebounce(value: string, delay: number): string {
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 const ANALYSIS_PAGE_SIZE = 50;
 const ANALYSIS_PRELOAD_PAGES = 3;
+const AlarmDetails = dynamic(
+    () => import("./alarm-details").then((module) => module.AlarmDetails)
+);
+const AlarmAnalysisView = dynamic(
+    () => import("./alarm-analysis-view").then((module) => module.AlarmAnalysisView)
+);
 
 export default function AlarmsPage() {
     const { toast } = useToast();
@@ -505,6 +510,7 @@ export default function AlarmsPage() {
                 </div>
             </div>  
 
+            <h2 className="sr-only">Resumen de indicadores</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <KPICard title="Total de alarmas" value={isLoading ? '...' : globalAlarmCounts.total.toLocaleString()} icon={<Bell className="h-4 w-4" />} iconClassName="text-black-500"/>
                 <KPICard title="Total de pendientes" value={isLoading ? '...' : globalAlarmCounts.pending.toLocaleString()} icon={<Clock className="h-4 w-4" />} iconClassName="text-yellow-500" />

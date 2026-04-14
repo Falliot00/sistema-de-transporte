@@ -13,18 +13,14 @@ const badgeVariants = cva(
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+          "border-transparent bg-red-700 text-white hover:bg-red-700/80",
         outline: "text-foreground",
         muted: "border-transparent bg-muted text-muted-foreground",
         success:
-          "border-transparent bg-green-600 text-primary-foreground hover:bg-green-600/80",
-        // --- INICIO DE LA SOLUCIÓN ---
-        // Se ha cambiado `text-secondary-foreground` por `text-primary-foreground`
-        // para que el texto sea blanco sobre el fondo amarillo, mejorando el contraste.
+          "border-transparent bg-green-700 text-white hover:bg-green-700/80",
         warning:
-          "border-transparent bg-yellow-500 text-primary-foreground hover:bg-yellow-500/80",
-        // --- FIN DE LA SOLUCIÓN ---
-        info: "border-transparent bg-blue-500 text-primary-foreground hover:bg-blue-500/80",
+          "border-transparent bg-yellow-400 text-zinc-950 hover:bg-yellow-400/80",
+        info: "border-transparent bg-blue-700 text-white hover:bg-blue-700/80",
         sky: "border-transparent bg-sky-100 text-sky-800 hover:bg-sky-100/80 dark:bg-sky-900/50 dark:text-sky-200",
         emerald: "border-transparent bg-emerald-100 text-emerald-800 hover:bg-emerald-100/80 dark:bg-emerald-900/50 dark:text-emerald-200",
         amber: "border-transparent bg-amber-100 text-amber-800 hover:bg-amber-100/80 dark:bg-amber-900/50 dark:text-amber-200",
@@ -39,7 +35,7 @@ const badgeVariants = cva(
         lensBrown: "border-transparent bg-[#c87e74] text-zinc-950 hover:bg-[#c87e74]/80",
         headPink: "border-transparent bg-[#ffa7c5] text-zinc-950 hover:bg-[#ffa7c5]/80",
         fatigueViolet: "border-transparent bg-[#953a93] text-white hover:bg-[#953a93]/80",
-        cellphoneRed: "border-transparent bg-[#ff534e] text-white hover:bg-[#ff534e]/80",
+        cellphoneRed: "border-transparent bg-[#ff534e] text-zinc-950 hover:bg-[#ff534e]/80",
         smokeGray: "border-transparent bg-[#adadad] text-zinc-950 hover:bg-[#adadad]/80",
         distractionBlue: "border-transparent bg-[#361ae6] text-white hover:bg-[#361ae6]/80",
       },
