@@ -1,22 +1,51 @@
 // frontend/app/drivers/[id]/page.tsx
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from 'react';
 import { getAnomalias, getDriverDetails } from "@/lib/api";
 import { useParams, notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RecentAlarmsTable } from "@/components/drivers/recent-alarms-table";
-import { GeneratedReportsTable } from "@/components/drivers/generated-reports-table";
-import { DriverPerformanceTab } from "./driver-performance-tab";
 import { Briefcase, CalendarDays, Contact } from "lucide-react";
-import { Driver as DriverType } from "@/types";
-import { AdvancedFilters, FilterOption } from '@/components/shared/advanced-filters';
-import { DateRange } from 'react-day-picker';
+import type { Driver as DriverType } from "@/types";
+import { AdvancedFilters } from '@/components/shared/advanced-filters';
+import type { FilterOption } from '@/components/shared/advanced-filters';
+import type { DateRange } from 'react-day-picker';
 import { alarmTypes } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiDateRange } from '@/lib/utils';
+
+const RecentAlarmsTable = dynamic(
+    () => import("@/components/drivers/recent-alarms-table").then((mod) => mod.RecentAlarmsTable),
+    {
+        loading: () => <Skeleton className="h-[460px] w-full rounded-lg" />,
+    }
+);
+
+const GeneratedReportsTable = dynamic(
+    () => import("@/components/drivers/generated-reports-table").then((mod) => mod.GeneratedReportsTable),
+    {
+        loading: () => <Skeleton className="h-[380px] w-full rounded-lg" />,
+    }
+);
+
+const DriverPerformanceTab = dynamic(
+    () => import("./driver-performance-tab").then((mod) => mod.DriverPerformanceTab),
+    {
+        loading: () => (
+            <div className="space-y-6 mt-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                        <Skeleton key={index} className="h-28 w-full" />
+                    ))}
+                </div>
+                <Skeleton className="h-[420px] w-full rounded-lg" />
+            </div>
+        ),
+    }
+);
 
 const AVAILABLE_COMPANIES = ['Laguna Paiva', 'Monte Vera'];
 const DRIVER_DETAIL_TAB_KEY = "driverDetailActiveTab";
@@ -156,7 +185,7 @@ export default function DriverDetailPage() {
             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div className="flex items-center gap-6">
                     <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-md">
-                        <AvatarImage src={driver.foto || ''} alt={fullName} className="object-cover" />
+                        <AvatarImage src={driver.foto || ''} alt={fullName} className="object-cover" decoding="async" />
                         <AvatarFallback className="text-4xl bg-secondary text-secondary-foreground">
                             {getInitials(fullName)}
                         </AvatarFallback>
@@ -211,26 +240,32 @@ export default function DriverDetailPage() {
                 </div>
 
                 <TabsContent value="alarmas" className="mt-0">
-                    <RecentAlarmsTable
-                        alarms={driver.alarmas || []}
-                        isLoading={isLoadingAlarms}
-                        onReportGenerated={loadDriverData}
-                    />
+                    {activeTab === "alarmas" ? (
+                        <RecentAlarmsTable
+                            alarms={driver.alarmas || []}
+                            isLoading={isLoadingAlarms}
+                            onReportGenerated={loadDriverData}
+                        />
+                    ) : null}
                 </TabsContent>
 
                 <TabsContent value="informes" className="mt-0">
-                    <GeneratedReportsTable
-                        reports={driver.informes || []}
-                        isLoading={isLoadingAlarms}
-                    />
+                    {activeTab === "informes" ? (
+                        <GeneratedReportsTable
+                            reports={driver.informes || []}
+                            isLoading={isLoadingAlarms}
+                        />
+                    ) : null}
                 </TabsContent>
 
                 <TabsContent value="desempeno" className="mt-0">
-                    <DriverPerformanceTab
-                        alarms={driver.alarmas || []}
-                        reports={driver.informes || []}
-                        isLoading={isLoadingAlarms}
-                    />
+                    {activeTab === "desempeno" ? (
+                        <DriverPerformanceTab
+                            alarms={driver.alarmas || []}
+                            reports={driver.informes || []}
+                            isLoading={isLoadingAlarms}
+                        />
+                    ) : null}
                 </TabsContent>
             </Tabs>
         </div>

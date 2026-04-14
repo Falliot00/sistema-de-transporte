@@ -44,6 +44,8 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
+const MAX_TREND_DAYS = 180;
+
 function parseDateOnly(value?: string): Date | null {
     if (!value) return null;
 
@@ -204,10 +206,13 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
             return [];
         }
 
-        // La serie inicia en la primera alarma confirmada filtrada del chofer.
-        const startDate = parseDayKey(confirmedAlarmKeys[0]);
+        // Limitamos la serie para evitar cientos de puntos en mobile y bajar TBT.
+        const firstConfirmedDate = parseDayKey(confirmedAlarmKeys[0]);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const earliestAllowedDate = new Date(today);
+        earliestAllowedDate.setDate(today.getDate() - (MAX_TREND_DAYS - 1));
+        const startDate = firstConfirmedDate > earliestAllowedDate ? firstConfirmedDate : earliestAllowedDate;
         const endDate = startDate > today ? startDate : today;
 
         const baseData: Omit<TrendDatum, "tendencia">[] = [];
@@ -385,6 +390,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                         <CardTitle>Tendencia de alarmas por chofer</CardTitle>
                         <CardDescription>
                             Barras por alarmas confirmadas diarias, linea de tendencia y marcas para fechas de informes generados.
+                            Se muestran hasta los ultimos {MAX_TREND_DAYS} dias para mantener la vista fluida.
                         </CardDescription>
                     </div>
                     <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">

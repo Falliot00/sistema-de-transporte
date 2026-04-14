@@ -1,6 +1,7 @@
 // frontend/components/shared/advanced-filters.tsx
 "use client";
 
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,8 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
+
+const DateRangePicker = dynamic(
+  () => import("@/components/ui/date-range-picker").then((mod) => mod.DateRangePicker),
+  {
+    loading: () => <div className="h-10 w-full min-w-[220px] rounded-md border bg-muted/40 sm:w-[320px]" />,
+  }
+);
 
 export interface FilterOption {
   label: string;

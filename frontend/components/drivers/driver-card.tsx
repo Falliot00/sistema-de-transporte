@@ -31,7 +31,13 @@ export function DriverCard({ driver }: DriverCardProps) {
                 <div className="relative">
                     <div className="aspect-w-1 aspect-h-1 w-full">
                          <Avatar className="h-full w-full rounded-none">
-                            <AvatarImage src={driver.foto || ""} alt={fullName} className="object-cover" />
+                            <AvatarImage
+                                src={driver.foto || ""}
+                                alt={fullName}
+                                className="object-cover"
+                                loading="lazy"
+                                decoding="async"
+                            />
                             <AvatarFallback className="text-5xl bg-secondary text-secondary-foreground rounded-none">
                                 {getInitials(fullName)}
                             </AvatarFallback>
