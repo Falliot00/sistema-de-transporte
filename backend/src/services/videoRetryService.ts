@@ -492,7 +492,13 @@ const retryFailedVideoDownloads = async (): Promise<void> => {
 
         let invalidCount = 0;
         let exhaustedCount = 0;
-        const alarmsEligible: Array<{ guid: string; dispositivo: number; alarmTime: Date; interno: string | null }> = [];
+        const alarmsEligible: Array<{
+            guid: string;
+            dispositivo: number;
+            alarmTime: Date;
+            interno: string | null;
+            retryCount: number;
+        }> = [];
 
         for (const alarm of alarmsWithoutVideo) {
             if (!alarm.dispositivo || !alarm.alarmTime) {
@@ -511,6 +517,7 @@ const retryFailedVideoDownloads = async (): Promise<void> => {
                 dispositivo: alarm.dispositivo,
                 alarmTime: alarm.alarmTime,
                 interno: alarm.interno ?? null,
+                retryCount: retries,
             });
         }
 
@@ -559,11 +566,42 @@ const retryFailedVideoDownloads = async (): Promise<void> => {
             return;
         }
 
-        const alarmsToRetry = filteredEligible.slice(0, RETRY_CONFIG.maxPerRun);
+        const alarmsByRetryCount: Array<typeof filteredEligible> = Array.from(
+            { length: RETRY_CONFIG.maxAttempts },
+            () => []
+        );
+
+        for (const alarm of filteredEligible) {
+            alarmsByRetryCount[alarm.retryCount].push(alarm);
+        }
+
+        const alarmsToRetry: typeof filteredEligible = [];
+        const batchByRetryCount = new Array(RETRY_CONFIG.maxAttempts).fill(0);
+
+        for (let retryCount = 0; retryCount < alarmsByRetryCount.length; retryCount += 1) {
+            if (alarmsToRetry.length >= RETRY_CONFIG.maxPerRun) {
+                break;
+            }
+
+            const bucket = alarmsByRetryCount[retryCount];
+            if (bucket.length === 0) {
+                continue;
+            }
+
+            const remainingSlots = RETRY_CONFIG.maxPerRun - alarmsToRetry.length;
+            const takeCount = Math.min(bucket.length, remainingSlots);
+
+            for (let index = 0; index < takeCount; index += 1) {
+                alarmsToRetry.push(bucket[index]);
+                batchByRetryCount[retryCount] += 1;
+            }
+        }
+
         const deferredByBatch = filteredEligible.length - alarmsToRetry.length;
+        const firstAttemptInBatch = batchByRetryCount[0];
 
         console.log(
-            `[video-retry] Reintentos a lanzar=${alarmsToRetry.length}, diferidas_por_lote=${deferredByBatch}, agotadas=${exhaustedCount}, invalidas=${invalidCount}, offline=${offlineSkipped}, estado_desconocido=${unknownOnlineStatus}.`
+            `[video-retry] Reintentos a lanzar=${alarmsToRetry.length}, primer_intento=${firstAttemptInBatch}, reintentos=${alarmsToRetry.length - firstAttemptInBatch}, diferidas_por_lote=${deferredByBatch}, agotadas=${exhaustedCount}, invalidas=${invalidCount}, offline=${offlineSkipped}, estado_desconocido=${unknownOnlineStatus}.`
         );
 
         for (let index = 0; index < alarmsToRetry.length; index += 1) {
