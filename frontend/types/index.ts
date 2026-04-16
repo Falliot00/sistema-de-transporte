@@ -194,11 +194,13 @@ export interface DriverRanking {
 
 export interface VolumenPorDia {
     name: string;
+    date?: string;
     Total: number;
 }
 
 export interface AlarmsDayProcesoA {
     name: string;
+    date?: string;
     Sospechosas: number;
     Pendientes: number;
     Rechazadas: number;
@@ -215,11 +217,13 @@ export interface ProcesoAData {
 
 export interface VolumenSospechosasPorDia {
     name: string;
+    date?: string;
     Sospechosas: number;
 }
 
 export interface AlarmsDayProcesoB {
     name: string;
+    date?: string;
     Sospechosas: number;
     Confirmadas: number;
     Rechazadas: number;

@@ -109,6 +109,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
         if (total === 0) {
           return {
             name: item.name,
+            date: item.date,
             Sospechosas: 0,
             Pendientes: 0,
             Rechazadas: 0,
@@ -117,6 +118,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
 
         return {
           name: item.name,
+          date: item.date,
           Sospechosas: Number(((sospechosas / total) * 100).toFixed(1)),
           Pendientes: Number(((pendientes / total) * 100).toFixed(1)),
           Rechazadas: Number(((rechazadas / total) * 100).toFixed(1)),
@@ -164,7 +166,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
 
   const handleExportVolumen = () => {
     exportRowsToCsv("proceso-a-volumen-alarmas-por-dia.csv", volumenPorDiaConTendencia, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Total", accessor: (row) => row.Total },
       { header: "Tendencia", accessor: (row) => row.Tendencia.toFixed(2) },
     ]);
@@ -172,7 +174,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
 
   const handleExportAlarmasPorDia = () => {
     exportRowsToCsv("proceso-a-alarmas-por-dia.csv", alarmasPorDiaConTendencia, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Sospechosas", accessor: (row) => row.Sospechosas },
       { header: "Pendientes", accessor: (row) => row.Pendientes },
       { header: "Rechazadas", accessor: (row) => row.Rechazadas },
@@ -183,7 +185,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
 
   const handleExportAlarmasPorDiaPercent = () => {
     exportRowsToCsv("proceso-a-alarmas-por-dia-100-apiladas.csv", alarmasPorDiaPercent, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Sospechosas (%)", accessor: (row) => row.Sospechosas },
       { header: "Pendientes (%)", accessor: (row) => row.Pendientes },
       { header: "Rechazadas (%)", accessor: (row) => row.Rechazadas },

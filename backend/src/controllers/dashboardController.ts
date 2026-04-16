@@ -6,6 +6,28 @@ const prisma = new PrismaClient();
 
 const CONFIRMED_STATUSES = ['Confirmada', 'confirmed'];
 
+const formatDashboardDayLabel = (value: Date | string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return date.toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+};
+
+const formatDashboardDayKey = (value: Date | string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
 const normalizeStringFilters = (value: unknown): string[] => {
     if (value === undefined || value === null) {
         return [];
@@ -381,11 +403,13 @@ export const getSummary = async (req: Request, res: Response) => {
             rechazadas: Number(pA.rechazadas) || 0,
             pendientes: Number(pA.pendientes) || 0,
             volumenPorDia: (volumenTotalPorDia || []).map((d: any) => ({
-                name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+                name: formatDashboardDayLabel(d.date),
+                date: formatDashboardDayKey(d.date),
                 Total: Number(d.total) || 0,
             })),
             alarmasPorDia: (alarmasPorDiaA || []).map((d: any) => ({
-                name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+                name: formatDashboardDayLabel(d.date),
+                date: formatDashboardDayKey(d.date),
                 Sospechosas: Number(d.sospechosas) || 0,
                 Pendientes: Number(d.pendientes) || 0,
                 Rechazadas: Number(d.rechazadas) || 0,
@@ -415,11 +439,13 @@ export const getSummary = async (req: Request, res: Response) => {
             sospechosasSinProcesar: sospechosasSinProcesar > 0 ? sospechosasSinProcesar : 0,
             tasaConfirmacion: tasaConfirmacion.toFixed(1),
             volumenSospechosasPorDia: (volumenSospechosasPorDia || []).map((d: any) => ({
-                name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+                name: formatDashboardDayLabel(d.date),
+                date: formatDashboardDayKey(d.date),
                 Sospechosas: Number(d.sospechosas) || 0,
             })),
             alarmasPorDia: (alarmasPorDiaB || []).map((d: any) => ({
-                name: new Date(d.date).toLocaleDateString('es-AR', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+                name: formatDashboardDayLabel(d.date),
+                date: formatDashboardDayKey(d.date),
                 Sospechosas: Number(d.sospechosas) || 0,
                 Confirmadas: Number(d.confirmadas) || 0,
                 Rechazadas: Number(d.rechazadas) || 0,

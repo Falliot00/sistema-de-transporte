@@ -106,6 +106,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
         if (total === 0) {
           return {
             name: item.name,
+            date: item.date,
             Sospechosas: 0,
             Confirmadas: 0,
             Rechazadas: 0,
@@ -114,6 +115,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
 
         return {
           name: item.name,
+          date: item.date,
           Sospechosas: Number(((sospechosas / total) * 100).toFixed(1)),
           Confirmadas: Number(((confirmadas / total) * 100).toFixed(1)),
           Rechazadas: Number(((rechazadas / total) * 100).toFixed(1)),
@@ -170,7 +172,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
 
   const handleExportVolumen = () => {
     exportRowsToCsv("proceso-b-volumen-alarmas-sospechosas-por-dia.csv", volumenSospechosasConTendencia, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Sospechosas", accessor: (row) => row.Sospechosas },
       { header: "Tendencia", accessor: (row) => row.Tendencia.toFixed(2) },
     ]);
@@ -178,7 +180,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
 
   const handleExportAlarmasPorDia = () => {
     exportRowsToCsv("proceso-b-alarmas-por-dia.csv", alarmasPorDiaConTendencia, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Sospechosas", accessor: (row) => row.Sospechosas },
       { header: "Confirmadas", accessor: (row) => row.Confirmadas },
       { header: "Rechazadas", accessor: (row) => row.Rechazadas },
@@ -189,7 +191,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
 
   const handleExportAlarmasPorDiaPercent = () => {
     exportRowsToCsv("proceso-b-alarmas-por-dia-100-apiladas.csv", alarmasPorDiaPercent, [
-      { header: "Dia", accessor: (row) => row.name },
+      { header: "Dia", accessor: (row) => row.date ?? row.name },
       { header: "Sospechosas (%)", accessor: (row) => row.Sospechosas },
       { header: "Confirmadas (%)", accessor: (row) => row.Confirmadas },
       { header: "Rechazadas (%)", accessor: (row) => row.Rechazadas },
