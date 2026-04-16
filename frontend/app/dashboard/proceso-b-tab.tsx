@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, ComposedChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ProcesoBData } from "@/types";
-import { CheckCircle, XCircle, Clock, Percent, FileSpreadsheet } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Percent, Download } from "lucide-react";
 import { AlarmsByTypePieChart } from "@/app/dashboard/charts/alarms-by-type-pie-chart";
 import { calculateLinearTrend } from "@/app/dashboard/charts/trend-utils";
 import { exportRowsToCsv } from "@/lib/csv";
@@ -269,7 +269,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
             onClick={handleExportVolumen}
             disabled={volumenSospechosasConTendencia.length === 0}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -314,7 +314,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
             onClick={handleExportAlarmasPorDia}
             disabled={alarmasPorDiaConTendencia.length === 0}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -362,7 +362,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
             onClick={handleExportAlarmasPorDiaPercent}
             disabled={alarmasPorDiaPercent.length === 0}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -410,7 +410,7 @@ export function ProcesoBTab({ data }: ProcesoBTabProps) {
             onClick={handleExportDistribucionAnomalia}
             disabled={distribucionAnomaliaData.length === 0}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
