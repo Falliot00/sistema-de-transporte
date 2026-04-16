@@ -235,7 +235,7 @@ export default function DriverDetailPage() {
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="alarmas">Alarmas asignadas</TabsTrigger>
                         <TabsTrigger value="informes">Informes generados</TabsTrigger>
-                        <TabsTrigger value="desempeno">Desempeno</TabsTrigger>
+                        <TabsTrigger value="desempeno">Desempeño</TabsTrigger>
                     </TabsList>
                 </div>
 

@@ -15,7 +15,7 @@ import {
     Bell,
     CheckCircle,
     Clock,
-    Download,
+    FileSpreadsheet,
     FileText,
     Megaphone,
     Percent,
@@ -415,7 +415,7 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                             onClick={handleExportTrendData}
                             disabled={trendData.length === 0}
                         >
-                            <Download className="mr-2 h-4 w-4" />
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
                             Exportar
                         </Button>
                         <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">

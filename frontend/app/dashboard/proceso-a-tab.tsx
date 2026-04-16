@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart, Line, ComposedChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ProcesoAData } from "@/types";
-import { AlertTriangle, XCircle, Clock, Download } from "lucide-react";
+import { AlertTriangle, XCircle, Clock, FileSpreadsheet } from "lucide-react";
 import { calculateLinearTrend } from "@/app/dashboard/charts/trend-utils";
 import { exportRowsToCsv } from "@/lib/csv";
 
@@ -249,7 +249,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             onClick={handleExportVolumen}
             disabled={volumenPorDiaConTendencia.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -294,7 +294,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             onClick={handleExportAlarmasPorDia}
             disabled={alarmasPorDiaConTendencia.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -342,7 +342,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             onClick={handleExportAlarmasPorDiaPercent}
             disabled={alarmasPorDiaPercent.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
@@ -387,7 +387,7 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
             onClick={handleExportDistribucionHoraria}
             disabled={data.distribucionHoraria.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>

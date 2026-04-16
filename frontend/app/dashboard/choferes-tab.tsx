@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DriverRankingList } from "./driver-ranking-list";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Search } from 'lucide-react';
+import { FileSpreadsheet, Search } from 'lucide-react';
 
 import { DateRange } from 'react-day-picker';
 import { exportRowsToCsv } from '@/lib/csv';
@@ -64,7 +64,7 @@ export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
               </CardDescription>
             </div>
             <Button type="button" variant="outline" size="sm" className="w-fit" disabled>
-              <Download className="mr-2 h-4 w-4" />
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
               Exportar
             </Button>
           </CardHeader>
@@ -97,7 +97,7 @@ export function ChoferesTab({ drivers, dateRange }: ChoferesTabProps) {
             onClick={handleExportDrivers}
             disabled={sortedAndFilteredDrivers.length === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </CardHeader>
