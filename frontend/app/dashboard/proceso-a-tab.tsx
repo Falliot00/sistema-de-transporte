@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, AreaChart, Line, ComposedChart } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { ProcesoAData } from "@/types";
-import { AlertTriangle, XCircle, Clock } from "lucide-react";
+import { AlertTriangle, XCircle, Clock, Download } from "lucide-react";
 import { calculateLinearTrend } from "@/app/dashboard/charts/trend-utils";
+import { exportRowsToCsv } from "@/lib/csv";
 
 interface ProcesoATabProps {
   data: ProcesoAData;
@@ -160,6 +162,41 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
     </div>
   );
 
+  const handleExportVolumen = () => {
+    exportRowsToCsv("proceso-a-volumen-alarmas-por-dia.csv", volumenPorDiaConTendencia, [
+      { header: "Dia", accessor: (row) => row.name },
+      { header: "Total", accessor: (row) => row.Total },
+      { header: "Tendencia", accessor: (row) => row.Tendencia.toFixed(2) },
+    ]);
+  };
+
+  const handleExportAlarmasPorDia = () => {
+    exportRowsToCsv("proceso-a-alarmas-por-dia.csv", alarmasPorDiaConTendencia, [
+      { header: "Dia", accessor: (row) => row.name },
+      { header: "Sospechosas", accessor: (row) => row.Sospechosas },
+      { header: "Pendientes", accessor: (row) => row.Pendientes },
+      { header: "Rechazadas", accessor: (row) => row.Rechazadas },
+      { header: "Total", accessor: (row) => row.Total },
+      { header: PROCESO_A_TREND_LABELS[selectedTrendKey], accessor: (row) => row.TendenciaGeneral.toFixed(2) },
+    ]);
+  };
+
+  const handleExportAlarmasPorDiaPercent = () => {
+    exportRowsToCsv("proceso-a-alarmas-por-dia-100-apiladas.csv", alarmasPorDiaPercent, [
+      { header: "Dia", accessor: (row) => row.name },
+      { header: "Sospechosas (%)", accessor: (row) => row.Sospechosas },
+      { header: "Pendientes (%)", accessor: (row) => row.Pendientes },
+      { header: "Rechazadas (%)", accessor: (row) => row.Rechazadas },
+    ]);
+  };
+
+  const handleExportDistribucionHoraria = () => {
+    exportRowsToCsv("proceso-a-distribucion-horaria.csv", data.distribucionHoraria, [
+      { header: "Hora", accessor: (row) => row.hour },
+      { header: "Alarmas", accessor: (row) => row.alarmas },
+    ]);
+  };
+
   return (
     <div className="space-y-6 mt-4">
       <h2 className="sr-only">Metricas del proceso A</h2>
@@ -199,9 +236,22 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Volumen de Alarmas Totales por Dia</CardTitle>
-          <CardDescription>Cantidad total de alarmas generadas cada dia.</CardDescription>
+        <CardHeader className="space-y-0 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Volumen de Alarmas Totales por Dia</CardTitle>
+            <CardDescription>Cantidad total de alarmas generadas cada dia.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={handleExportVolumen}
+            disabled={volumenPorDiaConTendencia.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
         </CardHeader>
         <CardContent className="pl-2">
           {data.volumenPorDia.length === 0 ? (
@@ -231,9 +281,22 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Alarmas por Dia - Proceso A</CardTitle>
-          <CardDescription>Sospechosas, Pendientes y Rechazadas por el Proceso A. Hace clic en una etiqueta para cambiar la tendencia.</CardDescription>
+        <CardHeader className="space-y-0 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Alarmas por Dia - Proceso A</CardTitle>
+            <CardDescription>Sospechosas, Pendientes y Rechazadas por el Proceso A. Hace clic en una etiqueta para cambiar la tendencia.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={handleExportAlarmasPorDia}
+            disabled={alarmasPorDiaConTendencia.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
         </CardHeader>
         <CardContent className="pl-2">
           {data.alarmasPorDia.length === 0 ? (
@@ -266,9 +329,22 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Alarmas por Dia - Proceso A (Barras 100% apiladas)</CardTitle>
-          <CardDescription>Distribucion porcentual diaria de Sospechosas, Pendientes y Rechazadas.</CardDescription>
+        <CardHeader className="space-y-0 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Alarmas por Dia - Proceso A (Barras 100% apiladas)</CardTitle>
+            <CardDescription>Distribucion porcentual diaria de Sospechosas, Pendientes y Rechazadas.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={handleExportAlarmasPorDiaPercent}
+            disabled={alarmasPorDiaPercent.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
         </CardHeader>
         <CardContent className="pl-2">
           {alarmasPorDiaPercent.length === 0 ? (
@@ -298,9 +374,22 @@ export function ProcesoATab({ data }: ProcesoATabProps) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Distribucion Horaria de Alarmas</CardTitle>
-          <CardDescription>Picos de actividad de alarmas durante el dia.</CardDescription>
+        <CardHeader className="space-y-0 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>Distribucion Horaria de Alarmas</CardTitle>
+            <CardDescription>Picos de actividad de alarmas durante el dia.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={handleExportDistribucionHoraria}
+            disabled={data.distribucionHoraria.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
         </CardHeader>
         <CardContent className="pl-2">
           {data.distribucionHoraria.length === 0 ? (

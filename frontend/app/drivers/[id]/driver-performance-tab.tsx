@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import { Alarm, DriverReport } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { KPICard } from "@/components/shared/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,7 @@ import {
     Bell,
     CheckCircle,
     Clock,
+    Download,
     FileText,
     Megaphone,
     Percent,
@@ -22,6 +24,7 @@ import {
     XCircle,
 } from "lucide-react";
 import { calculateLinearTrend } from "@/app/dashboard/charts/trend-utils";
+import { exportRowsToCsv } from "@/lib/csv";
 
 interface DriverPerformanceTabProps {
     alarms: Alarm[];
@@ -317,6 +320,16 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
         };
     }, [trendData]);
 
+    const handleExportTrendData = () => {
+        exportRowsToCsv("chofer-tendencia-alarmas.csv", trendData, [
+            { header: "Fecha", accessor: (row) => row.fullDate },
+            { header: "Alarmas confirmadas por dia", accessor: (row) => row.alarmas },
+            { header: "Tendencia", accessor: (row) => row.tendencia.toFixed(2) },
+            { header: "Informes generados", accessor: (row) => row.reportes },
+            { header: "Fecha con informe", accessor: (row) => (row.reportes > 0 ? "Si" : "No") },
+        ]);
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-6 mt-4">
@@ -393,10 +406,23 @@ export function DriverPerformanceTab({ alarms, reports, isLoading = false }: Dri
                             Se muestran hasta los ultimos {MAX_TREND_DAYS} dias para mantener la vista fluida.
                         </CardDescription>
                     </div>
-                    <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">
-                        <trendBadge.icon className="h-3.5 w-3.5" />
-                        {trendBadge.label}
-                    </Badge>
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-fit"
+                            onClick={handleExportTrendData}
+                            disabled={trendData.length === 0}
+                        >
+                            <Download className="mr-2 h-4 w-4" />
+                            Exportar
+                        </Button>
+                        <Badge variant={trendBadge.variant} className="w-fit flex items-center gap-1.5">
+                            <trendBadge.icon className="h-3.5 w-3.5" />
+                            {trendBadge.label}
+                        </Badge>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {trendData.length === 0 ? (
